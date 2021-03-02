@@ -382,16 +382,31 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
     
     // Withdraw Repayment, Also all the extra state variables are added here only for the review
 
-    function interestPerSecond(uint _principle) public view returns(uint256){
-        
+    function interestPerSecond(uint256 _principle)
+        public
+        view
+        returns (uint256)
+    {
+        uint256 _interest = ((_principle).mul(borrowRate)).div(yearSeconds);
+        return _interest;
+    }
+    
+    function amountLenderPerPeriod(address lender)
+        public
+        view
+        returns (uint256)
+    {
+        return (interestPerSecond(balanceOf(lender)).mul(repaymentInterval));
     }
 
-    function amountLenderPerPeriod(address lender) public view returns(uint256){
-        
+    function calculateCurrentPeriod() public view returns (uint256) {
+        uint256 _currentPeriod =
+            (block.timestamp.sub(loanStartTime)).div(repaymentInterval);
+        return _currentPeriod;
     }
 
-    function calculateCurrentPeriod() public view returns(uint256){
-        
+    function amountPerPeriod() public view returns (uint256) {
+        return (interestPerSecond(totalSupply()).mul(repaymentInterval));
     }
 
     
