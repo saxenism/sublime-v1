@@ -48,6 +48,7 @@
     "@openzeppelin/contracts-upgradeable": "^3.4.0",
     "ethereumjs-abi": "^0.6.8",
     "openzeppelin-solidity": "^3.3.0",
+    "solc": "^0.8.1",
     "truffle": "^5.1.61",
     "web3": "^1.3.1"
   }
