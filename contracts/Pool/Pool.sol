@@ -250,25 +250,25 @@ contract Pool is ERC20PresetMinterPauserUpgradeable {
     }
 
     // Note - Only when cancelled or terminated, lender can withdraw
-    function withdrawLiquidity(address lenderAddress)
-        external payable
+    function withdrawLiquidity()
+        external
     {
-        uint256 _balanceOfLender = balanceOf(lenderAddress);
+        uint256 _balanceOfLender = balanceOf(msg.sender);
         LoanStatus _poolStatus = loanStatus;
-        require(_balanceOfLender != 0);
+        require(_balanceOfLender != 0, "Pool::withdrawLiquidity - The lender has no right to the liquidity in the pool.");
         require(
             _poolStatus == LoanStatus.CANCELLED ||
                 _poolStatus == LoanStatus.TERMINATED,
-            "Lender: pool is active"
+            "Pool::withdrawLiquidity - Pool has not been cancelled or terminated."
         );
 
-        uint256 _amountwithdrawable = calculatewithdrawRepayment(lenderAddress);
+        uint256 _amountwithdrawable = calculatewithdrawRepayment(msg.sender);
         uint256 _totalSupplied = _balanceOfLender.add(_amountwithdrawable);
-        _burn(lenderAddress, _balanceOfLender);
-        lenders[lenderAddress].amountWithdrawn = (lenders[lenderAddress].amountWithdrawn).add(_totalSupplied);
+        _burn(msg.sender, _balanceOfLender);
+        lenders[msg.sender].amountWithdrawn = (lenders[msg.sender].amountWithdrawn).add(_totalSupplied);
 
         IERC20(borrowAsset).transfer(
-            lenderAddress,
+            msg.sender,
             _totalSupplied
         );
 
