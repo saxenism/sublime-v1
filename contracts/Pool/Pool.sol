@@ -70,7 +70,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
     event OpenBorrowPoolDefaulted();
     event CollateralAdded(address borrower,uint256 amount,uint256 sharesReceived);
     event MarginCallCollateralAdded(address borrower,address lender,uint256 amount,uint256 sharesReceived);
-    event CollateralWithdrawn(address user, address amount);
+    event CollateralWithdrawn(address user, uint256 amount);
     event liquiditySupplied(
         uint256 amountSupplied,
         address lenderAddress
@@ -238,11 +238,21 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         
     }
 
-    function withdrawCollateral()
+    function withdrawAllCollateral()
         external
         OnlyBorrower
     {
-        
+        LoanStatus _status = loanStatus;
+        require(
+            _status == LoanStatus.CLOSED || _status == LoanStatus.CANCELLED,
+            "Pool::withdrawAllCollateral: Loan is not CLOSED or CANCELLED"
+        );
+
+        uint256 _collateralShares = baseLiquidityShares.add(extraLiquidityShares);
+        uint256 _sharesReceived = ISavingAccount(IPoolFactory(PoolFactory).SavingAccount()).transfer(msg.sender,_collateralShares,collateralAsset,investedTo);
+        emit CollateralWithdrawn(msg.sender, _sharesReceived);
+        delete baseLiquidityShares;
+        delete extraLiquidityShares;
     }
 
 
