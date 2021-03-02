@@ -266,14 +266,14 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
             _amount = _borrowAmountNeeded.sub(totalSupply());
         }
 
-        uint256 __borrowToken = borrowAsset;
-        if(borrowToken == address(0)) {
+        address _borrowToken = borrowAsset;
+        if(_borrowToken == address(0)) {
             require(_amountLent == msg.value, "Pool::lend - Ether value is not same as parameter passed");
             if(_amount != _amountLent) {
                 msg.sender.send(_amountLent.sub(_amount));
             }
         } else {
-            IERC20(borrowToken).transferFrom(
+            IERC20(_borrowToken).transferFrom(
                 msg.sender,
                 address(this),
                 _amount
