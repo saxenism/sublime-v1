@@ -249,7 +249,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         );
 
         uint256 _collateralShares = baseLiquidityShares.add(extraLiquidityShares);
-        uint256 _sharesReceived = ISavingAccount(IPoolFactory(PoolFactory).SavingAccount()).transferFrom(address(this),borrower,_collateralShares,collateralAsset,investedTo);
+        uint256 _sharesReceived = ISavingAccount(IPoolFactory(PoolFactory).SavingAccount()).transfer(msg.sender,_collateralShares,collateralAsset,investedTo);
         emit CollateralWithdrawn(msg.sender, _sharesReceived);
         delete baseLiquidityShares;
         delete extraLiquidityShares;
