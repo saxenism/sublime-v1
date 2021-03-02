@@ -282,6 +282,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
             _poolStatus == LoanStatus.COLLECTION || (_poolStatus == LoanStatus.ACTIVE && block.timestamp<matchCollateralRatioEndTime, "Pool::cancelOpenBorrowPool - The pool cannot be cancelled when the status is active.")
         );
         loanStatus = LoanStatus.CANCELLED;
+        pause(); 
         emit OpenBorrowPoolCancelled();
     }
 
@@ -297,13 +298,13 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
             "Pool::terminateOpenBorrowPool - The pool can only be terminated if it is Active or Collection Period."
         );
         loanStatus = LoanStatus.TERMINATED;
+        pause(); 
         emit OpenBorrowPoolTerminated();
     }
 
     function closeLoan()
         internal   
     {
-        // TODO: Check if all repayments and principle are paid
         require(
             loanStatus == LoanStatus.ACTIVE,
             "Pool::closeLoan - The pool can only be closed if the loan is Active."
@@ -321,6 +322,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
             "Pool::defaultLoan - The pool can only be defaulted when it is Active."
         );
         loanStatus = LoanStatus.DEFAULTED;
+        pause();
         emit OpenBorrowPoolDefaulted();
     }
 
