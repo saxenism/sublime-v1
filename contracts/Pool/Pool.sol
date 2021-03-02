@@ -324,7 +324,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
 
         uint256 _amountwithdrawable = calculatewithdrawRepayment(msg.sender);
         uint256 _totalSupplied = _balanceOfLender.add(_amountwithdrawable);
-        _burn(msg.sender, _balanceOfLender);
+        burnFrom(msg.sender, _balanceOfLender);
         lenders[msg.sender].amountWithdrawn = (lenders[msg.sender].amountWithdrawn).add(_totalSupplied);
 
         IERC20(borrowAsset).transfer(
