@@ -73,7 +73,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable {
         address lenderAddress
     );
     event AmountBorrowed(address borrower, uint256 amount);
-    event liquiditywithdrawn(
+    event Liquiditywithdrawn(
         uint256 amount,
         address lenderAddress
     );
@@ -272,7 +272,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable {
             _totalSupplied
         );
 
-        emit liquiditywithdrawn(_totalSupplied, lenderAddress);
+        emit Liquiditywithdrawn(_totalSupplied, lenderAddress);
     }
 
 
