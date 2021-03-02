@@ -214,7 +214,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         }
         require(
             loanStatus == LoanStatus.ACTIVE,
-            "Borrower: Loan is not in ACTIVE state"
+            "Pool::withdrawBorrowedAmount - Loan is not in ACTIVE state"
         );
         uint256 _currentCollateralRatio = getCurrentCollateralRatio();
         require(_currentCollateralRatio > collateralRatio.sub(IPoolFactory(PoolFactory).collateralVolatilityThreshold()), "Pool::withdrawBorrowedAmount - The current collateral amount does not permit the loan.");
@@ -256,8 +256,34 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
     }
 
 
-    function lend(address _lender, uint256 _amountLent) external {
-        
+    function lend(address _lender, uint256 _amountLent) external payable{
+        require(_amountLent != 0, "Pool::lend - Invalid amount");
+        require(
+            totalSupply() != borrowAmountRequested,
+            "Pool::lend - Requested amount borrowed"
+        );
+        // Do we need to have a check that restricts the borrower from acting as a lender?
+        uint256 _amount = _amountLent;
+        if(_amountLent.add(totalSupply()) > borrowAmountRequested) {
+            _amount = borrowAmountRequested.sub(totalSupply());
+        }
+        // poolInfo.canBurn[msg.sender] == true;
+
+        if(borrowAsset == address(0)) {
+            require(_amountLent == msg.value, "Pool::lend - Ether value is not same as parameter passed");
+            if(_amount != _amountLent) {
+                // TODO - check for reentrenncy issues
+                msg.sender.send(_amountLent.sub(_amount));
+            }
+        } else {
+            IERC20(borrowAsset).transferFrom(
+                msg.sender,
+                address(this),
+                _amount
+            );
+        }
+        mint(_lender, _amount);
+        emit liquiditySupplied(_amount, _lender);
     }
 
     function _beforeTransfer(address _user) internal {
@@ -313,7 +339,6 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
     function withdrawLiquidity(address lenderAddress)
         external
     {
-        
     }
 
 
