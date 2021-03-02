@@ -303,6 +303,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
     function closeLoan()
         internal   
     {
+        // TODO: Check if all repayments and principle are paid
         require(
             loanStatus == LoanStatus.ACTIVE,
             "Pool::closeLoan - The pool can only be closed if the loan is Active."
