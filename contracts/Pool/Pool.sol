@@ -277,7 +277,13 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         external
         OnlyBorrower
     {   
-        
+        // TODO: active, but did not refill the collatoral before the time limit  
+        LoanStatus _poolStatus = loanStatus;
+        require(
+            _poolStatus == LoanStatus.COLLECTION || (_poolStatus == LoanStatus.ACTIVE && block.timestamp<matchCollateralRatioEndTime, "Pool::cancelOpenBorrowPool - The pool cannot be cancelled when the status is active.")
+        );
+        loanStatus = LoanStatus.CANCELLED;
+        emit OpenBorrowPoolCancelled();
     }
 
 
@@ -286,23 +292,40 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         external
         onlyOwner
     {
-        
+        LoanStatus _poolStatus = loanStatus;
+        require(
+            _poolStatus == LoanStatus.ACTIVE || _poolStatus == LoanStatus.COLLECTION,
+            "Pool::terminateOpenBorrowPool - The pool can only be terminated if it is Active or Collection Period."
+        );
+        loanStatus = LoanStatus.TERMINATED;
+        emit OpenBorrowPoolTerminated();
     }
 
     // TODO: repay function will invoke this fn
     function closeLoan()
-        internal
-        // onlyOwner // TODO: to be updated  --fixed
+        internal   
     {
-        
+        // TODO: Check if all repayments and principle are paid
+        require(
+            loanStatus == LoanStatus.ACTIVE,
+            "Pool::closeLoan - The pool can only be closed if the loan is Active."
+        );
+        loanStatus = LoanStatus.CLOSED;
+        // Pause token transfers
+        pause();
+        emit OpenBorrowPoolClosed();
     }
 
     // TODO: When repay is missed (interest/principle) call this
     function defaultLoan()
         internal
-        // onlyOwner // TODO: to be updated
     {
-        
+        require(
+            loanStatus == LoanStatus.ACTIVE,
+            "Pool::defaultLoan - The pool can only be defaulted when it is Active."
+        );
+        loanStatus = LoanStatus.DEFAULTED;
+        emit OpenBorrowPoolDefaulted();
     }
 
     function calculateLendingRate(uint256 s) public pure returns (uint256) {
