@@ -68,8 +68,8 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
     event OpenBorrowPoolTerminated();
     event OpenBorrowPoolClosed();
     event OpenBorrowPoolDefaulted();
-    event CollateralAdded(address borrower,uint256 amount,uint256 _sharesReceived);
-    event MarginCallCollateralAdded(address borrower,address lender,uint256 amount,uint256 _sharesReceived);
+    event CollateralAdded(address borrower,uint256 amount,uint256 sharesReceived);
+    event MarginCallCollateralAdded(address borrower,address lender,uint256 amount,uint256 sharesReceived);
     event CollateralWithdrawn(address user, address amount);
     event liquiditySupplied(
         uint256 amountSupplied,
