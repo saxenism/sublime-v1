@@ -354,7 +354,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
     event Liquidated(address liquidator, address lender);
 
     // TODO
-        function getCurrentCollateralRatio() public returns (uint256 _ratio) {
+    function getCurrentCollateralRatio() public returns (uint256 _ratio) {
         uint256 _currentCollateralTokens =
             IYield(investedTo).getTokensForShares(
                 baseLiquidityShares.add(extraLiquidityShares),
