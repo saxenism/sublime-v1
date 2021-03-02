@@ -272,7 +272,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable {
             _totalSupplied
         );
 
-        emit Liquiditywithdrawn(_totalSupplied, lenderAddress);
+        emit Liquiditywithdrawn(_totalSupplied, msg.sender);
     }
 
 
