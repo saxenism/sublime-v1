@@ -205,15 +205,16 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         external
         OnlyBorrower override
     {
-        if(loanStatus == LoanStatus.COLLECTION && loanStartTime < block.timestamp) {
+        LoanStatus _poolStatus = loanStatus;
+        if(_poolStatus == LoanStatus.COLLECTION && loanStartTime < block.timestamp) {
             if(totalSupply() < borrowAmountRequested.mul(minborrowAmountFraction).div(100)) {
-                loanStatus = LoanStatus.CANCELLED;
+                _poolStatus = LoanStatus.CANCELLED;
                 return;
             }
-            loanStatus = LoanStatus.ACTIVE;
+            _poolStatus = LoanStatus.ACTIVE;
         }
         require(
-            loanStatus == LoanStatus.ACTIVE,
+            _poolStatus == LoanStatus.ACTIVE,
             "Pool::withdrawBorrowedAmount - Loan is not in ACTIVE state"
         );
         uint256 _currentCollateralRatio = getCurrentCollateralRatio();
@@ -257,26 +258,22 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
 
 
     function lend(address _lender, uint256 _amountLent) external payable{
-        require(_amountLent != 0, "Pool::lend - Invalid amount");
-        require(
-            totalSupply() != borrowAmountRequested,
-            "Pool::lend - Requested amount borrowed"
-        );
-        // Do we need to have a check that restricts the borrower from acting as a lender?
-        uint256 _amount = _amountLent;
-        if(_amountLent.add(totalSupply()) > borrowAmountRequested) {
-            _amount = borrowAmountRequested.sub(totalSupply());
-        }
-        // poolInfo.canBurn[msg.sender] == true;
+        require(loanStatus == LoanStatus.COLLECTION, "Pool::lend - The pool should be in Collection Period.");
 
-        if(borrowAsset == address(0)) {
+        uint256 _amount = _amountLent;
+        uint256 borrowAmountNeeded = borrowAmountRequested;
+        if(_amountLent.add(totalSupply()) > borrowAmountNeeded) {
+            _amount = borrowAmountNeeded.sub(totalSupply());
+        }
+
+        uint256 borrowToken = borrowAsset;
+        if(borrowToken == address(0)) {
             require(_amountLent == msg.value, "Pool::lend - Ether value is not same as parameter passed");
             if(_amount != _amountLent) {
-                // TODO - check for reentrenncy issues
                 msg.sender.send(_amountLent.sub(_amount));
             }
         } else {
-            IERC20(borrowAsset).transferFrom(
+            IERC20(borrowToken).transferFrom(
                 msg.sender,
                 address(this),
                 _amount
