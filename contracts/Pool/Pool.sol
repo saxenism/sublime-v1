@@ -205,12 +205,13 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         external
         OnlyBorrower override
     {
-        if(loanStatus == LoanStatus.COLLECTION && loanStartTime < block.timestamp) {
+        LoanStatus _poolStatus = loanStatus;
+        if(_poolStatus == LoanStatus.COLLECTION && loanStartTime < block.timestamp) {
             if(totalSupply() < borrowAmountRequested.mul(minborrowAmountFraction).div(100)) {
-                loanStatus = LoanStatus.CANCELLED;
+                _poolStatus = LoanStatus.CANCELLED;
                 return;
             }
-            loanStatus = LoanStatus.ACTIVE;
+            _poolStatus = LoanStatus.ACTIVE;
         }
         require(
             (loanStatus == LoanStatus.ACTIVE) && (matchCollateralRatioEndTime!=0),
