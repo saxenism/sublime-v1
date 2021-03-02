@@ -201,12 +201,12 @@ contract Pool is ERC20PresetMinterPauserUpgradeable {
         require(loanStatus == LoanStatus.COLLECTION, "Pool::lend - The pool should be in Collection Period.");
 
         uint256 _amount = _amountLent;
-        uint256 borrowAmountNeeded = borrowAmountRequested;
-        if(_amountLent.add(totalSupply()) > borrowAmountNeeded) {
-            _amount = borrowAmountNeeded.sub(totalSupply());
+        uint256 _borrowAmountNeeded = borrowAmountRequested;
+        if(_amountLent.add(totalSupply()) > _borrowAmountNeeded) {
+            _amount = _borrowAmountNeeded.sub(totalSupply());
         }
 
-        uint256 borrowToken = borrowAsset;
+        uint256 __borrowToken = borrowAsset;
         if(borrowToken == address(0)) {
             require(_amountLent == msg.value, "Pool::lend - Ether value is not same as parameter passed");
             if(_amount != _amountLent) {
