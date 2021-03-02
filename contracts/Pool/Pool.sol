@@ -8,6 +8,7 @@ import "../interfaces/IPoolFactory.sol";
 import "../interfaces/IPriceOracle.sol";
 import "../interfaces/IYield.sol";
 import "../interfaces/IRepayment.sol";
+import "../interfaces/ISavingsAccount.sol";
 
 // TODO: set modifiers to disallow any transfers directly
 contract Pool is ERC20PresetMinterPauserUpgradeable {
@@ -67,6 +68,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable {
     event OpenBorrowPoolClosed();
     event OpenBorrowPoolDefaulted();
     event CollateralAdded(uint256 amount);
+    event MarginCallCollateralAdded(address _lender,uint256 _amount);
     event CollateralWithdrawn(address user, address amount);
     event liquiditySupplied(
         uint256 amountSupplied,
@@ -139,17 +141,55 @@ contract Pool is ERC20PresetMinterPauserUpgradeable {
     }
 
     // Deposit collateral
-    function deposit(uint256 _amount)
-        external
-        payable
+    function deposit(uint256 _amount,bool _isDirect) external payable {
+
+        require(_amount != 0, "Pool::deposit - collateral amount");
+        uint256 _sharesReceived;
+        if(_isDirect){
+            if(collateralAsset == address(0)) {
+                require(msg.value == _amount, "Pool::deposit - value to transfer doesn't match argument");
+                _sharesReceived = ISavingAccount(IPoolFactory(PoolFactory).SavingAccount()).deposit{value:msg.value}(_amount,collateralAsset,investedTo, address(this));
+            }
+            else{
+                IERC20(collateralAsset).approve(investedTo, _amount);
+                _sharesReceived = ISavingAccount(IPoolFactory(PoolFactory).SavingAccount()).deposit(_amount,collateralAsset,investedTo, address(this));
+            }
+        }
+        else{
+            _sharesReceived = ISavingAccount(IPoolFactory(PoolFactory).SavingAccount()).transferFrom(borrower, address(this), _amount, collateralAsset);
+        }
+        baseLiquidityShares = baseLiquidityShares.add(_sharesReceived);
+        emit CollateralAdded(_amount);  
+    } 
+
+
+    function addCollateralInMarginCall(address _lender,  uint256 _amount,bool _isDirect) external payable
     {
-        
-    }
+        require(loanStatus == LoanStatus.ACTIVE, "Pool::addCollateralMarginCall - Loan needs to be in Active stage to deposit"); 
+        require(lenders[_lender].marginCallEndTime >= block.timestamp, "Pool::addCollateralMarginCall - Can't Add after time is completed");
+        require(_amount !=0, "Pool::addCollateralMarginCall - collateral amount");
 
-    function _deposit(uint256 _amount) internal {
-        
-    }
+        uint256 _sharesReceived;
+        if(_isDirect){
+            if(collateralAsset == address(0)) {
+                require(msg.value == _amount, "Pool::addCollateralMarginCall - value to transfer doesn't match argument");
+                _sharesReceived = ISavingAccount(IPoolFactory(PoolFactory).SavingAccount()).deposit{value:msg.value}(_amount,collateralAsset,investedTo, address(this));
+            }
+            else{
+                IERC20(collateralAsset).approve(investedTo, _amount);
+                _sharesReceived = ISavingAccount(IPoolFactory(PoolFactory).SavingAccount()).deposit(_amount,collateralAsset,investedTo, address(this));
+            }
+        }
+        else{
+            _sharesReceived = ISavingAccount(IPoolFactory(PoolFactory).SavingAccount()).transferFrom(borrower, address(this), _amount, collateralAsset);
+        }
 
+        extraLiquidityShares = extraLiquidityShares.add(_sharesReceived);
+        lenders[_lender].extraLiquidityShares = lenders[_lender].extraLiquidityShares.add(_sharesReceived);
+        emit MarginCallCollateralAdded(_lender,_amount);
+
+    }	    
+    
 
     function withdrawBorrowedAmount()
         external

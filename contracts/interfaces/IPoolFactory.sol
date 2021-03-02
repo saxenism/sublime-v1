@@ -2,6 +2,8 @@
 pragma solidity 0.7.0;
 
 interface IPoolFactory {
+
+    function SavingAccount() external view returns(address);
     function owner() external view returns (address);
     function priceOracle() external view returns (address);
     function repaymentImpl() external view returns (address);
