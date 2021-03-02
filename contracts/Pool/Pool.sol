@@ -152,7 +152,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         uint256 _liquidityshare = IYield(_investedTo).getTokensForShares(_amount, _collateralAsset);
 
         if(_isDirect){
-            if(collateralAsset == address(0)) {
+            if(_collateralAsset == address(0)) {
                 require(msg.value == _amount, "Pool::deposit - value to transfer doesn't match argument");
                 _sharesReceived = _savingAccount.deposit{value:msg.value}(_amount,_collateralAsset,_investedTo, address(this));
             }
@@ -182,7 +182,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         uint256 _liquidityshare = IYield(_investedTo).getTokensForShares(_amount, _collateralAsset);
 
         if(_isDirect){
-            if(collateralAsset == address(0)) {
+            if(_collateralAsset == address(0)) {
                 require(msg.value == _amount, "Pool::addCollateralMarginCall - value to transfer doesn't match argument");
                 _sharesReceived = _savingAccount.deposit{value:msg.value}(_amount,_collateralAsset,_investedTo, address(this));
             }
