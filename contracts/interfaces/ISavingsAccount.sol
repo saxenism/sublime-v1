@@ -44,5 +44,12 @@ interface ISavingAccount {
         address investedTo
     ) external returns(uint256);
 
+    function transfer(
+        address recipient,
+        uint256 amount,
+        address assest,
+        address investedTo
+    ) external returns(uint256);
+
     
 }
