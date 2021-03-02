@@ -116,7 +116,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         uint256 _repaymentInterval,
         uint256 _noOfRepaymentIntervals,
         address _investedTo,
-        uint256 _collatoralAmount
+        uint256 _collateralAmount
     ) external initializer {
         
     }
@@ -132,7 +132,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         uint256 _repaymentInterval,
         uint256 _noOfRepaymentIntervals,
         address _investedTo,
-        uint256 _collatoralAmount
+        uint256 _collateralAmount
     ) internal {
         
     }
@@ -277,7 +277,6 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         external
         OnlyBorrower
     {   
-        // TODO: active, but did not refill the collatoral before the time limit  
         LoanStatus _poolStatus = loanStatus;
         require(
             _poolStatus == LoanStatus.COLLECTION || (_poolStatus == LoanStatus.ACTIVE && block.timestamp<matchCollateralRatioEndTime, "Pool::cancelOpenBorrowPool - The pool cannot be cancelled when the status is active.")
@@ -301,22 +300,18 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         emit OpenBorrowPoolTerminated();
     }
 
-    // TODO: repay function will invoke this fn
     function closeLoan()
         internal   
     {
-        // TODO: Check if all repayments and principle are paid
         require(
             loanStatus == LoanStatus.ACTIVE,
             "Pool::closeLoan - The pool can only be closed if the loan is Active."
         );
         loanStatus = LoanStatus.CLOSED;
-        // Pause token transfers
         pause();
         emit OpenBorrowPoolClosed();
     }
 
-    // TODO: When repay is missed (interest/principle) call this
     function defaultLoan()
         internal
     {
