@@ -279,7 +279,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
     {   
         LoanStatus _poolStatus = loanStatus;
         require(
-            _poolStatus == LoanStatus.COLLECTION || (_poolStatus == LoanStatus.ACTIVE && block.timestamp<matchCollateralRatioEndTime, "Pool::cancelOpenBorrowPool - The pool cannot be cancelled when the status is active.")
+            _poolStatus == LoanStatus.COLLECTION || (_poolStatus == LoanStatus.ACTIVE && block.timestamp<matchCollateralRatioEndTime), "Pool::cancelOpenBorrowPool - The pool cannot be cancelled when the status is active."
         );
         loanStatus = LoanStatus.CANCELLED;
         pause(); 
