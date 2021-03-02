@@ -254,10 +254,11 @@ contract Pool is ERC20PresetMinterPauserUpgradeable {
         external payable
     {
         uint256 _balanceOfLender = balanceOf(lenderAddress);
+        LoanStatus _poolStatus = loanStatus;
         require(_balanceOfLender != 0);
         require(
-            loanStatus == LoanStatus.CANCELLED ||
-                loanStatus == LoanStatus.TERMINATED,
+            _poolStatus == LoanStatus.CANCELLED ||
+                _poolStatus == LoanStatus.TERMINATED,
             "Lender: pool is active"
         );
 
