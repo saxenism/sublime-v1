@@ -214,7 +214,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
             _poolStatus = LoanStatus.ACTIVE;
         }
         require(
-            loanStatus == LoanStatus.ACTIVE,
+            _poolStatus == LoanStatus.ACTIVE,
             "Pool::withdrawBorrowedAmount - Loan is not in ACTIVE state"
         );
         uint256 _currentCollateralRatio = getCurrentCollateralRatio();
