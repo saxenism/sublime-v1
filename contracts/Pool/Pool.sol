@@ -395,7 +395,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         } else {
             _interest = _interest.sub(_extraInterest);
         }
-        _ratio = (_currentCollateralTokens.mul(_ratioOfPrices)).div(
+        _ratio = (_currentCollateralTokens.mul(_ratioOfPrices).div(100000000)).div(
             _totalSupply.add(_interest)
         );
     }
@@ -449,7 +449,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         } else {
             _interest = _interest.sub(_extraInterest);
         }
-        _ratio = (_currentCollateralTokens.mul(_ratioOfPrices)).div(
+        _ratio = (_currentCollateralTokens.mul(_ratioOfPrices).div(100000000)).div(
             _balanceOfLender.add(_interest)
         );
     }
