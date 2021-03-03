@@ -391,7 +391,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         return _interest;
     }
     
-    function amountLenderPerPeriod(address _lender)
+    function interestPerPeriod(address _lender)
         public
         view
         returns (uint256)
@@ -401,11 +401,11 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
 
     function calculateCurrentPeriod() public view returns (uint256) {
         uint256 _currentPeriod =
-            (block.timestamp.sub(loanStartTime)).div(repaymentInterval);
+            (block.timestamp.sub(loanStartTime, "Pool:: calculateCurrentPeriod - The loan has not started.")).div(repaymentInterval);
         return _currentPeriod;
     }
 
-    function amountPerPeriod() public view returns (uint256) {
+    function interestPerPeriod() public view returns (uint256) {
         return (interestPerSecond(totalSupply()).mul(repaymentInterval));
     }
 
