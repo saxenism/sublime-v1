@@ -61,8 +61,8 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
     mapping(address => LendingDetails) public lenders;
     uint256 public extensionVoteEndTime;
     uint256 public noOfGracePeriodsTaken;
-    uint256 nextDuePeriod;
-    uint256 gracePenaltyRate;
+    uint256 public nextDuePeriod;
+    uint256 public gracePeriodPenaltyFraction;
     event OpenBorrowPoolCreated(address poolCreator);
     event OpenBorrowPoolCancelled();
     event OpenBorrowPoolTerminated();
@@ -353,37 +353,40 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
     //todo: add more details here
     event Liquidated(address liquidator, address lender);
 
-    // TODO
     function getCurrentCollateralRatio() public returns (uint256 _ratio) {
+        address _collateralToken = collateralAsset;
         uint256 _currentCollateralTokens =
             IYield(investedTo).getTokensForShares(
                 baseLiquidityShares.add(extraLiquidityShares),
-                collateralAsset
+                _collateralToken
             );
 
         uint256 _ratioOfPrices =
             IPriceOracle(IPoolFactory(PoolFactory).priceOracle())
-                .getLatestPrice(collateralAsset, borrowAsset);
+                .getLatestPrice(_collateralToken, borrowAsset);
 
+        uint256 _repaymentLength = repaymentInterval;
+        uint256 _loanStartedAt = loanStartTime;
+        uint256 _totalSupply = totalSupply();
         (uint256 _interest, uint256 _gracePeriodsTaken) =
             (
                 IRepayment(Repayment).calculateRepayAmount(
-                    totalSupply(),
-                    repaymentInterval,
+                    _totalSupply,
+                    _repaymentLength,
                     borrowRate,
-                    loanStartTime,
+                    _loanStartedAt,
                     nextDuePeriod,
                     periodWhenExtensionIsRequested
                 )
             );
         uint256 _extraInterest =
-            interestPerSecond(totalSupply()).mul(
-                ((calculateCurrentPeriod().add(1)).mul(repaymentInterval))
-                    .add(loanStartTime)
+            interestPerSecond(_totalSupply).mul(
+                ((calculateCurrentPeriod().add(1)).mul(_repaymentLength))
+                    .add(_loanStartedAt)
                     .sub(block.timestamp)
             );
         _interest = _interest.sub(
-            gracePenaltyRate.mul(amountPerPeriod()).div(100).mul(
+            gracePeriodPenaltyFraction.mul(amountPerPeriod()).div(100).mul(
                 _gracePeriodsTaken
             )
         );
@@ -393,19 +396,19 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
             _interest = _interest.sub(_extraInterest);
         }
         _ratio = (_currentCollateralTokens.mul(_ratioOfPrices)).div(
-            totalSupply().add(_interest)
+            _totalSupply.add(_interest)
         );
     }
 
-    // TODO
     function getCurrentCollateralRatio(address _lender)
         public
         returns (uint256 _ratio)
     {
         uint256 _balanceOfLender = balanceOf(_lender);
+        uint256 _totalSupply = totalSupply();
         uint256 _currentCollateralTokens =
             IYield(investedTo).getTokensForShares(
-                (baseLiquidityShares.mul(_balanceOfLender).div(totalSupply()))
+                (baseLiquidityShares.mul(_balanceOfLender).div(_totalSupply))
                     .add(lenders[_lender].extraLiquidityShares),
                 collateralAsset
             );
@@ -415,7 +418,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         (uint256 _interest, uint256 _gracePeriodsTaken) =
             (
                 IRepayment(Repayment).calculateRepayAmount(
-                    totalSupply(),
+                    _totalSupply,
                     repaymentInterval,
                     borrowRate,
                     loanStartTime,
@@ -423,7 +426,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
                     periodWhenExtensionIsRequested
                 )
             );
-        _interest = _interest.mul(_balanceOfLender).div(totalSupply());
+        _interest = _interest.mul(_balanceOfLender).div(_totalSupply);
         // uint256 _currentPeriod = calculateCurrentPeriod();
         uint256 _extraInterest =
             interestPerSecond(
@@ -437,7 +440,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
                     .sub(block.timestamp)
             );
         _interest = _interest.sub(
-            gracePenaltyRate.mul(amountLenderPerPeriod(_lender)).div(100).mul(
+            gracePeriodPenaltyFraction.mul(amountLenderPerPeriod(_lender)).div(100).mul(
                 _gracePeriodsTaken
             )
         );
