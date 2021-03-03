@@ -310,7 +310,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
 
     function closeLoan()
         external   
-        onlyOwner
+        onlyBorrower
     {
         require(
             loanStatus == LoanStatus.ACTIVE,
