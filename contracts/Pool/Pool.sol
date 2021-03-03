@@ -391,12 +391,12 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         return _interest;
     }
     
-    function amountLenderPerPeriod(address lender)
+    function amountLenderPerPeriod(address _lender)
         public
         view
         returns (uint256)
     {
-        return (interestPerSecond(balanceOf(lender)).mul(repaymentInterval));
+        return (interestPerSecond(balanceOf(_lender)).mul(repaymentInterval));
     }
 
     function calculateCurrentPeriod() public view returns (uint256) {
