@@ -16,6 +16,13 @@ interface ISavingAccount {
         uint256 amount
     ) external;
 
+    function deposit(
+        uint256 amount,
+        address asset,
+        address strategy,
+        address user
+    ) external payable;
+
     function withdraw(
         uint256 amount,
         address asset,
