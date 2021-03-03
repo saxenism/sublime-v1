@@ -74,7 +74,7 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
         lendingPoolAddressesProvider = _lendingPoolAddressesProvider;
     }
 
-    function updateSavingAccount(address payable _savingsAccount)
+    function updateSavingsAccount(address payable _savingsAccount)
         external
         onlyOwner
     {

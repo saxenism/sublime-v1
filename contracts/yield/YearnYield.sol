@@ -43,7 +43,7 @@ contract YearnYield is IYield, Initializable, OwnableUpgradeable {
         savingsAccount = _savingsAccount;
     }
 
-    function updateSavingAccount(address payable _savingsAccount)
+    function updateSavingsAccount(address payable _savingsAccount)
         external
         onlyOwner
     {

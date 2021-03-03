@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.0;
 
-interface ISavingAccount {
+interface ISavingsAccount {
     function deposit(
         uint256 amount,
         address asset,
         address strategy,
         address user
-    ) external payable returns(uint256);
+    ) external payable returns (uint256);
 
     function switchStrategy(
         uint256 currentStrategy,
@@ -49,14 +49,12 @@ interface ISavingAccount {
         uint256 amount,
         address assest,
         address investedTo
-    ) external returns(uint256);
+    ) external returns (uint256);
 
     function transfer(
         address recipient,
         uint256 amount,
         address assest,
         address investedTo
-    ) external returns(uint256);
-
-    
+    ) external returns (uint256);
 }
