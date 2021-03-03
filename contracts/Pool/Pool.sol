@@ -281,13 +281,12 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         require(
             _poolStatus == LoanStatus.COLLECTION || (_poolStatus == LoanStatus.ACTIVE && block.timestamp<matchCollateralRatioEndTime), "Pool::cancelOpenBorrowPool - The pool cannot be cancelled when the status is active."
         );
+        require(matchCollateralRatioEndTime == 0, "Pool::cancelOpenBorrowPool - The borrowedAmount has already been withdrawn.");
         loanStatus = LoanStatus.CANCELLED;
-        pause(); 
+        _pause(); 
         emit OpenBorrowPoolCancelled();
     }
 
-
-    
     function terminateOpenBorrowPool()
         external
         onlyOwner
@@ -297,33 +296,30 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
             _poolStatus == LoanStatus.ACTIVE || _poolStatus == LoanStatus.COLLECTION,
             "Pool::terminateOpenBorrowPool - The pool can only be terminated if it is Active or Collection Period."
         );
-        loanStatus = LoanStatus.TERMINATED;
-        pause(); 
+        if (matchCollateralRatioEndTime == 0){
+            emit LoanDefaulted();
+        }
+        else{
+            uint256 _collateralShares = baseLiquidityShares.add(extraLiquidityShares);
+            ISavingAccount(IPoolFactory(PoolFactory).SavingAccount()).transfer(IPoolFactory(PoolFactory).owner(), _collateralShares, collateralAsset, investedTo);
+        }
+        _pause();
+        loanStatus = LoanStatus.TERMINATED; 
         emit OpenBorrowPoolTerminated();
     }
 
     function closeLoan()
-        internal   
+        external   
+        onlyOwner
     {
         require(
             loanStatus == LoanStatus.ACTIVE,
             "Pool::closeLoan - The pool can only be closed if the loan is Active."
         );
+        // TODO: check if the loan has beencompletely repayed.
         loanStatus = LoanStatus.CLOSED;
-        pause();
+        _pause();
         emit OpenBorrowPoolClosed();
-    }
-
-    function defaultLoan()
-        internal
-    {
-        require(
-            loanStatus == LoanStatus.ACTIVE,
-            "Pool::defaultLoan - The pool can only be defaulted when it is Active."
-        );
-        loanStatus = LoanStatus.DEFAULTED;
-        pause();
-        emit OpenBorrowPoolDefaulted();
     }
 
     function calculateLendingRate(uint256 s) public pure returns (uint256) {
