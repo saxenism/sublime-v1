@@ -406,7 +406,6 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
  
         if (borrowAsset == address(0)){
             if(msg.value<_correspondingBorrowTokens){
-                msg.sender.send(msg.value);
                 revert("Pool::liquidatePool - Not enough tokens");
             }
         }
@@ -417,12 +416,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
                 _correspondingBorrowTokens
             );
         }
-        
-        IERC20(borrowAsset).transferFrom(
-            msg.sender,
-            address(this),
-            _correspondingBorrowTokens
-        );
+    
 
         if(_transferToSavingsAccount == true){
             uint256 _sharesReceived = _savingAccount.transfer(msg.sender,_collateralLiquidityShare,_collateralAsset,investedTo);
@@ -431,17 +425,17 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         else{
 
             if(_recieveLiquidityShare == true){
-                uint256 _tokenReceived = _savingAccount.withdraw(_collateralTokens,_collateralAsset,_investedTo,true);
-                IERC20(_liquidityShareAddress).transfer(msg.sender, _tokenReceived);
+                uint256 _liquidityShareReceived = _savingAccount.withdraw(_collateralTokens,_collateralAsset,_investedTo,true);
+                IERC20(_liquidityShareAddress).transfer(msg.sender, _liquidityShareReceived);
                 emit lenderLiquidated(msg.sender, lender,_tokenReceived);
             }
             else{
                 uint256 _tokenReceived = _savingAccount.withdraw(_collateralTokens,_collateralAsset,_investedTo,false);
                 if(_collateralAsset == address(0)){
-                    msg.sender.send(_collateralTokens);
+                    msg.sender.send(_tokenReceived);
                 }
                 else{
-                    IERC20(_collateralAsset).transfer(msg.sender, _collateralTokens);
+                    IERC20(_collateralAsset).transfer(msg.sender, _tokenReceived);
                 }
                 emit lenderLiquidated(msg.sender, lender,_tokenReceived);
             }
@@ -457,6 +451,8 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
                 collateralAsset
             )).mul(liquidatorRewardFraction).div(100);
     }
+
+    
     function liquidatePool(bool _transferToSavingsAccount, bool _recieveLiquidityShare) external payable {
         LoanStatus _poolStatus = loanStatus;
         require(
@@ -474,7 +470,6 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
 
         if (borrowAsset == address(0)){
             if(msg.value<_correspondingBorrowTokens){
-                msg.sender.send(msg.value);
                 revert("Pool::liquidatePool - Not enough tokens");
             }
         }
