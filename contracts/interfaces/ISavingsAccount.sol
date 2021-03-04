@@ -16,45 +16,31 @@ interface ISavingsAccount {
         uint256 amount
     ) external;
 
-    function deposit(
-        uint256 amount,
-        address asset,
-        address strategy,
-        address user
-    ) external payable;
-
     function withdraw(
         uint256 amount,
         address asset,
-        uint256 strategy
-    ) external;
-
-    function addCollateralToPool(
-        address _invest,
-        address _pool,
-        uint256 _amount,
-        address _asset
-    ) external;
-
-    function lendToPool(
-        address _invest,
-        address _pool,
-        uint256 _amount,
-        address _asset
+        uint256 strategy,
+        bool withdrawShares,
+        address investedTo
     ) external;
 
     function transferFrom(
-        address sender,
-        address recipient,
+        address token,
+        address from,
+        address to,
         uint256 amount,
-        address assest,
         address investedTo
-    ) external returns (uint256);
+    ) external returns (bool);
 
     function transfer(
-        address recipient,
-        uint256 amount,
-        address assest,
-        address investedTo
-    ) external returns (uint256);
+        address token,
+        address to,
+        uint256 amount
+    ) external returns (bool);
+
+    function approve(
+        address token,
+        address to,
+        uint256 amount
+    ) external;
 }
