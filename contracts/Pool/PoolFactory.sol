@@ -39,8 +39,8 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     Limits poolSizeLimit;
     Limits collateralRatioLimit;
     Limits borrowRateLimit;
-    Limits loanDurationLimit;
     Limits repaymentIntervalLimit;
+    Limits noOfRepaymentIntervalsLimit;
 
     event InitializeFunctionUpdated(bytes4 updatedFunctionId);
     event PoolLogicUpdated(address updatedPoolLogic);
@@ -54,6 +54,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     event CollateralVolatilityThresholdUpdated(uint256 updatedCollateralVolatilityThreshold);
     event GracePeriodPenaltyFractionUpdated(uint256 updatedGracePeriodPenaltyFraction);
     event LiquidatorRewardFractionUpdated(uint256 updatedLiquidatorRewardFraction);
+    event LimitsUpdated(string limitType, uint256 max, uint256 min);
 
     modifier onlyPool() {
         require(registry[msg.sender], "PoolFactory::onlyPool - Only pool can destroy itself");
@@ -98,25 +99,29 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
 
     function createPool(
         uint256 _poolSize,
+        uint256 _minBorrowAmountFraction,
         address _borrowTokenType,
         address _collateralTokenType,
         uint256 _collateralRatio,
         uint256 _borrowRate,
-        uint256 _loanDuration,
         uint256 _repaymentInterval,
-        address _investedTo
-    ) external onlyBorrower {
+        uint256 _noOfRepaymentIntervals,
+        address _investedTo,
+        uint256 _collateralAmount,
+        bool _transferFromSavingsAccount
+    ) payable external onlyBorrower {
+        require(_minBorrowAmountFraction <= 10**18, "PoolFactory::createPool - invalid min borrow fraction");
         require(isBorrowToken[_borrowTokenType], "PoolFactory::createPool - Invalid borrow token type");
         require(isCollateralToken[_collateralTokenType], "PoolFactory::createPool - Invalid collateral token type");
         require(IStrategyRegistry(strategyRegistry).registry(_investedTo), "PoolFactory::createPool - Invalid strategy");
         require(isWithinLimits(_poolSize, poolSizeLimit.min, poolSizeLimit.max), "PoolFactory::createPool - PoolSize not within limits");
         require(isWithinLimits(_collateralRatio, collateralRatioLimit.min, collateralRatioLimit.max), "PoolFactory::createPool - Collateral Ratio not within limits");
         require(isWithinLimits(_borrowRate, borrowRateLimit.min, borrowRateLimit.max), "PoolFactory::createPool - Borrow rate not within limits");
-        require(isWithinLimits(_loanDuration, loanDurationLimit.min, loanDurationLimit.max), "PoolFactory::createPool - Loan duration not within limits");
+        require(isWithinLimits(_noOfRepaymentIntervals, noOfRepaymentIntervalsLimit.min, noOfRepaymentIntervalsLimit.max), "PoolFactory::createPool - Loan duration not within limits");
         require(isWithinLimits(_repaymentInterval, repaymentIntervalLimit.min, repaymentIntervalLimit.max), "PoolFactory::createPool - Repayment interval not within limits");
-        bytes memory data = abi.encodeWithSelector(initializeFunctionId, _poolSize, msg.sender, _borrowTokenType, _collateralTokenType, _collateralRatio, _borrowRate, _loanDuration, _repaymentInterval);
+        bytes memory data = abi.encodeWithSelector(initializeFunctionId, _poolSize, _minBorrowAmountFraction, msg.sender, _borrowTokenType, _collateralTokenType, _collateralRatio, _borrowRate, _repaymentInterval, _noOfRepaymentIntervals, _investedTo, _collateralAmount, _transferFromSavingsAccount);
         // TODO: Setting 0x00 as admin, so that it is not upgradable. Remove the upgradable functionality to optimize
-        address pool = address(new SublimeProxy(poolImpl, address(0), data));
+        address pool = address((new SublimeProxy){value: msg.value}(poolImpl, address(0), data));
         registry[pool] = true;
     }
 
@@ -194,5 +199,30 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     function updateLiquidatorRewardFraction(uint256 _liquidatorRewardFraction) external onlyOwner {
         liquidatorRewardFraction = _liquidatorRewardFraction;
         emit LiquidatorRewardFractionUpdated(_liquidatorRewardFraction);
+    }
+
+    function updatePoolSizeLimit(uint256 _min, uint256 _max) external onlyOwner {
+        poolSizeLimit = Limits(_min, _max);
+        emit LimitsUpdated("PoolSize", _min, _max);
+    }
+
+    function updateCollateralRatioLimit(uint256 _min, uint256 _max) external onlyOwner {
+        collateralRatioLimit = Limits(_min, _max);
+        emit LimitsUpdated("CollateralRatio", _min, _max);
+    }
+
+    function updateBorrowRateLimit(uint256 _min, uint256 _max) external onlyOwner {
+        borrowRateLimit = Limits(_min, _max);
+        emit LimitsUpdated("BorrowRate", _min, _max);
+    }
+
+    function updateRepaymentIntervalLimit(uint256 _min, uint256 _max) external onlyOwner {
+        repaymentIntervalLimit = Limits(_min, _max);
+        emit LimitsUpdated("RepaymentInterval", _min, _max);
+    }
+
+    function updateNoOfRepaymentIntervalsLimit(uint256 _min, uint256 _max) external onlyOwner {
+        noOfRepaymentIntervalsLimit = Limits(_min, _max);
+        emit LimitsUpdated("NoOfRepaymentIntervals", _min, _max);
     }
 }

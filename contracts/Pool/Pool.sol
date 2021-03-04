@@ -116,9 +116,31 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         uint256 _repaymentInterval,
         uint256 _noOfRepaymentIntervals,
         address _investedTo,
-        uint256 _collatoralAmount
+        uint256 _collatoralAmount,
+        bool _transferFromSavingsAccount
     ) external initializer {
-        
+        super.initialize("Open Pool Tokens", "OPT");
+        initializePoolParams(
+            _borrowAmountRequested,
+            _minborrowAmountFraction, // represented as %
+            _borrower,
+            _borrowAsset,
+            _collateralAsset,
+            _collateralRatio,
+            _borrowRate,
+            _repaymentInterval,
+            _noOfRepaymentIntervals,
+            _investedTo,
+            _collatoralAmount
+        );
+        PoolFactory = msg.sender;
+
+        depositCollateral(_collatoralAmount, _transferFromSavingsAccount);
+        uint256 collectionPeriod = IPoolFactory(msg.sender).collectionPeriod();
+        loanStartTime = block.timestamp.add(collectionPeriod);
+        matchCollateralRatioEndTime = block.timestamp.add(collectionPeriod).add(IPoolFactory(msg.sender).matchCollateralRatioInterval());
+
+        emit OpenBorrowPoolCreated(msg.sender);
     }
 
     function initializePoolParams(
@@ -134,15 +156,20 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         address _investedTo,
         uint256 _collatoralAmount
     ) internal {
-        
-    }
-
-    function setGlobalParams(address _poolFactory) internal {
-        
+        borrowAmountRequested = _borrowAmountRequested;
+        minborrowAmountFraction = _minborrowAmountFraction;
+        borrower = _borrower;
+        borrowAsset = _borrowAsset;
+        collateralAsset = _collateralAsset;
+        collateralRatio = _collateralRatio;
+        borrowRate =  _borrowRate;
+        repaymentInterval = _repaymentInterval;
+        noOfRepaymentIntervals = _noOfRepaymentIntervals;
+        investedTo = _investedTo;
     }
 
     // Deposit collateral
-    function depositCollateral(uint256 _amount,bool _transferFromSavingsAccount) external payable override {
+    function depositCollateral(uint256 _amount,bool _transferFromSavingsAccount) public payable override {
 
         require(_amount != 0, "Pool::deposit - collateral amount");
         uint256 _sharesReceived;
