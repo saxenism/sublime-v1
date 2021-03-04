@@ -4,14 +4,17 @@ pragma solidity 0.7.0;
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-contract StrategyRegistry is Initializable, OwnableUpgradeable {
+import "../interfaces/IStrategyRegistry.sol";
+
+contract StrategyRegistry is
+    Initializable,
+    OwnableUpgradeable,
+    IStrategyRegistry
+{
     using SafeMath for uint256;
 
     address[] strategies;
     uint256 maxStrategies;
-
-    event StrategyAdded(address strategy);
-    event StrategyRemoved(address strategy);
 
     function initialize(address _owner, uint256 _maxStrategies)
         public
@@ -27,11 +30,21 @@ contract StrategyRegistry is Initializable, OwnableUpgradeable {
         maxStrategies = _maxStrategies;
     }
 
+    function registry(address strategy) external view override returns (bool) {
+        uint256 length = strategies.length;
+        for (uint256 index = 0; index < length; index++) {
+            if (strategies[index] == strategy) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * @dev Add strategies to invest in. Please ensure that number of strategies are less than maxStrategies.
      * @param _strategy address of the owner of the savings account contract
      **/
-    function addStrategy(address _strategy) external onlyOwner {
+    function addStrategy(address _strategy) external override onlyOwner {
         require(
             strategies.length.add(1) <= maxStrategies,
             "StrategyRegistry::addStrategy - Can't add more strategies"
@@ -45,7 +58,11 @@ contract StrategyRegistry is Initializable, OwnableUpgradeable {
      * @dev Remove strategy to invest in.
      * @param _strategyIndex Index of the strategy to remove
      **/
-    function removeStrategy(uint256 _strategyIndex) external onlyOwner {
+    function removeStrategy(uint256 _strategyIndex)
+        external
+        override
+        onlyOwner
+    {
         address strategy = strategies[_strategyIndex];
         strategies[_strategyIndex] = strategies[
             strategies.length.sub(
@@ -68,7 +85,7 @@ contract StrategyRegistry is Initializable, OwnableUpgradeable {
         uint256 _strategyIndex,
         address _oldStrategy,
         address _newStrategy
-    ) external onlyOwner {
+    ) external override onlyOwner {
         require(
             strategies[_strategyIndex] == _oldStrategy,
             "StrategyRegistry::updateStrategy - index to update and strategy address don't match"
