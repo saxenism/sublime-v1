@@ -22,7 +22,7 @@ contract YearnYield is IYield, Initializable, OwnableUpgradeable {
     /**
      * @dev stores the address of contract to invest in
      */
-    mapping(address => address) investTo;
+    mapping(address => address) public override liquidityToken;
 
     modifier onlySavingsAccount {
         require(
@@ -57,10 +57,10 @@ contract YearnYield is IYield, Initializable, OwnableUpgradeable {
     {
         require(to != address(0), "Invest: zero address");
         require(
-            investTo[asset] == address(0),
+            liquidityToken[asset] == address(0),
             "Invest: Cannot update existing address"
         );
-        investTo[asset] = to;
+        liquidityToken[asset] = to;
     }
 
     function emergencyWithdraw(address _asset, address payable _wallet)
@@ -68,7 +68,7 @@ contract YearnYield is IYield, Initializable, OwnableUpgradeable {
         onlyOwner
         returns (uint256 received)
     {
-        address investedTo = investTo[_asset];
+        address investedTo = liquidityToken[_asset];
         uint256 amount = IERC20(investedTo).balanceOf(address(this));
 
         if (_asset == address(0)) {
@@ -86,6 +86,7 @@ contract YearnYield is IYield, Initializable, OwnableUpgradeable {
      * @param user the address of user
      * @param asset the address of token to invest
      * @param amount the amount of asset
+     * @return investedTo address of liquidity token
      * @return sharesReceived amount of shares received
      **/
     function lockTokens(
@@ -97,11 +98,11 @@ contract YearnYield is IYield, Initializable, OwnableUpgradeable {
         payable
         override
         onlySavingsAccount
-        returns (uint256 sharesReceived)
+        returns (address investedTo, uint256 sharesReceived)
     {
         require(amount != 0, "Invest: amount");
 
-        address investedTo = investTo[asset];
+        investedTo = liquidityToken[asset];
         if (asset == address(0)) {
             require(msg.value == amount, "Invest: ETH amount");
             sharesReceived = _depositETH(investedTo, amount);
@@ -126,7 +127,7 @@ contract YearnYield is IYield, Initializable, OwnableUpgradeable {
         returns (uint256 received)
     {
         require(amount != 0, "Invest: amount");
-        address investedTo = investTo[asset];
+        address investedTo = liquidityToken[asset];
 
         if (asset == address(0)) {
             received = _withdrawETH(investedTo, amount);
@@ -151,7 +152,7 @@ contract YearnYield is IYield, Initializable, OwnableUpgradeable {
         returns (uint256 amount)
     {
         if (shares == 0) return 0;
-        amount = IyVault(investTo[asset])
+        amount = IyVault(liquidityToken[asset])
             .getPricePerFullShare()
             .mul(shares)
             .div(1e18);

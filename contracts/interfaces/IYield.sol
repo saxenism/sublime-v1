@@ -22,17 +22,28 @@ interface IYield {
     event UnlockedTokens(address investedTo, uint256 collateralReceived);
 
     /**
+     * @dev Used to get liquidity token address from asset address
+     * @param asset the address of underlying token
+     * @return tokenAddress address of liquidity token
+     **/
+    function liquidityToken(address asset)
+        external
+        view
+        returns (address tokenAddress);
+
+    /**
      * @dev Used to lock tokens in available protocol
      * @param user the address of user locking tokens
      * @param asset the address of token to invest
      * @param amount the amount of asset
+     * @return token address of liquidity token
      * @return sharesReceived amount of shares received
      **/
     function lockTokens(
         address user,
         address asset,
         uint256 amount
-    ) external payable returns (uint256 sharesReceived);
+    ) external payable returns (address token, uint256 sharesReceived);
 
     /**
      * @dev Used to unlock tokens from available protocol

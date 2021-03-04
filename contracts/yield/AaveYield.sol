@@ -74,6 +74,21 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
         lendingPoolAddressesProvider = _lendingPoolAddressesProvider;
     }
 
+    /**
+     * @dev Used to get liquidity token address from asset address
+     * @param asset the address of underlying token
+     * @return aToken address of liquidity token
+     **/
+    function liquidityToken(address asset)
+        public
+        view
+        override
+        returns (address aToken)
+    {
+        (aToken, , ) = IProtocolDataProvider(protocolDataProvider)
+            .getReserveTokensAddresses(asset);
+    }
+
     function updateSavingsAccount(address payable _savingsAccount)
         external
         onlyOwner
@@ -113,11 +128,8 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
         onlyOwner
         returns (uint256 received)
     {
-        (address aToken, , ) =
-            IProtocolDataProvider(protocolDataProvider)
-                .getReserveTokensAddresses(_asset);
-
-        uint256 amount = IERC20(aToken).balanceOf(address(this));
+        uint256 amount =
+            IERC20(liquidityToken(_asset)).balanceOf(address(this));
 
         if (_asset == address(0)) {
             received = _withdrawETH(amount);
@@ -133,6 +145,7 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
      * @notice Asset Tokens to be locked must be approved to this contract by user
      * @param asset the address of token to invest
      * @param amount the amount of asset
+     * @return investedTo address of liquidity token
      * @return sharesReceived amount of shares received
      **/
     function lockTokens(
@@ -144,11 +157,10 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
         payable
         override
         onlySavingsAccount
-        returns (uint256 sharesReceived)
+        returns (address investedTo, uint256 sharesReceived)
     {
         require(amount != 0, "Invest: amount");
 
-        address investedTo;
         if (asset == address(0)) {
             require(msg.value == amount, "Invest: ETH amount");
             (investedTo, sharesReceived) = _depositETH(amount);
@@ -198,9 +210,7 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
         returns (uint256 amount)
     {
         if (shares == 0) return 0;
-        (address aToken, , ) =
-            IProtocolDataProvider(protocolDataProvider)
-                .getReserveTokensAddresses(asset);
+        address aToken = liquidityToken(asset);
 
         (, , , , , , , uint256 liquidityIndex, , ) =
             IProtocolDataProvider(protocolDataProvider).getReserveData(asset);
@@ -235,8 +245,7 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
         internal
         returns (address aToken, uint256 sharesReceived)
     {
-        (aToken, , ) = IProtocolDataProvider(protocolDataProvider)
-            .getReserveTokensAddresses(asset);
+        aToken = liquidityToken(asset);
 
         uint256 aTokensBefore = IERC20(aToken).balanceOf(address(this));
 
@@ -278,9 +287,7 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
         internal
         returns (uint256 tokensReceived)
     {
-        (address aToken, , ) =
-            IProtocolDataProvider(protocolDataProvider)
-                .getReserveTokensAddresses(asset);
+        address aToken = liquidityToken(asset);
 
         address lendingPool =
             ILendingPoolAddressesProvider(lendingPoolAddressesProvider)
