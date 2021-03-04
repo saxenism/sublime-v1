@@ -427,7 +427,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
             if(_recieveLiquidityShare == true){
                 uint256 _liquidityShareReceived = _savingAccount.withdraw(_collateralTokens,_collateralAsset,_investedTo,true);
                 IERC20(_liquidityShareAddress).transfer(msg.sender, _liquidityShareReceived);
-                emit lenderLiquidated(msg.sender, lender,_tokenReceived);
+                emit lenderLiquidated(msg.sender, lender,_liquidityShareReceived);
             }
             else{
                 uint256 _tokenReceived = _savingAccount.withdraw(_collateralTokens,_collateralAsset,_investedTo,false);
@@ -452,7 +452,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
             )).mul(liquidatorRewardFraction).div(100);
     }
 
-    
+
     function liquidatePool(bool _transferToSavingsAccount, bool _recieveLiquidityShare) external payable {
         LoanStatus _poolStatus = loanStatus;
         require(
