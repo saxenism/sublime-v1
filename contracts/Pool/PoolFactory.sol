@@ -2,11 +2,12 @@
 pragma solidity 0.7.0;
 
 import "../Proxy.sol";
+import "../interfaces/IPoolFactory.sol";
 import "../interfaces/IBorrower.sol";
 import "../interfaces/IStrategyRegistry.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-contract PoolFactory is Initializable, OwnableUpgradeable {
+contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
 
     struct Limits {
         // TODO: Optimize to uint128 or even less
@@ -18,14 +19,15 @@ contract PoolFactory is Initializable, OwnableUpgradeable {
     address public poolImpl;
     address public borrowerRegistry;
     address public strategyRegistry;
-    address public repaymentImpl;
-    address public priceOracle;
+    address public override savingsAccount;
+    address public override repaymentImpl;
+    address public override priceOracle;
 
-    uint256 public collectionPeriod;
-    uint256 public matchCollateralRatioInterval;
-    uint256 public marginCallDuration;
-    uint256 public collateralVolatilityThreshold;
-    uint256 public gracePeriodPenaltyFraction;
+    uint256 public override collectionPeriod;
+    uint256 public override matchCollateralRatioInterval;
+    uint256 public override marginCallDuration;
+    uint256 public override collateralVolatilityThreshold;
+    uint256 public override gracePeriodPenaltyFraction;
 
     mapping(address => bool) isBorrowToken;
     mapping(address => bool) isCollateralToken;
@@ -61,6 +63,10 @@ contract PoolFactory is Initializable, OwnableUpgradeable {
         _;
     }
 
+    function owner() override(IPoolFactory, OwnableUpgradeable) public view returns(address) {
+        return OwnableUpgradeable.owner();
+    }
+
     function initialize(
         address _poolImpl, 
         address _borrowerRegistry, 
@@ -71,7 +77,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable {
         uint256 _marginCallDuration,
         uint256 _collateralVolatilityThreshold,
         uint256 _gracePeriodPenaltyFraction,
-        bytes4 _initializeFunctionId;
+        bytes4 _initializeFunctionId
     ) external initializer {
         OwnableUpgradeable.__Ownable_init();
         OwnableUpgradeable.transferOwnership(_admin);
@@ -110,13 +116,13 @@ contract PoolFactory is Initializable, OwnableUpgradeable {
         registry[pool] = true;
     }
 
-    function isWithinLimits(uint256 _value, uint256 _min, uint256 _max) internal returns(bool) {
+    function isWithinLimits(uint256 _value, uint256 _min, uint256 _max) internal pure returns(bool) {
         if(_min != 0 && _max != 0) {
             return (_value >= _min && _value <= _max);
         } else if(_min != 0) {
             return (_value >= _min);
         } else if(_max != 0) {
-            return (value <= _max);
+            return (_value <= _max);
         } else {
             return true;
         }
@@ -180,3 +186,4 @@ contract PoolFactory is Initializable, OwnableUpgradeable {
         gracePeriodPenaltyFraction = _gracePeriodPenaltyFraction;
         emit GracePeriodPenaltyFractionUpdated(_gracePeriodPenaltyFraction);
     }
+}

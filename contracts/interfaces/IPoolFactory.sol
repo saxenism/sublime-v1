@@ -3,12 +3,13 @@ pragma solidity 0.7.0;
 
 interface IPoolFactory {
 
-    function SavingAccount() external view returns(address);
-    function owner() external view returns (address);
+    function savingsAccount() external view returns(address);
+    function owner() external view returns(address);
     function priceOracle() external view returns (address);
     function repaymentImpl() external view returns (address);
     function collectionPeriod() external view returns (uint256);
     function matchCollateralRatioInterval() external view returns (uint256);
     function marginCallDuration() external view returns (uint256);
     function collateralVolatilityThreshold() external view returns (uint256);
+    function gracePeriodPenaltyFraction() external view returns (uint256);
 }
