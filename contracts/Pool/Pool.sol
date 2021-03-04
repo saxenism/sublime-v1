@@ -337,7 +337,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
      * @dev It will revert in case collateral ratio is not below expected value
      * or the lender has already called it.
      */
-    function requestMarginCall() external isLender(msg.sender) {
+    function requestMarginCall() external isPoolActive isLender(msg.sender) {
         require(
             lenders[msg.sender].marginCallEndTime < block.timestamp,
             "Pool::requestMarginCall margin call already requested"
