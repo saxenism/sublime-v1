@@ -233,7 +233,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         override
         returns (uint256 tokenReceived)
     {
-        tokenReceived = userLockedBalance[msg.sender][asset][address(0)];
+        tokenReceived = userLockedBalance[msg.sender][_asset][address(0)];
 
         // Withdraw tokens
         address[] memory _strategyList =
@@ -246,7 +246,9 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
                 tokenReceived = tokenReceived.add(
                     _withdraw(
                         msg.sender,
-                        _toWithdraw,
+                        userLockedBalance[msg.sender][_asset][
+                            _strategyList[index]
+                        ],
                         _asset,
                         _strategyList[index]
                     )
@@ -255,7 +257,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         }
 
         // approve transfer
-        IERC20(_asset).safeApprove(_to, _amount);
+        IERC20(_asset).safeApprove(_to, tokenReceived);
     }
 
     function approve(
