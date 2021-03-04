@@ -7,6 +7,8 @@ interface IStrategyRegistry {
 
     function registry(address _strategy) external view returns (bool);
 
+    function getStrategies() external view returns (address[] memory);
+
     /**
      * @dev Add strategies to invest in. Please ensure that number of strategies are less than maxStrategies.
      * @param _strategy address of the owner of the savings account contract

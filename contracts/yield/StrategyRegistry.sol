@@ -13,8 +13,8 @@ contract StrategyRegistry is
 {
     using SafeMath for uint256;
 
-    address[] strategies;
-    uint256 maxStrategies;
+    address[] public strategies;
+    uint256 public maxStrategies;
 
     function initialize(address _owner, uint256 _maxStrategies)
         public
@@ -30,6 +30,14 @@ contract StrategyRegistry is
         maxStrategies = _maxStrategies;
     }
 
+    function updateMaxStrategies(uint256 _maxStrategies) external onlyOwner {
+        require(
+            _maxStrategies != 0,
+            "StrategyRegistry::updateMaxStrategies should be more than zero"
+        );
+        maxStrategies = _maxStrategies;
+    }
+
     function registry(address strategy) external view override returns (bool) {
         uint256 length = strategies.length;
         for (uint256 index = 0; index < length; index++) {
@@ -38,6 +46,10 @@ contract StrategyRegistry is
             }
         }
         return false;
+    }
+
+    function getStrategies() external view override returns (address[] memory) {
+        return strategies;
     }
 
     /**
