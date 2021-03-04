@@ -399,10 +399,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         uint256 _collateralTokens = IYield(_investedTo).getTokensForShares(_collateralLiquidityShare, _collateralAsset);
         
         uint256 _correspondingBorrowTokens=
-            _collateralTokens.mul(IPriceOracle(IPoolFactory(PoolFactory).priceOracle()).getLatestPrice(
-                borrowAsset,
-                _collateralAsset
-            ));
+            correspondingBorrowTokens(_collateralLiquidityShare);
 
 
         address _liquidityShareAddress = IYield(_investedTo).liquidityToken(_collateralAsset);
@@ -452,8 +449,8 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         }
 
     }
-    function correspondingBorrowTokens(uint256 liquidityShares) public returns(uint256){
-        uint256 _collateralTokens = IYield(investedTo).getTokensForShares(liquidityShares, collateralAsset);
+    function correspondingBorrowTokens(uint256 _liquidityShares) public returns(uint256){
+        uint256 _collateralTokens = IYield(investedTo).getTokensForShares(_liquidityShares, collateralAsset);
         uint256 _correspondingBorrowTokens = 
             _collateralTokens.mul(IPriceOracle(IPoolFactory(PoolFactory).priceOracle()).getLatestPrice(
                 borrowAsset,
