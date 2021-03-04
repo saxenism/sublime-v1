@@ -51,6 +51,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
     uint256 public repaymentInterval;
     address public collateralAsset;
     
+    uint256 public liquidatorRewardFraction;
     uint256 PeriodWhenExtensionIsRequested;
     uint256 public baseLiquidityShares;
     uint256 public extraLiquidityShares;
@@ -451,13 +452,13 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         }
 
     }
-    function correspondingBorrowTokens(uint256 liquidityShares) public view returns(uint256){
+    function correspondingBorrowTokens(uint256 liquidityShares) public returns(uint256){
         uint256 _collateralTokens = IYield(investedTo).getTokensForShares(liquidityShares, collateralAsset);
         uint256 _correspondingBorrowTokens = 
             _collateralTokens.mul(IPriceOracle(IPoolFactory(PoolFactory).priceOracle()).getLatestPrice(
                 borrowAsset,
                 collateralAsset
-            ));
+            )).mul(liquidatorRewardFraction).div(100);
     }
     function liquidatePool(bool _transferToSavingsAccount, bool _recieveLiquidityShare) external payable {
         LoanStatus _poolStatus = loanStatus;
