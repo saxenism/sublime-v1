@@ -462,37 +462,36 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
 
         ISavingAccount _savingAccount = ISavingAccount(IPoolFactory(PoolFactory).SavingAccount());
      
-        uint256 _amountToBeRepaid;
         address _collateralAsset = collateralAsset;
- 
+        address _borrowAsset = borrowAsset;
         uint256 _collateralLiquidityShare = baseLiquidityShares.add(extraLiquidityShares);  
         uint256 _correspondingBorrowTokens = correspondingBorrowTokens(_collateralLiquidityShare);
 
-        if (borrowAsset == address(0)){
+        if (_borrowAsset == address(0)){
             if(msg.value<_correspondingBorrowTokens){
                 revert("Pool::liquidatePool - Not enough tokens");
             }
         }
         else{
-            IERC20(borrowAsset).transferFrom(
+            IERC20(_borrowAsset).transferFrom(
                 msg.sender,
                 address(this),
                 _correspondingBorrowTokens
             );
         }
-        uint256 _tokenReceived;
+        address _investedTo = investedTo;
         if(_transferToSavingsAccount == true){
-            uint256 _sharesReceived = _savingAccount.transfer(msg.sender, _collateralLiquidityShare, _collateralAsset, investedTo);
+            uint256 _sharesReceived = _savingAccount.transfer(msg.sender, _collateralLiquidityShare, _collateralAsset, _investedTo);
         }
         else{
             if(_recieveLiquidityShare == true){
-                uint256 _sharesReceived = _savingAccount.transfer(msg.sender, _collateralLiquidityShare, _collateralAsset, investedTo);
-                address _addressOfTheLiquidityToken = IYield(investedTo).liquidityToken(_collateralAsset);
+                uint256 _sharesReceived = _savingAccount.transfer(msg.sender, _collateralLiquidityShare, _collateralAsset, _investedTo);
+                address _addressOfTheLiquidityToken = IYield(_investedTo).liquidityToken(_collateralAsset);
                 IERC20(_addressOfTheLiquidityToken).transfer(msg.sender, _sharesReceived);
             }
             else{
-                uint256 _collateralTokens = IYield(investedTo).getTokensForShares(_collateralLiquidityShare, collateralAsset);
-                _savingAccount.withdraw(_collateralTokens, _collateralAsset, investedTo, false);
+                uint256 _collateralTokens = IYield(_investedTo).getTokensForShares(_collateralLiquidityShare, _collateralAsset);
+                _savingAccount.withdraw(_collateralTokens, _collateralAsset, _investedTo, false);
                 if(_collateralAsset == address(0)){
                     msg.sender.send(_collateralTokens);
                 }
