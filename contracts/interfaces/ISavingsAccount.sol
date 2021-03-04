@@ -30,13 +30,13 @@ interface ISavingsAccount {
         address to,
         uint256 amount,
         address investedTo
-    ) external returns (bool);
+    ) external returns (uint256);
 
     function transfer(
         address token,
         address to,
         uint256 amount
-    ) external returns (bool);
+    ) external returns (uint256);
 
     function approve(
         address token,
