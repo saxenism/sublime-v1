@@ -142,7 +142,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
     }
 
     // Deposit collateral
-    function deposit(uint256 _amount,bool _isDirect) external payable override {
+    function depositCollateral(uint256 _amount,bool _transferFromSavingsAccount) external payable override {
 
         require(_amount != 0, "Pool::deposit - collateral amount");
         uint256 _sharesReceived;
@@ -151,7 +151,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         address _investedTo = investedTo;
         uint256 _liquidityshare = IYield(_investedTo).getTokensForShares(_amount, _collateralAsset);
 
-        if(_isDirect){
+        if(!_transferFromSavingsAccount){
             if(_collateralAsset == address(0)) {
                 require(msg.value == _amount, "Pool::deposit - value to transfer doesn't match argument");
                 _sharesReceived = _savingAccount.deposit{value:msg.value}(_amount,_collateralAsset,_investedTo, address(this));
@@ -169,7 +169,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
 
 
 
-    function addCollateralInMarginCall(address _lender,  uint256 _amount,bool _isDirect) external payable override
+    function addCollateralInMarginCall(address _lender,  uint256 _amount,bool _transferFromSavingsAccount) external payable override
     {
         require(loanStatus == LoanStatus.ACTIVE, "Pool::addCollateralMarginCall - Loan needs to be in Active stage to deposit"); 
         require(lenders[_lender].marginCallEndTime >= block.timestamp, "Pool::addCollateralMarginCall - Can't Add after time is completed");
@@ -181,7 +181,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         address _investedTo = investedTo;
         uint256 _liquidityshare = IYield(_investedTo).getTokensForShares(_amount, _collateralAsset);
 
-        if(_isDirect){
+        if(!_transferFromSavingsAccount){
             if(_collateralAsset == address(0)) {
                 require(msg.value == _amount, "Pool::addCollateralMarginCall - value to transfer doesn't match argument");
                 _sharesReceived = _savingAccount.deposit{value:msg.value}(_amount,_collateralAsset,_investedTo, address(this));
