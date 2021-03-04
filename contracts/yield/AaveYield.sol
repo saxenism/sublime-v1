@@ -145,7 +145,6 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
      * @notice Asset Tokens to be locked must be approved to this contract by user
      * @param asset the address of token to invest
      * @param amount the amount of asset
-     * @return investedTo address of liquidity token
      * @return sharesReceived amount of shares received
      **/
     function lockTokens(
@@ -157,10 +156,11 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
         payable
         override
         onlySavingsAccount
-        returns (address investedTo, uint256 sharesReceived)
+        returns (uint256 sharesReceived)
     {
         require(amount != 0, "Invest: amount");
 
+        address investedTo;
         if (asset == address(0)) {
             require(msg.value == amount, "Invest: ETH amount");
             (investedTo, sharesReceived) = _depositETH(amount);

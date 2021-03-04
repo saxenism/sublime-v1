@@ -87,7 +87,6 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable {
      * @param user the address of user
      * @param asset the address of token to invest
      * @param amount the amount of asset
-     * @return investedTo address of liquidity token
      * @return sharesReceived amount of shares received
      **/
     function lockTokens(
@@ -99,11 +98,11 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable {
         payable
         override
         onlySavingsAccount
-        returns (address investedTo, uint256 sharesReceived)
+        returns (uint256 sharesReceived)
     {
         require(amount != 0, "Invest: amount");
 
-        investedTo = liquidityToken[asset];
+        address investedTo = liquidityToken[asset];
         if (asset == address(0)) {
             require(msg.value == amount, "Invest: ETH amount");
             sharesReceived = _depositETH(investedTo, amount);
