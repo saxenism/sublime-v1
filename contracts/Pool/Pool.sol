@@ -161,7 +161,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
             }
         }
         else{
-            _sharesReceived = _savingAccount.transferFrom(borrower, address(this), _liquidityshare, _collateralAsset,_investedTo);
+            _sharesReceived = _savingAccount.transferFrom(msg.sender, address(this), _liquidityshare, _collateralAsset,_investedTo);
         }
         baseLiquidityShares = baseLiquidityShares.add(_sharesReceived);
         emit CollateralAdded(msg.sender,_amount,_sharesReceived);
@@ -191,7 +191,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
             }
         }
         else{
-            _sharesReceived = _savingAccount.transferFrom(borrower, address(this), _liquidityshare, _collateralAsset,_investedTo);
+            _sharesReceived = _savingAccount.transferFrom(msg.sender, address(this), _liquidityshare, _collateralAsset,_investedTo);
         }
 
         extraLiquidityShares = extraLiquidityShares.add(_sharesReceived);
@@ -408,28 +408,26 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
             _correspondingBorrowTokens
         );
 
-        if(_transferToSavingsAccount == true || _recieveLiquidityShare == true){
-
-            uint256 _sharesReceived = ISavingAccount(IPoolFactory(PoolFactory).SavingAccount()).transfer(msg.sender,_collateralLiquidityShare,_collateralAsset,investedTo);
+        if(_transferToSavingsAccount == true){
+            uint256 _sharesReceived = _savingAccount.transfer(msg.sender,_collateralLiquidityShare,_collateralAsset,investedTo);
             emit lenderLiquidated(msg.sender, lender,_sharesReceived);
-
-        }
-        else if(_transferToSavingsAccount == true || _recieveLiquidityShare != true){
-                
-            
-
-        }
-        else if(_transferToSavingsAccount != true || _recieveLiquidityShare == true){
-            _sharesReceived = _savingAccount.withdraw(_amount,_collateralAsset,_investedTo, address(this));
-
-            IERC20(_collateralAsset).transfer(msg.sender, _collateralTokens);
         }
         else{
-            IERC20(_collateralAsset).transfer(msg.sender, _collateralTokens);
+
+            if(_recieveLiquidityShare == true){
+
+                _tokenReceived = _savingAccount.withdraw(_collateralTokens,_collateralAsset,_investedTo,true);
+                IERC20(_collateralAsset).transfer(msg.sender, _tokenReceived);
+                emit lenderLiquidated(msg.sender, lender,_tokenReceived);
+            }
+            else{
+                _tokenReceived = _savingAccount.withdraw(_collateralTokens,_collateralAsset,_investedTo,false);
+                IERC20(_collateralAsset).transfer(msg.sender, _tokenReceived);
+                emit lenderLiquidated(msg.sender, lender,_tokenReceived);
+            }
+
         }
 
-        emit lenderLiquidated(msg.sender, lender);
-        
     }
 
 
