@@ -25,9 +25,6 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
     mapping(address => mapping(address => mapping(address => uint256)))
         public userLockedBalance;
 
-    //user -> token (underlying address) -> amount (shares)
-    mapping(address => mapping(address => uint256)) public savingsAccountInfo;
-
     //user => asset => to => amount
     mapping(address => mapping(address => mapping(address => uint256)))
         public allowance;
@@ -52,13 +49,6 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
 
         strategyRegistry = _strategyRegistry;
     }
-
-    /**
-     * @dev Used to deploy asset to Saving Account. Amount to deposit should be approved to strategy contract
-     * @param amount amount of asset deposited
-     * @param asset address of the asset deposited
-     * @param strategy strategy in which asset has to deposited(ex:- compound,Aave etc)
-     **/
 
     // TODO - Number of strategies user can invest in is limited. Make this set specific to user rather than global.
 
@@ -95,10 +85,6 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
             asset
         ][strategy]
             .add(sharesReceived);
-
-        savingsAccountInfo[user][asset] = savingsAccountInfo[user][asset].add(
-            sharesReceived
-        );
 
         emit Deposited(user, amount, asset);
     }
@@ -160,9 +146,12 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
             );
         }
 
-        uint256 sharesReceived = tokensReceived;
+        uint256 sharesReceived;
         if (newStrategy != address(0)) {
-            IERC20(asset).approve(newStrategy, tokensReceived);
+            if (asset != address(0)) {
+                IERC20(asset).approve(newStrategy, tokensReceived);
+            }
+
             sharesReceived = _depositToYield(
                 tokensReceived,
                 asset,
@@ -174,12 +163,6 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         userLockedBalance[msg.sender][asset][newStrategy] = userLockedBalance[
             msg.sender
         ][asset][newStrategy]
-            .add(sharesReceived);
-
-        savingsAccountInfo[msg.sender][asset] = savingsAccountInfo[msg.sender][
-            asset
-        ]
-            .sub(amount)
             .add(sharesReceived);
 
         // emit StrategySwitched(msg.sender, currentStrategy, newStrategy);
@@ -206,11 +189,6 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         userLockedBalance[msg.sender][asset][strategy] = userLockedBalance[
             msg.sender
         ][asset][strategy]
-            .sub(amount);
-
-        savingsAccountInfo[msg.sender][asset] = savingsAccountInfo[msg.sender][
-            asset
-        ]
             .sub(amount);
 
         uint256 amountReceived = amount;
@@ -250,40 +228,29 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         emit Withdrawn(user, amountReceived, asset, strategy);
     }
 
-    function withdrawAll(
-        address _to,
-        uint256 _amount,
-        address _asset
-    ) external override returns (uint256 tokenReceived) {
-        uint256 assetTotalBalance = savingsAccountInfo[msg.sender][_asset];
-        require(
-            _amount <= assetTotalBalance,
-            "SavingsAccount::withdrawAll insufficient funds"
-        );
+    function withdrawAll(address _to, address _asset)
+        external
+        override
+        returns (uint256 tokenReceived)
+    {
+        tokenReceived = userLockedBalance[msg.sender][asset][address(0)];
 
         // Withdraw tokens
         address[] memory _strategyList =
             IStrategyRegistry(strategyRegistry).getStrategies();
 
-        uint256 _amountLeft = _amount;
         for (uint256 index = 0; index < _strategyList.length; index++) {
-            uint256 _balanceInStrategy =
-                userLockedBalance[msg.sender][_asset][_strategyList[index]];
-
-            uint256 _toWithdraw;
-            if (_amountLeft <= _balanceInStrategy) {
-                _toWithdraw = _amountLeft;
-            } else {
-                _toWithdraw = _balanceInStrategy;
-            }
-
-            _amountLeft = _amountLeft.sub(_toWithdraw);
-            tokenReceived = tokenReceived.add(
-                _withdraw(msg.sender, _toWithdraw, _asset, _strategyList[index])
-            );
-
-            if (_amountLeft == 0) {
-                break;
+            if (
+                userLockedBalance[msg.sender][_asset][_strategyList[index]] > 0
+            ) {
+                tokenReceived = tokenReceived.add(
+                    _withdraw(
+                        msg.sender,
+                        _toWithdraw,
+                        _asset,
+                        _strategyList[index]
+                    )
+                );
             }
         }
 
@@ -312,26 +279,17 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
     ) external override returns (uint256) {
         require(amount != 0, "SavingsAccount::transfer zero amount");
         require(
-            savingsAccountInfo[msg.sender][token] >= amount,
+            userLockedBalance[msg.sender][token][investedTo] >= amount,
             "SavingsAccount::transfer insufficient funds"
         );
 
         //reduce msg.sender balance
-        savingsAccountInfo[msg.sender][token] = savingsAccountInfo[msg.sender][
-            token
-        ]
-            .sub(amount);
-
         userLockedBalance[msg.sender][token][investedTo] = userLockedBalance[
             msg.sender
         ][token][investedTo]
-            .add(amount);
+            .sub(amount);
 
         //update receiver's balance
-        savingsAccountInfo[to][token] = savingsAccountInfo[to][token].add(
-            amount
-        );
-
         userLockedBalance[to][token][investedTo] = userLockedBalance[to][token][
             investedTo
         ]
@@ -352,13 +310,8 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
     ) external override returns (uint256) {
         require(amount != 0, "SavingsAccount::transferFrom zero amount");
         require(
-            allowance[from][token][msg.sender] >= amount,
+            userLockedBalance[msg.sender][token][investedTo] >= amount,
             "SavingsAccount::transferFrom insufficient allowance"
-        );
-
-        require(
-            savingsAccountInfo[from][token] >= amount,
-            "SavingsAccount::transferFrom insufficient funds"
         );
 
         //update allowance
@@ -366,20 +319,12 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
             .sub(amount);
 
         //reduce sender's balance
-        savingsAccountInfo[from][token] = savingsAccountInfo[from][token].sub(
-            amount
-        );
-
         userLockedBalance[from][token][investedTo] = userLockedBalance[from][
             token
         ][investedTo]
-            .add(amount);
+            .sub(amount);
 
         //update receiver's balance
-        savingsAccountInfo[to][token] = savingsAccountInfo[to][token].add(
-            amount
-        );
-
         userLockedBalance[to][token][investedTo] = userLockedBalance[to][token][
             investedTo
         ]
