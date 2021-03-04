@@ -86,7 +86,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         ][strategy]
             .add(sharesReceived);
 
-        emit Deposited(user, amount, asset);
+        emit Deposited(user, amount, asset, strategy);
     }
 
     function _depositToYield(
@@ -165,7 +165,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         ][asset][newStrategy]
             .add(sharesReceived);
 
-        // emit StrategySwitched(msg.sender, currentStrategy, newStrategy);
+        emit StrategySwitched(msg.sender, currentStrategy, newStrategy);
     }
 
     /**
@@ -228,7 +228,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         emit Withdrawn(user, amountReceived, asset, strategy);
     }
 
-    function withdrawAll(address _to, address _asset)
+    function withdrawAll(address _asset)
         external
         override
         returns (uint256 tokenReceived)
@@ -256,8 +256,13 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
             }
         }
 
-        // approve transfer
-        IERC20(_asset).safeApprove(_to, tokenReceived);
+        if (_asset == address(0)) {
+            msg.sender.transfer(tokenReceived);
+        } else {
+            IERC20(_asset).safeTransfer(msg.sender, tokenReceived);
+        }
+
+        emit WithdrawnAll(msg.sender, tokenReceived, _asset);
     }
 
     function approve(
@@ -270,7 +275,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
             amount
         );
 
-        //emit Approved(token, msg.sender, to , amount);
+        emit Approved(token, msg.sender, to, amount);
     }
 
     function transfer(
@@ -297,10 +302,9 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         ]
             .add(amount);
 
+        emit Transfer(token, investedTo, msg.sender, to, amount);
         //not sure
         return amount;
-
-        // emit Transfer(token, msg.sender, to, amount);
     }
 
     function transferFrom(
@@ -332,9 +336,9 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         ]
             .add(amount);
 
+        emit Transfer(token, investedTo, from, to, amount);
+
         //not sure
         return amount;
-
-        // emit Transfer(token, from, to, amount);
     }
 }

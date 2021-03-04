@@ -6,7 +6,6 @@ interface IStrategyRegistry {
     event StrategyRemoved(address strategy);
 
     function registry(address _strategy) external view returns (bool);
-
     function getStrategies() external view returns (address[] memory);
 
     /**
