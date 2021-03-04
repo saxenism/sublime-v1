@@ -83,6 +83,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
     event CollateralCalled(address lenderAddress);
     event lenderVoted(address Lender);
     event LoanDefaulted();
+    event lenderLiquidated(address liquidator, address lender,uint256 _tokenReceived);
 
     modifier OnlyBorrower {
         require(msg.sender == borrower, "Pool::OnlyBorrower - Only borrower can invoke");
@@ -390,11 +391,11 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
      
         uint256 _collateralShareOfLender;
         uint256 _amountToBeRepaid;
-        uint256 _collateralAsset = collateralAsset;
- 
-        _collateralLiquidityShare = ((baseLiquidityShares.mul(balanceOf(lender))).div(totalSupply())).add(lenders[lender].extraLiquidityShares);
+        address _collateralAsset = collateralAsset;
+        address _investedTo = investedTo;
+        uint256 _collateralLiquidityShare = ((baseLiquidityShares.mul(balanceOf(lender))).div(totalSupply())).add(lenders[lender].extraLiquidityShares);
         uint256 _collateralTokens = IYield(_investedTo).getTokensForShares(_collateralLiquidityShare, _collateralAsset);
-  
+        
         uint256 _correspondingBorrowTokens=
             _collateralTokens.mul(IPriceOracle(IPoolFactory(PoolFactory).priceOracle()).getLatestPrice(
                 borrowAsset,
@@ -402,6 +403,22 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
             ));
 
 
+        address _liquidityShareAddress = IYield(_investedTo).liquidityToken(_collateralAsset);
+ 
+        if (borrowAsset == address(0)){
+            if(msg.value<_correspondingBorrowTokens){
+                msg.sender.send(msg.value);
+                revert("Pool::liquidatePool - Not enough tokens");
+            }
+        }
+        else{
+            IERC20(borrowAsset).transferFrom(
+                msg.sender,
+                address(this),
+                _correspondingBorrowTokens
+            );
+        }
+        
         IERC20(borrowAsset).transferFrom(
             msg.sender,
             address(this),
@@ -415,14 +432,18 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         else{
 
             if(_recieveLiquidityShare == true){
-
-                _tokenReceived = _savingAccount.withdraw(_collateralTokens,_collateralAsset,_investedTo,true);
-                IERC20(_collateralAsset).transfer(msg.sender, _tokenReceived);
+                uint256 _tokenReceived = _savingAccount.withdraw(_collateralTokens,_collateralAsset,_investedTo,true);
+                IERC20(_liquidityShareAddress).transfer(msg.sender, _tokenReceived);
                 emit lenderLiquidated(msg.sender, lender,_tokenReceived);
             }
             else{
-                _tokenReceived = _savingAccount.withdraw(_collateralTokens,_collateralAsset,_investedTo,false);
-                IERC20(_collateralAsset).transfer(msg.sender, _tokenReceived);
+                uint256 _tokenReceived = _savingAccount.withdraw(_collateralTokens,_collateralAsset,_investedTo,false);
+                if(_collateralAsset == address(0)){
+                    msg.sender.send(_collateralTokens);
+                }
+                else{
+                    IERC20(_collateralAsset).transfer(msg.sender, _collateralTokens);
+                }
                 emit lenderLiquidated(msg.sender, lender,_tokenReceived);
             }
 
