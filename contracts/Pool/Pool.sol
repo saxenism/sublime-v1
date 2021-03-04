@@ -186,11 +186,11 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
             }
         } else {
             _sharesReceived = _savingsAccount.transferFrom(
+                _collateralAsset,
                 borrower,
                 address(this),
-                _liquidityshare,
-                _collateralAsset,
-                _investedTo
+                _investedTo,
+                _liquidityshare
             );
         }
         baseLiquidityShares = baseLiquidityShares.add(_sharesReceived);
@@ -246,11 +246,11 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
             }
         } else {
             _sharesReceived = _savingsAccount.transferFrom(
+                _collateralAsset,
                 borrower,
                 address(this),
-                _liquidityshare,
-                _collateralAsset,
-                _investedTo
+                _investedTo,
+                _liquidityshare
             );
         }
 
@@ -314,10 +314,10 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         uint256 _sharesReceived =
             ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount())
                 .transfer(
-                msg.sender,
-                _collateralShares,
                 collateralAsset,
-                investedTo
+                msg.sender,
+                investedTo,
+                _collateralShares
             );
         emit CollateralWithdrawn(msg.sender, _sharesReceived);
         delete baseLiquidityShares;
