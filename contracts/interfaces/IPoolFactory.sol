@@ -12,4 +12,5 @@ interface IPoolFactory {
     function marginCallDuration() external view returns (uint256);
     function collateralVolatilityThreshold() external view returns (uint256);
     function gracePeriodPenaltyFraction() external view returns (uint256);
+    function liquidatorRewardFraction() external view returns (uint256);
 }

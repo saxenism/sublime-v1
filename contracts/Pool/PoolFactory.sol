@@ -28,6 +28,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     uint256 public override marginCallDuration;
     uint256 public override collateralVolatilityThreshold;
     uint256 public override gracePeriodPenaltyFraction;
+    uint256 public override liquidatorRewardFraction;
 
     mapping(address => bool) isBorrowToken;
     mapping(address => bool) isCollateralToken;
@@ -52,6 +53,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     event MarginCallDurationUpdated(uint256 updatedMarginCallDuration);
     event CollateralVolatilityThresholdUpdated(uint256 updatedCollateralVolatilityThreshold);
     event GracePeriodPenaltyFractionUpdated(uint256 updatedGracePeriodPenaltyFraction);
+    event LiquidatorRewardFractionUpdated(uint256 updatedLiquidatorRewardFraction);
 
     modifier onlyPool() {
         require(registry[msg.sender], "PoolFactory::onlyPool - Only pool can destroy itself");
@@ -77,7 +79,8 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         uint256 _marginCallDuration,
         uint256 _collateralVolatilityThreshold,
         uint256 _gracePeriodPenaltyFraction,
-        bytes4 _initializeFunctionId
+        bytes4 _initializeFunctionId,
+        uint256 _liquidatorRewardFraction
     ) external initializer {
         OwnableUpgradeable.__Ownable_init();
         OwnableUpgradeable.transferOwnership(_admin);
@@ -90,6 +93,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         collateralVolatilityThreshold = _collateralVolatilityThreshold;
         gracePeriodPenaltyFraction = _gracePeriodPenaltyFraction;
         initializeFunctionId = _initializeFunctionId;
+        liquidatorRewardFraction = _liquidatorRewardFraction;
     }
 
     function createPool(
@@ -185,5 +189,10 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     function updateGracePeriodPenaltyFraction(uint256 _gracePeriodPenaltyFraction) external onlyOwner {
         gracePeriodPenaltyFraction = _gracePeriodPenaltyFraction;
         emit GracePeriodPenaltyFractionUpdated(_gracePeriodPenaltyFraction);
+    }
+
+    function updateLiquidatorRewardFraction(uint256 _liquidatorRewardFraction) external onlyOwner {
+        liquidatorRewardFraction = _liquidatorRewardFraction;
+        emit LiquidatorRewardFractionUpdated(_liquidatorRewardFraction);
     }
 }
