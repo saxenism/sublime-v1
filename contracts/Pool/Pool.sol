@@ -332,10 +332,25 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         
     }
 
-    function requestCollateralCall()
-        public
-    {
-        
+    function requestMarginCall() external isLender(msg.sender) {
+        require(
+            lenders[msg.sender].marginCallEndTime < block.timestamp,
+            "Pool::requestMarginCall margin call already requested"
+        );
+
+        require(
+            collateralRatio >
+                getCurrentCollateralRatio(msg.sender).add(
+                    IPoolFactory(PoolFactory).collateralVolatilityThreshold()
+                ),
+            "Pool::requestMarginCall collateral ratio has not reached threshold yet"
+        );
+
+        lenders[msg.sender].marginCallEndTime = block.timestamp.add(
+            IPoolFactory(PoolFactory).marginCallDuration()
+        );
+
+        emit CollateralCalled(msg.sender);
     }
 
     
