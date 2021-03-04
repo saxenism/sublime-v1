@@ -30,7 +30,7 @@ interface IYield {
         external
         view
         returns (address tokenAddress);
-    
+
     /**
      * @dev Used to lock tokens in available protocol
      * @param user the address of user locking tokens

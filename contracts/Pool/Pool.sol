@@ -84,6 +84,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
     event lenderVoted(address Lender);
     event LoanDefaulted();
     event lenderLiquidated(address liquidator, address lender,uint256 _tokenReceived);
+    event PoolLiquidated(address liquidator);
 
     modifier OnlyBorrower {
         require(msg.sender == borrower, "Pool::OnlyBorrower - Only borrower can invoke");
@@ -369,7 +370,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
     }
    
     function liquidateLender(address lender,bool _transferToSavingsAccount,bool _recieveLiquidityShare)
-        public
+        public payable
     {
 
         require(
@@ -450,14 +451,66 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         }
 
     }
+    function correspondingBorrowTokens(uint256 liquidityShares) public view returns(uint256){
+        uint256 _collateralTokens = IYield(investedTo).getTokensForShares(liquidityShares, collateralAsset);
+        uint256 _correspondingBorrowTokens = 
+            _collateralTokens.mul(IPriceOracle(IPoolFactory(PoolFactory).priceOracle()).getLatestPrice(
+                borrowAsset,
+                collateralAsset
+            ));
+    }
+    function liquidatePool(bool _transferToSavingsAccount, bool _recieveLiquidityShare) external payable {
+        LoanStatus _poolStatus = loanStatus;
+        require(
+            _poolStatus == LoanStatus.DEFAULTED || ((_poolStatus == LoanStatus.TERMINATED) && (matchCollateralRatioEndTime == 0)),
+            "Pool::liquidateLender - Borrower Extra time to match collateral is running"
+        );
 
+        ISavingAccount _savingAccount = ISavingAccount(IPoolFactory(PoolFactory).SavingAccount());
+     
+        uint256 _amountToBeRepaid;
+        address _collateralAsset = collateralAsset;
+ 
+        uint256 _collateralLiquidityShare = baseLiquidityShares.add(extraLiquidityShares);  
+        uint256 _correspondingBorrowTokens = correspondingBorrowTokens(_collateralLiquidityShare);
 
-
-
-    function liquidatePool() external {
+        if (borrowAsset == address(0)){
+            if(msg.value<_correspondingBorrowTokens){
+                msg.sender.send(msg.value);
+                revert("Pool::liquidatePool - Not enough tokens");
+            }
+        }
+        else{
+            IERC20(borrowAsset).transferFrom(
+                msg.sender,
+                address(this),
+                _correspondingBorrowTokens
+            );
+        }
+        uint256 _tokenReceived;
+        if(_transferToSavingsAccount == true){
+            uint256 _sharesReceived = _savingAccount.transfer(msg.sender, _collateralLiquidityShare, _collateralAsset, investedTo);
+        }
+        else{
+            if(_recieveLiquidityShare == true){
+                uint256 _sharesReceived = _savingAccount.transfer(msg.sender, _collateralLiquidityShare, _collateralAsset, investedTo);
+                address _addressOfTheLiquidityToken = IYield(investedTo).liquidityToken(_collateralAsset);
+                IERC20(_addressOfTheLiquidityToken).transfer(msg.sender, _sharesReceived);
+            }
+            else{
+                uint256 _collateralTokens = IYield(investedTo).getTokensForShares(_collateralLiquidityShare, collateralAsset);
+                _savingAccount.withdraw(_collateralTokens, _collateralAsset, investedTo, false);
+                if(_collateralAsset == address(0)){
+                    msg.sender.send(_collateralTokens);
+                }
+                else{
+                    IERC20(_collateralAsset).transfer(msg.sender, _collateralTokens);
+                }
+            }
+        }
+        emit PoolLiquidated(msg.sender);
         
     }
-
 
     
     // Withdraw Repayment, Also all the extra state variables are added here only for the review

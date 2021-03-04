@@ -19,9 +19,9 @@ interface ISavingAccount {
     function withdraw(
         uint256 amount,
         address asset,
-        uint256 strategy,
-        bool unlock
-    ) external;
+        address strategy,
+        bool withdrawShares
+    ) external returns(uint256);
 
     function addCollateralToPool(
         address _invest,
