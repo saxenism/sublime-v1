@@ -116,7 +116,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         uint256 _repaymentInterval,
         uint256 _noOfRepaymentIntervals,
         address _investedTo,
-        uint256 _collatoralAmount,
+        uint256 _collateralAmount,
         bool _transferFromSavingsAccount
     ) external initializer {
         super.initialize("Open Pool Tokens", "OPT");
@@ -130,12 +130,11 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
             _borrowRate,
             _repaymentInterval,
             _noOfRepaymentIntervals,
-            _investedTo,
-            _collatoralAmount
+            _investedTo
         );
         PoolFactory = msg.sender;
 
-        depositCollateral(_collatoralAmount, _transferFromSavingsAccount);
+        depositCollateral(_collateralAmount, _transferFromSavingsAccount);
         uint256 collectionPeriod = IPoolFactory(msg.sender).collectionPeriod();
         loanStartTime = block.timestamp.add(collectionPeriod);
         matchCollateralRatioEndTime = block.timestamp.add(collectionPeriod).add(IPoolFactory(msg.sender).matchCollateralRatioInterval());
@@ -153,8 +152,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         uint256 _borrowRate,
         uint256 _repaymentInterval,
         uint256 _noOfRepaymentIntervals,
-        address _investedTo,
-        uint256 _collatoralAmount
+        address _investedTo
     ) internal {
         borrowAmountRequested = _borrowAmountRequested;
         minborrowAmountFraction = _minborrowAmountFraction;
