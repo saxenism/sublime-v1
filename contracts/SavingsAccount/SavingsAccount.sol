@@ -78,6 +78,11 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
             sharesReceived = amount;
             if (asset != address(0)) {
                 IERC20(asset).transferFrom(user, address(this), amount);
+            } else {
+                require(
+                    msg.value == amount,
+                    "SavingsAccount::deposit ETH sent must be equal to amount"
+                );
             }
         }
 
@@ -182,6 +187,11 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         bool withdrawShares
     ) external override {
         require(
+            amount != 0,
+            "SavingsAccount::withdraw Amount must be greater than zero"
+        );
+
+        require(
             userLockedBalance[msg.sender][asset][strategy] >= amount,
             "SavingsAccount::withdraw Insufficient amount"
         );
@@ -194,7 +204,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         uint256 amountReceived = amount;
 
         if (!withdrawShares || strategy != address(0)) {
-            amountReceived = _withdraw(msg.sender, amount, asset, strategy);
+            amountReceived = IYield(strategy).unlockTokens(asset, amount);
         }
 
         address token = asset;
@@ -205,27 +215,8 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         } else {
             IERC20(token).safeTransfer(msg.sender, amountReceived);
         }
-    }
 
-    function _withdraw(
-        address user,
-        uint256 amount,
-        address asset,
-        address strategy
-    ) internal returns (uint256 amountReceived) {
-        require(
-            amount != 0,
-            "SavingsAccount::withdraw Amount must be greater than zero"
-        );
-
-        require(
-            userLockedBalance[user][asset][strategy] >= amount,
-            "SavingsAccount::withdraw insufficient balance"
-        );
-
-        amountReceived = IYield(strategy).unlockTokens(asset, amount);
-
-        emit Withdrawn(user, amountReceived, asset, strategy);
+        emit Withdrawn(msg.sender, amountReceived, token, strategy);
     }
 
     function withdrawAll(address _asset)
@@ -244,17 +235,17 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
                 userLockedBalance[msg.sender][_asset][_strategyList[index]] > 0
             ) {
                 tokenReceived = tokenReceived.add(
-                    _withdraw(
-                        msg.sender,
+                    IYield(_strategyList[index]).unlockTokens(
+                        _asset,
                         userLockedBalance[msg.sender][_asset][
                             _strategyList[index]
-                        ],
-                        _asset,
-                        _strategyList[index]
+                        ]
                     )
                 );
             }
         }
+
+        if (tokenReceived == 0) return 0;
 
         if (_asset == address(0)) {
             msg.sender.transfer(tokenReceived);
@@ -316,7 +307,11 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
     ) external override returns (uint256) {
         require(amount != 0, "SavingsAccount::transferFrom zero amount");
         require(
-            userLockedBalance[msg.sender][token][investedTo] >= amount,
+            allowance[from][token][msg.sender] >= amount,
+            "SavingsAccount::transferFrom allowance limit exceeding"
+        );
+        require(
+            userLockedBalance[from][token][investedTo] >= amount,
             "SavingsAccount::transferFrom insufficient allowance"
         );
 
