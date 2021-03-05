@@ -3,7 +3,7 @@ pragma solidity 0.7.0;
 
 import "../Proxy.sol";
 import "../interfaces/IPoolFactory.sol";
-import "../interfaces/IBorrower.sol";
+import "../interfaces/IVerification.sol";
 import "../interfaces/IStrategyRegistry.sol";
 import "../interfaces/IRepayment.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -18,7 +18,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
 
     bytes4 public initializeFunctionId; //  bytes4(keccak256("initialize(uint256,address,address,address,uint256,uint256,uint256,uint256,bool)"))
     address public poolImpl;
-    address public borrowerRegistry;
+    address public userRegistry;
     address public strategyRegistry;
     address public override repaymentImpl;
     address public override priceOracle;
@@ -46,7 +46,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     event PoolCreated(address pool, address borrower);
     event InitializeFunctionUpdated(bytes4 updatedFunctionId);
     event PoolLogicUpdated(address updatedPoolLogic);
-    event BorrowerRegistryUpdated(address updatedBorrowerRegistry);
+    event UserRegistryUpdated(address updatedBorrowerRegistry);
     event StrategyRegistryUpdated(address updatedStrategyRegistry);
     event RepaymentImplUpdated(address updatedRepaymentImpl);
     event PriceOracleUpdated(address updatedPriceOracle);
@@ -64,7 +64,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     }
 
     modifier onlyBorrower() {
-        require(IBorrower(borrowerRegistry).isBorrower(msg.sender), "PoolFactory::onlyBorrower - Only a valid Borrower can create Pool");
+        require(IVerification(userRegistry).isUser(msg.sender), "PoolFactory::onlyBorrower - Only a valid Borrower can create Pool");
         _;
     }
 
@@ -74,7 +74,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
 
     function initialize(
         address _poolImpl, 
-        address _borrowerRegistry, 
+        address _userRegistry, 
         address _strategyRegistry, 
         address _admin, 
         uint256 _collectionPeriod,
@@ -91,7 +91,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         OwnableUpgradeable.__Ownable_init();
         OwnableUpgradeable.transferOwnership(_admin);
         poolImpl = _poolImpl;
-        borrowerRegistry = _borrowerRegistry;
+        userRegistry = _userRegistry;
         strategyRegistry = _strategyRegistry;
 
         collectionPeriod = _collectionPeriod;
@@ -163,9 +163,9 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         emit PoolLogicUpdated(_poolLogic);
     }
 
-    function updateBorrowerRegistry(address _borrowerRegistry) external onlyOwner {
-        borrowerRegistry = _borrowerRegistry;
-        emit BorrowerRegistryUpdated(_borrowerRegistry);
+    function updateUserRegistry(address _userRegistry) external onlyOwner {
+        userRegistry = _userRegistry;
+        emit UserRegistryUpdated(_userRegistry);
     }
 
     function updateStrategyRegistry(address _strategyRegistry) external onlyOwner {
