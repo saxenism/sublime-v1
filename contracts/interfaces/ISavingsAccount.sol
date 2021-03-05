@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.0;
 
-interface ISavingAccount {
+interface ISavingsAccount {
     function deposit(
         uint256 amount,
         address asset,
