@@ -2,6 +2,34 @@
 pragma solidity 0.7.0;
 
 interface ISavingsAccount {
+    //events
+    event Deposited(
+        address user,
+        uint256 amount,
+        address asset,
+        address strategy
+    );
+    event StrategySwitched(
+        address user,
+        address currentStrategy,
+        address newStrategy
+    );
+    event Withdrawn(
+        address user,
+        uint256 amountReceived,
+        address token,
+        address strategy
+    );
+    event WithdrawnAll(address user, uint256 tokenReceived, address asset);
+    event Approved(address token, address from, address to, uint256 amount);
+    event Transfer(
+        address token,
+        address strategy,
+        address from,
+        address to,
+        uint256 amount
+    );
+
     function deposit(
         uint256 amount,
         address asset,
@@ -35,7 +63,7 @@ interface ISavingsAccount {
         address asset,
         address strategy,
         bool withdrawShares
-    ) external returns(uint256);
+    ) external returns (uint256);
 
     function withdrawAll(address _asset)
         external

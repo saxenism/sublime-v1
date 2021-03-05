@@ -21,34 +21,6 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
 
     address public strategyRegistry;
 
-    //events
-    event Deposited(
-        address user,
-        uint256 amount,
-        address asset,
-        address strategy
-    );
-    event StrategySwitched(
-        address user,
-        address currentStrategy,
-        address newStrategy
-    );
-    event Withdrawn(
-        address user,
-        uint256 amountReceived,
-        address token,
-        address strategy
-    );
-    event WithdrawnAll(address user, uint256 tokenReceived, address asset);
-    event Approved(address token, address from, address to, uint256 amount);
-    event Transfer(
-        address token,
-        address strategy,
-        address from,
-        address to,
-        uint256 amount
-    );
-
     //user -> strategy -> token (underlying address) -> amount (shares)
     mapping(address => mapping(address => mapping(address => uint256)))
         public userLockedBalance;
@@ -213,7 +185,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         address asset,
         address strategy,
         bool withdrawShares
-    ) external override returns(uint256) {
+    ) external override returns (uint256) {
         require(
             amount != 0,
             "SavingsAccount::withdraw Amount must be greater than zero"
