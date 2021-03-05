@@ -128,7 +128,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         require(isWithinLimits(_borrowRate, borrowRateLimit.min, borrowRateLimit.max), "PoolFactory::createPool - Borrow rate not within limits");
         require(isWithinLimits(_noOfRepaymentIntervals, noOfRepaymentIntervalsLimit.min, noOfRepaymentIntervalsLimit.max), "PoolFactory::createPool - Loan duration not within limits");
         require(isWithinLimits(_repaymentInterval, repaymentIntervalLimit.min, repaymentIntervalLimit.max), "PoolFactory::createPool - Repayment interval not within limits");
-        bytes memory data = abi.encodeWithSelector(initializeFunctionId, _poolSize, _minBorrowAmountFraction, msg.sender, _borrowTokenType, _collateralTokenType, _collateralRatio, _borrowRate, _repaymentInterval, _noOfRepaymentIntervals, _investedTo, _collateralAmount, _transferFromSavingsAccount);
+        bytes memory data = abi.encodeWithSelector(initializeFunctionId, _poolSize, _minBorrowAmountFraction, msg.sender, _borrowTokenType, _collateralTokenType, _collateralRatio, _borrowRate, _repaymentInterval, _noOfRepaymentIntervals, _investedTo, _collateralAmount, _transferFromSavingsAccount, gracePeriodPenaltyFraction);
         // TODO: Setting 0x00 as admin, so that it is not upgradable. Remove the upgradable functionality to optimize
         address pool = address((new SublimeProxy){value: msg.value}(poolImpl, address(0), data));
         registry[pool] = true;

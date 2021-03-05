@@ -61,7 +61,8 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
     mapping(address => LendingDetails) public lenders;
     uint256 public extensionVoteEndTime;
     uint256 public noOfGracePeriodsTaken;
-    uint256 nextDuePeriod;
+    uint256 public nextDuePeriod;
+    uint256 public gracePeriodPenaltyFraction;
 
     event OpenBorrowPoolCreated(address poolCreator);
     event OpenBorrowPoolCancelled();
@@ -117,7 +118,8 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         uint256 _noOfRepaymentIntervals,
         address _investedTo,
         uint256 _collateralAmount,
-        bool _transferFromSavingsAccount
+        bool _transferFromSavingsAccount,
+        uint256 _gracePeriodPenaltyFraction
     ) external initializer {
         super.initialize("Open Pool Tokens", "OPT");
         initializePoolParams(
@@ -130,7 +132,8 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
             _borrowRate,
             _repaymentInterval,
             _noOfRepaymentIntervals,
-            _investedTo
+            _investedTo,
+            _gracePeriodPenaltyFraction
         );
         PoolFactory = msg.sender;
 
@@ -152,7 +155,8 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         uint256 _borrowRate,
         uint256 _repaymentInterval,
         uint256 _noOfRepaymentIntervals,
-        address _investedTo
+        address _investedTo,
+        uint256 _gracePeriodPenaltyFraction
     ) internal {
         borrowAmountRequested = _borrowAmountRequested;
         minborrowAmountFraction = _minborrowAmountFraction;
@@ -164,6 +168,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         repaymentInterval = _repaymentInterval;
         noOfRepaymentIntervals = _noOfRepaymentIntervals;
         investedTo = _investedTo;
+        gracePeriodPenaltyFraction = _gracePeriodPenaltyFraction;
     }
 
     // Deposit collateral
