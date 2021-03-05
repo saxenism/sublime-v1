@@ -353,12 +353,10 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
     //todo: add more details here
     event Liquidated(address liquidator, address lender);
 
-
-    function getInterestTillNow(uint256 _interestPerPeriod) public view returns(uint256){
+    function interestTillNow(uint256 balance, uint256 _interestPerPeriod) public view returns(uint256){
         uint256 _repaymentLength = repaymentInterval;
         uint256 _loanStartedAt = loanStartTime;
         uint256 _totalSupply = totalSupply();
-        address _collateralToken = collateralAsset;
         (uint256 _interest, uint256 _gracePeriodsTaken) =
             (
                 IRepayment(Repayment).calculateRepayAmount(
@@ -371,7 +369,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
                 )
             );
         uint256 _extraInterest =
-            interestPerSecond(_totalSupply).mul(
+            interestPerSecond(balance).mul(
                 ((calculateCurrentPeriod().add(1)).mul(_repaymentLength))
                     .add(_loanStartedAt)
                     .sub(block.timestamp)
@@ -388,25 +386,24 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         }
     }
 
-    function getCurrentCollateralRatio() public returns (uint256 _ratio) {
-        address _collateralToken = collateralAsset;
+    function calculateCollateralRatio(uint256 _interestPerPeriod, uint256 _currentCollateralTokens, uint256 balance) public view returns(uint256){
+        uint256 _interest = interestTillNow(balance, _interestPerPeriod);
+        uint256 _ratioOfPrices =
+            IPriceOracle(IPoolFactory(PoolFactory).priceOracle())
+                .getLatestPrice(collateralAsset, borrowAsset);
+        uint256 _ratio = (_currentCollateralTokens.mul(_ratioOfPrices).div(100000000)).div(
+            balance.add(_interest)
+        );
+        return(_ratio);
+    }
+
+    function getCurrentCollateralRatio() public returns (uint256) {
         uint256 _currentCollateralTokens =
             IYield(investedTo).getTokensForShares(
                 baseLiquidityShares.add(extraLiquidityShares),
-                _collateralToken
+                collateralAsset
             );
-
-        uint256 _ratioOfPrices =
-            IPriceOracle(IPoolFactory(PoolFactory).priceOracle())
-                .getLatestPrice(_collateralToken, borrowAsset);
-
-        uint256 _repaymentLength = repaymentInterval;
-        uint256 _loanStartedAt = loanStartTime;
-        uint256 _totalSupply = totalSupply();
-        uint256 _interest = getInterestTillNow(amountPerPeriod());
-        _ratio = (_currentCollateralTokens.mul(_ratioOfPrices).div(100000000)).div(
-            _totalSupply.add(_interest)
-        );
+        return(calculateCollateralRatio(amountPerPeriod(), _currentCollateralTokens, totalSupply()));
     }
 
     function getCurrentCollateralRatio(address _lender)
@@ -414,21 +411,14 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         returns (uint256 _ratio)
     {
         uint256 _balanceOfLender = balanceOf(_lender);
-        uint256 _totalSupply = totalSupply();
-        address _collateralToken = collateralAsset;
         uint256 _currentCollateralTokens =
             IYield(investedTo).getTokensForShares(
-                (baseLiquidityShares.mul(_balanceOfLender).div(_totalSupply))
+                (baseLiquidityShares.mul(_balanceOfLender).div(totalSupply()))
                     .add(lenders[_lender].extraLiquidityShares),
-                _collateralToken
+                collateralAsset
             );
-        uint256 _ratioOfPrices =
-            IPriceOracle(IPoolFactory(PoolFactory).priceOracle())
-                .getLatestPrice(_collateralToken, borrowAsset);
-        uint256 _interest = getInterestTillNow(amountLenderPerPeriod(_lender));
-        _ratio = (_currentCollateralTokens.mul(_ratioOfPrices).div(100000000)).div(
-            _balanceOfLender.add(_interest)
-        );
+        
+        return(calculateCollateralRatio(amountLenderPerPeriod(_lender), _currentCollateralTokens, _balanceOfLender));
     }
    
     function liquidateLender(address lender)
