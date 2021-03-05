@@ -189,12 +189,14 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
 
     /**
      * @dev Used to withdraw asset from Saving Account
+     * @param withdrawTo address to which asset should be sent
      * @param amount amount of liquidity shares to withdraw
      * @param asset address of the asset to be withdrawn
      * @param strategy strategy from where asset has to withdrawn(ex:- compound,Aave etc)
      * @param withdrawShares boolean indicating to withdraw in liquidity share or underlying token
      */
     function withdraw(
+        address payable withdrawTo,
         uint256 amount,
         address asset,
         address strategy,
@@ -225,9 +227,9 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         if (withdrawShares) token = IYield(strategy).liquidityToken(asset);
 
         if (token == address(0)) {
-            msg.sender.transfer(amountReceived);
+            withdrawTo.transfer(amountReceived);
         } else {
-            IERC20(token).safeTransfer(msg.sender, amountReceived);
+            IERC20(token).safeTransfer(withdrawTo, amountReceived);
         }
 
         emit Withdrawn(msg.sender, amountReceived, token, strategy);

@@ -53,12 +53,14 @@ interface ISavingsAccount {
 
     /**
      * @dev Used to withdraw asset from Saving Account
+     * @param withdrawTo address to which asset should be sent
      * @param amount amount of liquidity shares to withdraw
      * @param asset address of the asset to be withdrawn
      * @param strategy strategy from where asset has to withdrawn(ex:- compound,Aave etc)
      * @param withdrawShares boolean indicating to withdraw in liquidity share or underlying token
      */
     function withdraw(
+        address payable withdrawTo,
         uint256 amount,
         address asset,
         address strategy,
