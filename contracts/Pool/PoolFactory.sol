@@ -35,7 +35,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     mapping(address => bool) isCollateralToken;
     
 
-    mapping(address => bool) public override registry;
+    mapping(address => bool) public override openBorrowPoolRegistry;
 
     Limits poolSizeLimit;
     Limits collateralRatioLimit;
@@ -59,7 +59,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     event LimitsUpdated(string limitType, uint256 max, uint256 min);
 
     modifier onlyPool() {
-        require(registry[msg.sender], "PoolFactory::onlyPool - Only pool can destroy itself");
+        require(openBorrowPoolRegistry[msg.sender], "PoolFactory::onlyPool - Only pool can destroy itself");
         _;
     }
 
@@ -131,7 +131,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         bytes memory data = abi.encodeWithSelector(initializeFunctionId, _poolSize, _minBorrowAmountFraction, msg.sender, _borrowTokenType, _collateralTokenType, _collateralRatio, _borrowRate, _repaymentInterval, _noOfRepaymentIntervals, _investedTo, _collateralAmount, _transferFromSavingsAccount, gracePeriodPenaltyFraction);
         // TODO: Setting 0x00 as admin, so that it is not upgradable. Remove the upgradable functionality to optimize
         address pool = address((new SublimeProxy){value: msg.value}(poolImpl, address(0), data));
-        registry[pool] = true;
+        openBorrowPoolRegistry[pool] = true;
         IRepayment(repaymentImpl).initializeRepayment(_noOfRepaymentIntervals, _repaymentInterval);
         emit PoolCreated(pool, msg.sender);
 
@@ -150,7 +150,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     }
 
     function destroyPool() public onlyPool {
-        delete registry[msg.sender];
+        delete openBorrowPoolRegistry[msg.sender];
     }
 
     function updateInitializeFunctionId(bytes4 _functionId) external onlyOwner {
