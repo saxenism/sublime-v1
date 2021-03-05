@@ -23,10 +23,10 @@ contract CreditLine is CreditLineStorage {
      * @dev checks if Credit Line exists
      * @param creditLineHash credit hash
      **/
-    modifier ifcreditLineExists(bytes32 creditLineHash) {
+    modifier ifCreditLineExists(bytes32 creditLineHash) {
         require(
             creditLineInfo[creditLineHash].exists == true,
-            "CreditLine Doesn't exists"
+            "Credit line does not exist"
         );
         _;
     }
@@ -38,7 +38,7 @@ contract CreditLine is CreditLineStorage {
     modifier onlyCreditLineBorrower(bytes32 creditLineHash) {
         require(
             creditLineInfo[creditLineHash].borrower == msg.sender,
-            "only Credit Line Borrower can access"
+            "Only credit line Borrower can access"
         );
         _;
     }
@@ -50,7 +50,7 @@ contract CreditLine is CreditLineStorage {
     modifier onlyCreditLineLender(bytes32 creditLineHash) {
         require(
             creditLineInfo[creditLineHash].lender == msg.sender,
-            "only Credit Line Lender can access"
+            "Only credit line Lender can access"
         );
         _;
     }
@@ -60,7 +60,8 @@ contract CreditLine is CreditLineStorage {
      * @dev emits when borrower request for a credit Line
      * @param creditLineHash the credit Line Hash
      **/
-    event creditLineRequested(bytes32 creditLineHash);
+    event CreditLineRequestedToLender(bytes32 creditLineHash, address lender, address borrower);
+    event CreditLineRequestedToBorrower(bytes32 creditLineHash, address lender, address borrower);
 
 
     function initialize() public initializer {
@@ -69,48 +70,79 @@ contract CreditLine is CreditLineStorage {
 
 
     /**
-     * @dev Used to Calculate Interest Per second on given principle and Interest rate
-     * @param principle principle Amount for which interest has to be calculated.
+     * @dev Used to Calculate Interest Per second on given principal and Interest rate
+     * @param principal principal Amount for which interest has to be calculated.
      * @param borrowRate It is the Interest Rate at which Credit Line is approved
     * @return uint256 interest per second for the given parameters
     */
-    function calculateInterestPerSecond(uint256 principle, uint256 borrowRate)
+    function calculateInterestPerSecond(uint256 principal, uint256 borrowRate)
         public
         view
         returns (uint256)
     {
-        
+        uint256 _interest = (principal.mul(borrowRate)).div(yearSeconds);
+        return _interest;
     }
 
 
     /**
-     * @dev Used to Calculate Accrue Interest uptill now which has to be paid
-     * @param creditLineHash creditLine Hash of the CreditLine for which Accrue Interest has to be calculated
-     * @return uint256 interest Accrued over current borrowed amount
+     * @dev Used to calculate interest accrued since last repayment
+     * @param creditLineHash Hash of the credit line for which interest accrued has to be calculated
+     * @return uint256 interest accrued over current borrowed amount since last repayment
     */
 
-    function calculateAccrueInterest(bytes32 creditLineHash)
+    function calculateInterestAccrued(bytes32 creditLineHash)
         public
         view
-        ifcreditLineExists(creditLineHash)
+        ifCreditLineExists(creditLineHash)
         returns (uint256)
     {
-        
+        uint256 timeElapsed = block.timestamp - creditLineUsage[creditLineHash].lastPrincipalUpdateTime;
+
+        uint256 interestAccrued = calculateInterestPerSecond(
+                                        creditLineUsage[creditLineHash].principal,
+                                        creditLineInfo[creditLineHash].borrowRate
+                                    ).mul(timeElapsed);
+        return interestAccrued;
     }
 
     /**
-     * @dev Used to Calculate Current Debt for a Borrower
-     * @param creditLineHash creditLine Hash of the CreditLine for which Current Debt has to be calculated
-     * @return uint256 current debt over user 
+     * @dev Used to calculate current debt of borrower against a credit line. 
+     * @param creditLineHash Hash of the credit line for which current debt has to be calculated
+     * @return uint256 current debt of borrower 
     */
     function calculateCurrentDebt(bytes32 creditLineHash)
         public
-        ifcreditLineExists(creditLineHash)
+        view
+        ifCreditLineExists(creditLineHash)
         returns (uint256)
     {
-        
+        uint256 interestAccrued = calculateInterestAccrued(creditLineHash);
+        uint256 currentDebt =
+            (creditLineUsage[creditLineHash].principal)
+                .add(repaymentsInfo[creditLineHash].interestAccruedTillUpdate)
+                .add(interestAccrued)
+                .sub(repaymentsInfo[creditLineHash].interestRepaid);
+        return currentDebt;
     }
 
+    function updateInterestAccruedTillUpdate(bytes32 creditLineHash)
+        internal
+        ifCreditLineExists(creditLineHash)
+        returns (uint256) {
+
+            require(creditLineInfo[creditLineHash].currentStatus == creditLineStatus.ACTIVE,
+                "CreditLine: The credit line is not yet active.");
+
+            uint256 interestAccrued = calculateInterestAccrued(creditLineHash);
+            uint256 newInterestAccrued = (repaymentsInfo[creditLineHash].interestAccruedTillUpdate)
+                                            .add(interestAccrued);
+            repaymentsInfo[creditLineHash].interestAccruedTillUpdate = newInterestAccrued;
+
+            return newInterestAccrued;
+        }
+
+    //function update
 
     // /**
     //  * @dev Used to set Initial Values for a creditLine whenever a CreditLine is Created
@@ -124,49 +156,142 @@ contract CreditLine is CreditLineStorage {
 
     /**
      * @dev used to request a credit line by a borrower
-     * @param _lender lender from whom creditLine is requested
-     * @param _borrowAmount maximum borrow amount in a credit line
-     * @param _liquidationThreshold threshold for liquidation 
-     * @param _borrowRate Interest Rate at which credit Line is requested
+     * @param lender lender from whom creditLine is requested
+     * @param borrowLimit maximum borrow amount in a credit line
+     * @param liquidationThreshold threshold for liquidation 
+     * @param borrowRate Interest Rate at which credit Line is requested
     */
-    function requestCreditLine(
-        address _lender,
-        uint256 _borrowAmount,
-        uint256 _liquidationThreshold,
-        uint256 _borrowRate,
-        bool _autoLiquidation
+    function requestCreditLineToLender(
+        address lender,
+        uint256 borrowLimit,
+        uint256 liquidationThreshold,
+        uint256 borrowRate,
+        bool autoLiquidation,
+        uint256 collateralRatio,
+        address borrowAsset,
+        address collateralAsset
     ) public returns (bytes32) {
 
-        
+        require(userData[lender].blockCreditLineRequests == true,
+                "CreditLine: External requests blocked");
+
+        CreditLineCounter = CreditLineCounter + 1; // global counter to generate ID
+
+        bytes32 creditLineHash = keccak256(abi.encodePacked(CreditLineCounter));
+        CreditLineVars memory temp;
+
+        temp.exists = true;
+        temp.currentStatus = creditLineStatus.REQUESTED;
+        temp.borrower = msg.sender;
+        temp.lender = lender;
+        temp.borrowLimit = borrowLimit;
+        temp.autoLiquidation = autoLiquidation;
+        temp.idealCollateralRatio = collateralRatio;
+        temp.liquidationThreshold = liquidationThreshold;
+        temp.borrowRate = borrowRate;
+        temp.borrowAsset = borrowAsset;
+        temp.collateralAsest = collateralAsset;
+
+        creditLineInfo[creditLineHash] = temp;
+        // setRepayments(creditLineHash);
+        emit CreditLineRequestedToLender(creditLineHash, lender, msg.sender);
+
+        return creditLineHash;
+
+    }
+
+    function requestCreditLineToBorrower(
+        address borrower,
+        uint256 borrowLimit,
+        uint256 liquidationThreshold,
+        uint256 borrowRate,
+        bool autoLiquidation,
+        uint256 collateralRatio,
+        address borrowAsset,
+        address collateralAsset
+    ) public returns (bytes32) {
+
+        require(userData[borrower].blockCreditLineRequests == true,
+                "CreditLine: External requests blocked");
+
+        CreditLineCounter = CreditLineCounter + 1; // global counter to generate ID
+
+        bytes32 creditLineHash = keccak256(abi.encodePacked(CreditLineCounter));
+        CreditLineVars memory temp;
+
+        temp.exists = true;
+        temp.currentStatus = creditLineStatus.REQUESTED;
+        temp.borrower = borrower;
+        temp.lender = msg.sender;
+        temp.borrowLimit = borrowLimit;
+        temp.autoLiquidation = autoLiquidation;
+        temp.idealCollateralRatio = collateralRatio;
+        temp.liquidationThreshold = liquidationThreshold;
+        temp.borrowRate = borrowRate;
+        temp.borrowAsset = borrowAsset;
+        temp.collateralAsest = collateralAsset;
+
+        creditLineInfo[creditLineHash] = temp;
+        // setRepayments(creditLineHash);
+        emit CreditLineRequestedToBorrower(creditLineHash, msg.sender, borrower);
+
+        return creditLineHash;
 
     }
 
 
+    event CreditLineAccepted(bytes32 creditLineHash);
     /**
      * @dev used to Accept a credit line by a specified lender
      * @param creditLineHash Credit line hash which represents the credit Line Unique Hash
     */
     function acceptCreditLine(bytes32 creditLineHash)
         external
-        ifcreditLineExists(creditLineHash)
+        ifCreditLineExists(creditLineHash)
         onlyCreditLineLender(creditLineHash)
     {
-        
+        require(
+            creditLineInfo[creditLineHash].currentStatus == creditLineStatus.REQUESTED,
+            "CreditLine is already accepted");
+
+        creditLineInfo[creditLineHash].currentStatus = creditLineStatus.ACTIVE;
+
+        emit CreditLineAccepted(creditLineHash);
     }
 
 
     //TODO :- Make the function to accept ether as well
     /**
      * @dev used to withdraw assest from credit line 
-     * @param amount amount which borrower wants to withdraw from credit line
+     * @param borrowAmount amount which borrower wants to withdraw from credit line
      * @param creditLineHash Credit line hash which represents the credit Line Unique Hash
     */
-    function useCreditLine(uint256 amount, bytes32 creditLineHash)
+
+    event BorrowedFromCreditLine(uint256 borrowAmount, bytes32 creditLineHash);
+
+    function borrowFromCreditLine(uint256 borrowAmount, bytes32 creditLineHash)
         external
-        ifcreditLineExists(creditLineHash)
+        ifCreditLineExists(creditLineHash)
         onlyCreditLineBorrower(creditLineHash)
     {   
+        require(creditLineInfo[creditLineHash].currentStatus == creditLineStatus.ACTIVE,
+                "CreditLine: The credit line is not yet active.");
 
+        uint256 _currentDebt = calculateCurrentDebt(creditLineHash);
+        require(
+            _currentDebt.add(borrowAmount) <= creditLineInfo[creditLineHash].borrowLimit,
+            "CreditLine: Amount exceeds borrow limit.");
+
+        uint256 interestAccruedTillUpdate = updateInterestAccruedTillUpdate(creditLineHash);
+
+        //refactor
+        creditLineUsage[creditLineHash].principal = creditLineUsage[creditLineHash].principal.add(borrowAmount);
+
+        creditLineUsage[creditLineHash].lastPrincipalUpdateTime = block.timestamp;
+
+        /// transfer of assest is remaning as it requires interation with saving account of lender
+
+        emit BorrowedFromCreditLine(borrowAmount, creditLineHash);
     }
 
 
@@ -176,35 +301,167 @@ contract CreditLine is CreditLineStorage {
      * @param repayAmount amount which borrower wants to repay to credit line
      * @param creditLineHash Credit line hash which represents the credit Line Unique Hash
     */
-    function repayCreditLine(uint256 repayAmount, bytes32 creditLineHash, address token)
+
+    /*
+        Parameters used:
+        - currentStatus
+        - borrowAsset
+        - interestTillLastUpdate
+        - principal
+        - totalInterestRepaid
+        - lastPrincipalUpdateTime
+
+
+
+    */
+
+    event PartialCreditLineRepaid(bytes32 creditLineHash, uint256 repayAmount);
+
+    function repayCreditLine(uint256 repayAmount, bytes32 creditLineHash, address asset)
         external
-        ifcreditLineExists(creditLineHash)
+        ifCreditLineExists(creditLineHash)
         onlyCreditLineBorrower(creditLineHash)
     {   
 
-        
+        require(creditLineInfo[creditLineHash].currentStatus == creditLineStatus.ACTIVE,
+                "CreditLine: The credit line is not yet active.");
+        // update 
+
+        require(asset == creditLineInfo[creditLineHash].borrowAsset,
+                "CreditLine: Asset does not match.");
+
+        uint256 _interestSinceLastUpdate = calculateInterestAccrued(creditLineHash);
+        uint256 _totalInterestAccrued = (creditLineUsage[creditLineHash].interestTillLastUpdate)
+                                        .add(_interestSinceLastUpdate);
+
+        uint256 _totalDebt = _totalInterestAccrued.add(creditLineUsage[creditLineHash].principal);
+        // check requried for correct token type
+        //uint256 _currentDebt = calculateCurrentDebt(creditLineHash);
+        require(_totalDebt >= repayAmount,
+                "CreditLine: Repay amount is greater than debt.");
+
+        if (repayAmount.add(creditLineUsage[creditLineHash].totalInterestRepaid) <= _totalInterestAccrued) {
+            creditLineUsage[creditLineHash].totalInterestRepaid = repayAmount
+                                                                .add(creditLineUsage[creditLineHash].totalInterestRepaid);
+        }
+
+        else {
+            creditLineUsage[creditLineHash].principal = (creditLineUsage[creditLineHash].principal)
+                                                        .sub(repayAmount)
+                                                        .sub(creditLineUsage[creditLineHash].totalInterestRepaid)
+                                                        .add(_totalInterestAccrued);
+            creditLineUsage[creditLineHash].interestTillLastUpdate = _totalInterestAccrued;
+            creditLineUsage[creditLineHash].totalInterestRepaid = repayAmount
+                                                                .add(creditLineUsage[creditLineHash].totalInterestRepaid);
+            creditLineUsage[creditLineHash].lastPrincipalUpdateTime = block.timestamp;
+
+        }
+
+        /// TODO - make the transfer
+
+        if (creditLineUsage[creditLineHash].principal == 0) {
+            _resetCreditLine(creditLineHash);
+        }
+
+        // emit event
+
+        PartialCreditLineRepaid(creditLineHash, repayAmount);
     }
 
+    event CreditLineReset(bytes32 creditLineHash);
+
+    function _resetCreditLine(bytes32 creditLineHash) 
+        internal 
+        ifCreditLineExists(creditLineHash) {
+
+        require(creditLineInfo[creditLineHash].currentStatus == creditLineStatus.ACTIVE,
+                "CreditLine: Credit line should be active.");
+
+        creditLineUsage[creditLineHash].lastPrincipalUpdateTime = 0; // check if can assign 0 or not
+        creditLineUsage[creditLineHash].totalInterestRepaid = 0;
+        creditLineUsage[creditLineHash].interestTillLastUpdate = 0;
+
+        emit CreditLineReset(bytes32 creditLineHash);
+    }
 
     /**
      * @dev used to close credit line once by borrower or lender  
      * @param creditLineHash Credit line hash which represents the credit Line Unique Hash
     */
+
+    event CreditLineClosed(bytes32 creditLineHash);
+
     function closeCreditLine(bytes32 creditLineHash)
         external
-        ifcreditLineExists(creditLineHash)
+        ifCreditLineExists(creditLineHash)
     {
-        
+        require(
+            msg.sender == creditLineInfo[creditLineHash].borrower ||
+                msg.sender == creditLineInfo[creditLineHash].lender,
+            "CreditLine: Permission denied while closing Line of credit"
+        );
+
+        require(creditLineInfo[creditLineHash].currentStatus == creditLineStatus.ACTIVE,
+                "CreditLine: Credit line should be active.");
+
+        require(creditLineUsage[creditLineHash].principal == 0,
+                "CreditLine: Cannot be closed since not repaid.");
+
+        require(creditLineUsage[creditLineHash].interestTillLastUpdate == 0,
+                "CreditLine: Cannot be closed since not repaid.")
+
+        creditLineInfo[creditLineHash].currentStatus = creditLineStatus.CLOSED;
+
+        // emit event
+        emit CreditLineClosed(creditLineHash);
     }
 
 
 
-    function calculateCurrentCollateralRatio(bytes32 creditLineHash) public ifcreditLineExists(creditLineHash) returns(uint256) {
-        
+    function calculateCurrentCollateralRatio(bytes32 creditLineHash) 
+        public 
+        view 
+        ifCreditLineExists(creditLineHash) {
+
+        uint256 _ratioOfPrices =
+            IPriceOracle(_priceOracle).getLatestPrice(
+                creditLineInfo[creditLineHash].collateralAsset,
+                creditLineInfo[creditLineHash].borrowAsset
+            );
+
+        uint256 currentDebt = calculateCurrentDebt(creditLineHash);
+
+        uint256 currentCollateralRatio = ((creditLineUsage[creditLineHash].collateralAmount)
+                                            .div(currentDebt)).mul(_ratioOfPrices);
+
+        return currentCollateralRatio;
     }
 
-    function liquidation(bytes32 creditLineHash) external ifcreditLineExists(creditLineHash) {
+    function liquidation(bytes32 creditLineHash) 
+        external payable
+        ifCreditLineExists(creditLineHash) 
+    {
 
+        require(creditLineInfo[creditLineHash].currentStatus == creditLineStatus.ACTIVE,
+                "CreditLine: Credit line should be active.");
+
+        uint currentCollateralRatio = calculateCurrentCollateralRatio(creditLineHash);
+
+        require(currentCollateralRatio < creditLineInfo[creditLineHash].liquidationThreshold,
+                "CreditLine: Collateral ratio is higher than liquidation threshold")
+
+        if(creditLineInfo[creditLineHash].autoLiquidation == true) {
+            require(msg.sender == creditLineInfo[creditLineHash].lender,
+                    "CreditLine: Liquidation can only be performed by lender.");
+
+            //TODO transfer tokens
+
+        }
+
+        else {
+            
+            //TODO transfer tokens
+        }
 
     }
 
