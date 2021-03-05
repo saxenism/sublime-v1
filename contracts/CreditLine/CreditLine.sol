@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./CreditLineStorage.sol";
 import "../interfaces/IPriceOracle.sol";
+import "../interfaces/IPoolFactory.sol";
 
 /**
  * @title Credit Line contract with Methods related to credit Line
@@ -18,6 +19,7 @@ contract CreditLine is CreditLineStorage {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
+    address public PoolFactory;
 
     /**
      * @dev checks if Credit Line exists
@@ -111,6 +113,8 @@ contract CreditLine is CreditLineStorage {
      * @param creditLineHash Hash of the credit line for which current debt has to be calculated
      * @return uint256 current debt of borrower 
     */
+
+    // maybe change interestAccruedTillPrincipalUpdate to interestAccruedTillLastPrincipalUpdate
     function calculateCurrentDebt(bytes32 creditLineHash)
         public
         view
@@ -120,13 +124,13 @@ contract CreditLine is CreditLineStorage {
         uint256 interestAccrued = calculateInterestAccrued(creditLineHash);
         uint256 currentDebt =
             (creditLineUsage[creditLineHash].principal)
-                .add(repaymentsInfo[creditLineHash].interestAccruedTillUpdate)
+                .add(creditLineUsage[creditLineHash].interestAccruedTillPrincipalUpdate)
                 .add(interestAccrued)
-                .sub(repaymentsInfo[creditLineHash].interestRepaid);
+                .sub(creditLineUsage[creditLineHash].totalInterestRepaid);
         return currentDebt;
     }
 
-    function updateInterestAccruedTillUpdate(bytes32 creditLineHash)
+    function updateinterestAccruedTillPrincipalUpdate(bytes32 creditLineHash)
         internal
         ifCreditLineExists(creditLineHash)
         returns (uint256) {
@@ -135,9 +139,9 @@ contract CreditLine is CreditLineStorage {
                 "CreditLine: The credit line is not yet active.");
 
             uint256 interestAccrued = calculateInterestAccrued(creditLineHash);
-            uint256 newInterestAccrued = (repaymentsInfo[creditLineHash].interestAccruedTillUpdate)
+            uint256 newInterestAccrued = (creditLineUsage[creditLineHash].interestAccruedTillPrincipalUpdate)
                                             .add(interestAccrued);
-            repaymentsInfo[creditLineHash].interestAccruedTillUpdate = newInterestAccrued;
+            creditLineUsage[creditLineHash].interestAccruedTillPrincipalUpdate = newInterestAccrued;
 
             return newInterestAccrued;
         }
@@ -150,7 +154,7 @@ contract CreditLine is CreditLineStorage {
     // */
     // function setRepayments(bytes32 creditLineHash) internal {
 
-    //     repaymentsInfo[creditLineHash] = _repaymentTemp;
+    //     creditLineUsage[creditLineHash] = _repaymentTemp;
     // }
 
 
@@ -172,8 +176,8 @@ contract CreditLine is CreditLineStorage {
         address collateralAsset
     ) public returns (bytes32) {
 
-        require(userData[lender].blockCreditLineRequests == true,
-                "CreditLine: External requests blocked");
+        //require(userData[lender].blockCreditLineRequests == true,
+        //        "CreditLine: External requests blocked");
 
         CreditLineCounter = CreditLineCounter + 1; // global counter to generate ID
 
@@ -190,7 +194,7 @@ contract CreditLine is CreditLineStorage {
         temp.liquidationThreshold = liquidationThreshold;
         temp.borrowRate = borrowRate;
         temp.borrowAsset = borrowAsset;
-        temp.collateralAsest = collateralAsset;
+        temp.collateralAsset = collateralAsset;
 
         creditLineInfo[creditLineHash] = temp;
         // setRepayments(creditLineHash);
@@ -211,8 +215,8 @@ contract CreditLine is CreditLineStorage {
         address collateralAsset
     ) public returns (bytes32) {
 
-        require(userData[borrower].blockCreditLineRequests == true,
-                "CreditLine: External requests blocked");
+        //require(userData[borrower].blockCreditLineRequests == true,
+        //        "CreditLine: External requests blocked");
 
         CreditLineCounter = CreditLineCounter + 1; // global counter to generate ID
 
@@ -229,7 +233,7 @@ contract CreditLine is CreditLineStorage {
         temp.liquidationThreshold = liquidationThreshold;
         temp.borrowRate = borrowRate;
         temp.borrowAsset = borrowAsset;
-        temp.collateralAsest = collateralAsset;
+        temp.collateralAsset = collateralAsset;
 
         creditLineInfo[creditLineHash] = temp;
         // setRepayments(creditLineHash);
@@ -282,7 +286,7 @@ contract CreditLine is CreditLineStorage {
             _currentDebt.add(borrowAmount) <= creditLineInfo[creditLineHash].borrowLimit,
             "CreditLine: Amount exceeds borrow limit.");
 
-        uint256 interestAccruedTillUpdate = updateInterestAccruedTillUpdate(creditLineHash);
+        uint256 interestAccruedTillPrincipalUpdate = updateinterestAccruedTillPrincipalUpdate(creditLineHash);
 
         //refactor
         creditLineUsage[creditLineHash].principal = creditLineUsage[creditLineHash].principal.add(borrowAmount);
@@ -306,7 +310,7 @@ contract CreditLine is CreditLineStorage {
         Parameters used:
         - currentStatus
         - borrowAsset
-        - interestTillLastUpdate
+        - interestAccruedTillPrincipalUpdate
         - principal
         - totalInterestRepaid
         - lastPrincipalUpdateTime
@@ -330,9 +334,9 @@ contract CreditLine is CreditLineStorage {
         require(asset == creditLineInfo[creditLineHash].borrowAsset,
                 "CreditLine: Asset does not match.");
 
-        uint256 _interestSinceLastUpdate = calculateInterestAccrued(creditLineHash);
-        uint256 _totalInterestAccrued = (creditLineUsage[creditLineHash].interestTillLastUpdate)
-                                        .add(_interestSinceLastUpdate);
+        uint256 _interestSincePrincipalUpdate = calculateInterestAccrued(creditLineHash);
+        uint256 _totalInterestAccrued = (creditLineUsage[creditLineHash].interestAccruedTillPrincipalUpdate)
+                                        .add(_interestSincePrincipalUpdate);
 
         uint256 _totalDebt = _totalInterestAccrued.add(creditLineUsage[creditLineHash].principal);
         // check requried for correct token type
@@ -350,7 +354,7 @@ contract CreditLine is CreditLineStorage {
                                                         .sub(repayAmount)
                                                         .sub(creditLineUsage[creditLineHash].totalInterestRepaid)
                                                         .add(_totalInterestAccrued);
-            creditLineUsage[creditLineHash].interestTillLastUpdate = _totalInterestAccrued;
+            creditLineUsage[creditLineHash].interestAccruedTillPrincipalUpdate = _totalInterestAccrued;
             creditLineUsage[creditLineHash].totalInterestRepaid = repayAmount
                                                                 .add(creditLineUsage[creditLineHash].totalInterestRepaid);
             creditLineUsage[creditLineHash].lastPrincipalUpdateTime = block.timestamp;
@@ -379,7 +383,7 @@ contract CreditLine is CreditLineStorage {
 
         creditLineUsage[creditLineHash].lastPrincipalUpdateTime = 0; // check if can assign 0 or not
         creditLineUsage[creditLineHash].totalInterestRepaid = 0;
-        creditLineUsage[creditLineHash].interestTillLastUpdate = 0;
+        creditLineUsage[creditLineHash].interestAccruedTillPrincipalUpdate = 0;
 
         emit CreditLineReset(creditLineHash);
     }
@@ -407,7 +411,7 @@ contract CreditLine is CreditLineStorage {
         require(creditLineUsage[creditLineHash].principal == 0,
                 "CreditLine: Cannot be closed since not repaid.");
 
-        require(creditLineUsage[creditLineHash].interestTillLastUpdate == 0,
+        require(creditLineUsage[creditLineHash].interestAccruedTillPrincipalUpdate == 0,
                 "CreditLine: Cannot be closed since not repaid.");
 
         creditLineInfo[creditLineHash].currentStatus = creditLineStatus.CLOSED;
@@ -421,13 +425,13 @@ contract CreditLine is CreditLineStorage {
     function calculateCurrentCollateralRatio(bytes32 creditLineHash) 
         public 
         view 
-        ifCreditLineExists(creditLineHash) {
+        ifCreditLineExists(creditLineHash) returns (uint256) {
 
         uint256 _ratioOfPrices =
-            IPriceOracle(_priceOracle).getLatestPrice(
+            IPriceOracle(IPoolFactory(PoolFactory).priceOracle())
+                .getLatestPrice(
                 creditLineInfo[creditLineHash].collateralAsset,
-                creditLineInfo[creditLineHash].borrowAsset
-            );
+                creditLineInfo[creditLineHash].borrowAsset);
 
         uint256 currentDebt = calculateCurrentDebt(creditLineHash);
 

@@ -41,23 +41,24 @@ contract Repayments is RepaymentStorage {
 
 
     function calculateRepayAmount(
+        address poolID,
         uint256 borrowRate,
         uint256 activePrincipal,
         uint256 loanStartTime,
         uint256 repaymentInterval
         ) public view returns(uint256) {
 
-        uint256 memory yearInSeconds = 365 days;
+        uint256 yearInSeconds = 365 days;
         // assuming repaymentInterval is in seconds
-        uint256 memory currentPeriod = (block.timestamp.sub(loanStartTime)).div(repaymentInterval);
+        uint256 currentPeriod = (block.timestamp.sub(loanStartTime)).div(repaymentInterval);
 
-        uint256 memory interestPerSecond = activePrincipal
+        uint256 interestPerSecond = activePrincipal
                                            .mul(borrowRate)
                                            .div(yearInSeconds);
 
-        uint256 memory periodEndTime = loanStartTime.add((currentPeriod.add(1)).mul(repaymentInterval));
+        uint256 periodEndTime = loanStartTime.add((currentPeriod.add(1)).mul(repaymentInterval));
 
-        uint256 memory interestDueTillPeriodEnd = interestPerSecond
+        uint256 interestDueTillPeriodEnd = interestPerSecond
                                                   .mul((periodEndTime)
                                                     .sub(repaymentDetails[poolID].repaymentPeriodCovered));
         return interestDueTillPeriodEnd;
@@ -69,69 +70,71 @@ contract Repayments is RepaymentStorage {
 
     function repayAmount(
         address poolID,
-        uint256 repayAmount,
+        uint256 amount,
         uint256 activePrincipal,
         uint256 repaymentInterval,
         uint256 borrowRate,
         uint256 loanStartTime,
         bool isLoanExtensionActive
-    ) public isPoolInitialized {
+    ) public isPoolInitialized returns (bool) {
         //repayAmount() in Pool.sol is already performing pool status check - confirm this
 
         // assuming repaymentInterval is in seconds
 
-        uint256 memory interestPerSecond = activePrincipal
+        uint256 yearInSeconds = 365 days;
+        uint256 interestPerSecond = activePrincipal
                                            .mul(borrowRate)
                                            .div(yearInSeconds);
 
-        uint256 memory interestDueTillPeriodEnd = calculateRepayAmount(borrowRate, 
-                                                                        activePrincipal, 
-                                                                        loanStartTime, 
-                                                                        repaymentInterval);
+        uint256 interestDueTillPeriodEnd = calculateRepayAmount(poolID,
+                                                                borrowRate, 
+                                                                activePrincipal, 
+                                                                loanStartTime, 
+                                                                repaymentInterval);
 
 
         if (isLoanExtensionActive == false) {
             // might consider transferring interestDueTillPeriodEnd and refunding the rest
-            require(repayAmount < interestDueTillPeriodEnd,
-                    "Repayments - repayAmount is greater than interest due this period.");
+            require(amount < interestDueTillPeriodEnd,
+                    "Repayments - amount is greater than interest due this period.");
             
             // TODO add transfer
 
-            uint256 memory periodCovered = repayAmount
+            uint256 periodCovered = amount
                                             .div(interestPerSecond);
 
             repaymentDetails[poolID].repaymentPeriodCovered = repaymentDetails[poolID].repaymentPeriodCovered
                                                               .add(periodCovered);
 
-            emit InterestRepaid(poolID, repayAmount);
+            emit InterestRepaid(poolID, amount);
 
         }
         else {
-            if (repayAmount >= repaymentDetails[poolID].repaymentOverdue) {
+            if (amount >= repaymentDetails[poolID].repaymentOverdue) {
                 repaymentDetails[poolID].repaymentOverdue = 0;
                 isLoanExtensionActive = false;
-                repayAmount = repayAmount.sub(repaymentDetails[poolID].repaymentOverdue);
+                amount = amount.sub(repaymentDetails[poolID].repaymentOverdue);
                 emit MissedRepaymentRepaid(poolID);
 
                 // might consider transferring interestDueTillPeriodEnd and refunding the rest
-                require(repayAmount < interestDueTillPeriodEnd,
-                        "Repayments - repayAmount is greater than interest due this period.");
+                require(amount < interestDueTillPeriodEnd,
+                        "Repayments - amount is greater than interest due this period.");
 
                 //TODO make token transfer
-                uint256 memory periodCovered = repayAmount
+                uint256 periodCovered = amount
                                                 .div(interestPerSecond);
 
                 repaymentDetails[poolID].repaymentPeriodCovered = repaymentDetails[poolID].repaymentPeriodCovered
                                                                   .add(periodCovered);
-                emit InterestRepaid(poolID, repayAmount);
+                emit InterestRepaid(poolID, amount);
             }
 
             else {
 
                 //TODO make token transfer
                 repaymentDetails[poolID].repaymentOverdue = repaymentDetails[poolID].repaymentOverdue
-                                                            .sub(repayAmount);
-                repayAmount = 0;
+                                                            .sub(amount);
+                amount = 0;
 
                 emit PartialExtensionRepaymentMade(poolID);
             }

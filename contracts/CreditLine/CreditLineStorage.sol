@@ -35,7 +35,7 @@ contract CreditLineStorage is OwnableUpgradeable {
         uint256 principal;
         uint256 totalInterestRepaid;
         uint256 lastPrincipalUpdateTime;
-        uint256 interestTillLastUpdate;
+        uint256 interestAccruedTillPrincipalUpdate;
         uint256 collateralAmount;
     }
 
