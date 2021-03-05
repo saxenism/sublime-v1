@@ -205,7 +205,7 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
      **/
     function getTokensForShares(uint256 shares, address asset)
         external
-        view
+
         override
         returns (uint256 amount)
     {
