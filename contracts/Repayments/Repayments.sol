@@ -5,7 +5,6 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-
 import "./RepaymentStorage.sol";
 
 contract Repayments is RepaymentStorage {
@@ -21,21 +20,30 @@ contract Repayments is RepaymentStorage {
         _;
     }
 
-    function initialize(address poolImpl, address lenderImpl)
+    modifier onlyValidPool {
+        require(poolFactory.registry(msg.sender), "Repayments::onlyValidPool - Invalid Pool");
+        _;
+    }
+
+    function initialize(address _poolFactory, uint256 _votingExtensionlength, uint256 _votingPassRatio)
         public
         initializer
     {
+        // _votingExtensionlength - should enforce conditions with repaymentInterval
         __Ownable_init();
+        poolFactory = IPoolFactory(_poolFactory);
+        votingExtensionlength = _votingExtensionlength;
+        votingPassRatio = _votingPassRatio;
     }
 
-    function initializePool(
+    function initializeRepayment(
         uint256 numberOfTotalRepayments,
-        uint256 votingExtensionlength,
-        uint256 gracepenaltyRate,
-        uint256 gracePeriodInterval,
-        uint256 loanDuration
-    ) external {
-
+        uint256 repaymentInterval
+    ) external onlyValidPool {
+        repaymentDetails[msg.sender].gracePenaltyRate = gracePenaltyRate;
+        repaymentDetails[msg.sender].gracePeriodFraction = gracePeriodFraction;
+        repaymentDetails[msg.sender].numberOfTotalRepayments = numberOfTotalRepayments;
+        repaymentDetails[msg.sender].loanDuration = repaymentInterval.mul(numberOfTotalRepayments);
     }
 
 
@@ -114,5 +122,17 @@ contract Repayments is RepaymentStorage {
         uint256 nextDuePeriod
     ) external isPoolInitialized returns (uint256) {
         
+    }
+
+    function updatePoolFactory(address _poolFactory) external onlyOwner {
+        poolFactory = IPoolFactory(_poolFactory);
+    }
+
+    function updateVotingExtensionlength(uint256 _votingExtensionPeriod) external onlyOwner {
+        votingExtensionlength = _votingExtensionPeriod;
+    }
+
+    function updateVotingPassRatio(uint256 _votingPassRatio) external onlyOwner {
+        votingPassRatio = _votingPassRatio;
     }
 }

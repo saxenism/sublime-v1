@@ -116,9 +116,32 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         uint256 _repaymentInterval,
         uint256 _noOfRepaymentIntervals,
         address _investedTo,
-        uint256 _collatoralAmount
+        uint256 _collateralAmount,
+        bool _transferFromSavingsAccount,
+        uint256 _gracePeriodPenaltyFraction
     ) external initializer {
-        
+        super.initialize("Open Pool Tokens", "OPT");
+        initializePoolParams(
+            _borrowAmountRequested,
+            _minborrowAmountFraction, // represented as %
+            _borrower,
+            _borrowAsset,
+            _collateralAsset,
+            _collateralRatio,
+            _borrowRate,
+            _repaymentInterval,
+            _noOfRepaymentIntervals,
+            _investedTo,
+            _gracePeriodPenaltyFraction
+        );
+        PoolFactory = msg.sender;
+
+        depositCollateral(_collateralAmount, _transferFromSavingsAccount);
+        uint256 collectionPeriod = IPoolFactory(msg.sender).collectionPeriod();
+        loanStartTime = block.timestamp.add(collectionPeriod);
+        matchCollateralRatioEndTime = block.timestamp.add(collectionPeriod).add(IPoolFactory(msg.sender).matchCollateralRatioInterval());
+
+        emit OpenBorrowPoolCreated(msg.sender);
     }
 
     function initializePoolParams(
@@ -132,26 +155,32 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         uint256 _repaymentInterval,
         uint256 _noOfRepaymentIntervals,
         address _investedTo,
-        uint256 _collatoralAmount
+        uint256 _gracePeriodPenaltyFraction
     ) internal {
-        
-    }
-
-    function setGlobalParams(address _poolFactory) internal {
-        
+        borrowAmountRequested = _borrowAmountRequested;
+        minborrowAmountFraction = _minborrowAmountFraction;
+        borrower = _borrower;
+        borrowAsset = _borrowAsset;
+        collateralAsset = _collateralAsset;
+        collateralRatio = _collateralRatio;
+        borrowRate =  _borrowRate;
+        repaymentInterval = _repaymentInterval;
+        noOfRepaymentIntervals = _noOfRepaymentIntervals;
+        investedTo = _investedTo;
+        gracePeriodPenaltyFraction = _gracePeriodPenaltyFraction;
     }
 
     // Deposit collateral
-    function deposit(uint256 _amount,bool _isDirect) external payable override {
+    function depositCollateral(uint256 _amount,bool _transferFromSavingsAccount) public payable override {
 
         require(_amount != 0, "Pool::deposit - collateral amount");
         uint256 _sharesReceived;
-        ISavingAccount _savingAccount = ISavingAccount(IPoolFactory(PoolFactory).SavingAccount());
+        ISavingsAccount _savingAccount = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
         address _collateralAsset = collateralAsset;
         address _investedTo = investedTo;
         uint256 _liquidityshare = IYield(_investedTo).getTokensForShares(_amount, _collateralAsset);
 
-        if(_isDirect){
+        if(!_transferFromSavingsAccount){
             if(_collateralAsset == address(0)) {
                 require(msg.value == _amount, "Pool::deposit - value to transfer doesn't match argument");
                 _sharesReceived = _savingAccount.deposit{value:msg.value}(_amount,_collateralAsset,_investedTo, address(this));
@@ -169,19 +198,19 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
 
 
 
-    function addCollateralInMarginCall(address _lender,  uint256 _amount,bool _isDirect) external payable override
+    function addCollateralInMarginCall(address _lender,  uint256 _amount,bool _transferFromSavingsAccount) external payable override
     {
         require(loanStatus == LoanStatus.ACTIVE, "Pool::addCollateralMarginCall - Loan needs to be in Active stage to deposit"); 
         require(lenders[_lender].marginCallEndTime >= block.timestamp, "Pool::addCollateralMarginCall - Can't Add after time is completed");
         require(_amount !=0, "Pool::addCollateralMarginCall - collateral amount");
 
         uint256 _sharesReceived;
-        ISavingAccount _savingAccount = ISavingAccount(IPoolFactory(PoolFactory).SavingAccount());
+        ISavingsAccount _savingAccount = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
         address _collateralAsset = collateralAsset;
         address _investedTo = investedTo;
         uint256 _liquidityshare = IYield(_investedTo).getTokensForShares(_amount, _collateralAsset);
 
-        if(_isDirect){
+        if(!_transferFromSavingsAccount){
             if(_collateralAsset == address(0)) {
                 require(msg.value == _amount, "Pool::addCollateralMarginCall - value to transfer doesn't match argument");
                 _sharesReceived = _savingAccount.deposit{value:msg.value}(_amount,_collateralAsset,_investedTo, address(this));
@@ -249,7 +278,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         );
 
         uint256 _collateralShares = baseLiquidityShares.add(extraLiquidityShares);
-        uint256 _sharesReceived = ISavingAccount(IPoolFactory(PoolFactory).SavingAccount()).transfer(msg.sender,_collateralShares,collateralAsset,investedTo);
+        uint256 _sharesReceived = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()).transfer(msg.sender,_collateralShares,collateralAsset,investedTo);
         emit CollateralWithdrawn(msg.sender, _sharesReceived);
         delete baseLiquidityShares;
         delete extraLiquidityShares;
@@ -353,23 +382,11 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
     //todo: add more details here
     event Liquidated(address liquidator, address lender);
 
-    function interestPerSecond(uint _principle) public view returns(uint256){
-        
-    }
-
-    function amountLenderPerPeriod(address lender) public view returns(uint256){
-        
-    }
-
-    function calculateCurrentPeriod() public view returns(uint256){
-        
-    }
-
     function amountPerPeriod() public view returns(uint256){
         
     }
 
-    function interestTillNow(uint256 _balance, uint256 _interestPerPeriod) public returns(uint256){
+    function interestTillNow(uint256 _balance, uint256 _interestPerPeriod) public view returns(uint256){
         uint256 _repaymentLength = repaymentInterval;
         uint256 _loanStartedAt = loanStartTime;
         uint256 _totalSupply = totalSupply();
@@ -431,7 +448,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         uint256 _balanceOfLender = balanceOf(_lender);
         uint256 _liquidityShares = (baseLiquidityShares.mul(_balanceOfLender).div(totalSupply()))
                     .add(lenders[_lender].extraLiquidityShares); 
-        return(calculateCollateralRatio(amountLenderPerPeriod(_lender), _balanceOfLender, _liquidityShares));
+        return(calculateCollateralRatio(interestPerPeriod(balanceOf(_lender)), _balanceOfLender, _liquidityShares));
     }
    
     function liquidateLender(address lender)
@@ -440,11 +457,30 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         
     }
 
-    function liquidatePool() external {
+    function liquidatePool() external {}
         
+    function interestPerSecond(uint256 _principle)
+        public
+        view
+        returns (uint256)
+    {
+        uint256 _interest = ((_principle).mul(borrowRate)).div(365 days);
+        return _interest;
+    }
+    
+    function interestPerPeriod(uint256 _balance)
+        public
+        view
+        returns (uint256)
+    {
+        return (interestPerSecond(_balance).mul(repaymentInterval));
     }
 
-
+    function calculateCurrentPeriod() public view returns (uint256) {
+        uint256 _currentPeriod =
+            (block.timestamp.sub(loanStartTime, "Pool:: calculateCurrentPeriod - The loan has not started.")).div(repaymentInterval);
+        return _currentPeriod;
+    }
     
     // Withdraw Repayment, Also all the extra state variables are added here only for the review
     
@@ -453,8 +489,6 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
     }
 
     function transferTokensRepayments(uint256 amount, address from, address to) internal{
-        _withdrawRepayment(from);
-        _withdrawRepayment(to);
         
     }
 
