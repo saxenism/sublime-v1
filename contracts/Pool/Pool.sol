@@ -149,8 +149,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         ISavingAccount _savingAccount = ISavingAccount(IPoolFactory(PoolFactory).SavingAccount());
         address _collateralAsset = collateralAsset;
         address _investedTo = investedTo;
-        uint256 _liquidityshare = IYield(_investedTo).getTokensForShares(_amount, _collateralAsset);
-
+    
         if(_isDirect){
             if(_collateralAsset == address(0)) {
                 require(msg.value == _amount, "Pool::deposit - value to transfer doesn't match argument");
@@ -161,7 +160,8 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
             }
         }
         else{
-            _sharesReceived = _savingAccount.transferFrom(borrower, address(this), _liquidityshare, _collateralAsset,_investedTo);
+            uint256 _liquidityshare = IYield(_investedTo).getTokensForShares(_amount, _collateralAsset);
+            _sharesReceived = _savingAccount.transferFrom(msg.sender, address(this), _liquidityshare, _collateralAsset,_investedTo);
         }
         baseLiquidityShares = baseLiquidityShares.add(_sharesReceived);
         emit CollateralAdded(msg.sender,_amount,_sharesReceived);
@@ -179,7 +179,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         ISavingAccount _savingAccount = ISavingAccount(IPoolFactory(PoolFactory).SavingAccount());
         address _collateralAsset = collateralAsset;
         address _investedTo = investedTo;
-        uint256 _liquidityshare = IYield(_investedTo).getTokensForShares(_amount, _collateralAsset);
+        
 
         if(_isDirect){
             if(_collateralAsset == address(0)) {
@@ -187,12 +187,12 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
                 _sharesReceived = _savingAccount.deposit{value:msg.value}(_amount,_collateralAsset,_investedTo, address(this));
             }
             else{
-                IERC20(collateralAsset).approve(_investedTo, _amount);
                 _sharesReceived = _savingAccount.deposit(_amount,_collateralAsset,_investedTo, address(this));
             }
         }
         else{
-            _sharesReceived = _savingAccount.transferFrom(borrower, address(this), _liquidityshare, _collateralAsset,_investedTo);
+            uint256 _liquidityshare = IYield(_investedTo).getTokensForShares(_amount, _collateralAsset);
+            _sharesReceived = _savingAccount.transferFrom(msg.sender, address(this), _liquidityshare, _collateralAsset,_investedTo);
         }
 
         extraLiquidityShares = extraLiquidityShares.add(_sharesReceived);
