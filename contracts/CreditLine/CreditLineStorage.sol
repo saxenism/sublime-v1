@@ -51,6 +51,7 @@ contract CreditLineStorage is OwnableUpgradeable {
         address collateralAsset;
         creditLineStatus currentStatus;
         bool autoLiquidation;
+        mapping(address => uint256) sharesInStrategy;
     }
 
     mapping(bytes32 => CreditLineUsageVars) public creditLineUsage;
