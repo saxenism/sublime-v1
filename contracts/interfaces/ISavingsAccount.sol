@@ -1,55 +1,64 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.0;
 
-interface ISavingAccount {
+interface ISavingsAccount {
     function deposit(
         uint256 amount,
         address asset,
         address strategy,
         address user
-    ) external payable returns(uint256);
+    ) external payable returns (uint256 sharesReceived);
 
+    /**
+     * @dev Used to switch saving strategy of an asset
+     * @param currentStrategy initial strategy of asset
+     * @param newStrategy new strategy to invest
+     * @param asset address of the asset
+     * @param amount amount of **liquidity shares** to be reinvested
+     */
     function switchStrategy(
-        uint256 currentStrategy,
-        uint256 newStrategy,
+        address currentStrategy,
+        address newStrategy,
         address asset,
         uint256 amount
     ) external;
 
+    /**
+     * @dev Used to withdraw asset from Saving Account
+     * @param amount amount of liquidity shares to withdraw
+     * @param asset address of the asset to be withdrawn
+     * @param strategy strategy from where asset has to withdrawn(ex:- compound,Aave etc)
+     * @param withdrawShares boolean indicating to withdraw in liquidity share or underlying token
+     */
     function withdraw(
         uint256 amount,
         address asset,
-        uint256 strategy
-    ) external;
-
-    function addCollateralToPool(
-        address _invest,
-        address _pool,
-        uint256 _amount,
-        address _asset
-    ) external;
-
-    function lendToPool(
-        address _invest,
-        address _pool,
-        uint256 _amount,
-        address _asset
-    ) external;
-
-    function transferFrom(
-        address sender,
-        address recipient,
-        uint256 amount,
-        address assest,
-        address investedTo
+        address strategy,
+        bool withdrawShares
     ) external returns(uint256);
+
+    function withdrawAll(address _asset)
+        external
+        returns (uint256 tokenReceived);
+
+    function approve(
+        address token,
+        address to,
+        uint256 amount
+    ) external;
 
     function transfer(
-        address recipient,
-        uint256 amount,
-        address assest,
-        address investedTo
-    ) external returns(uint256);
+        address token,
+        address to,
+        address investedTo,
+        uint256 amount
+    ) external returns (uint256);
 
-    
+    function transferFrom(
+        address token,
+        address from,
+        address to,
+        address investedTo,
+        uint256 amount
+    ) external returns (uint256);
 }

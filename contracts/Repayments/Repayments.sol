@@ -5,7 +5,6 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-
 import "./RepaymentStorage.sol";
 
 contract Repayments is RepaymentStorage {
@@ -21,68 +20,136 @@ contract Repayments is RepaymentStorage {
         _;
     }
 
-    function initialize(address poolImpl, address lenderImpl)
+    modifier onlyValidPool {
+        require(poolFactory.openBorrowPoolRegistry(msg.sender), "Repayments::onlyValidPool - Invalid Pool");
+        _;
+    }
+
+    function initialize(address _poolFactory, uint256 _votingExtensionlength, uint256 _votingPassRatio)
         public
         initializer
     {
+        // _votingExtensionlength - should enforce conditions with repaymentInterval
         __Ownable_init();
+        poolFactory = IPoolFactory(_poolFactory);
+        votingExtensionlength = _votingExtensionlength;
+        votingPassRatio = _votingPassRatio;
     }
 
-    function initializePool(
+    function initializeRepayment(
         uint256 numberOfTotalRepayments,
-        uint256 votingExtensionlength,
-        uint256 gracepenaltyRate,
-        uint256 gracePeriodInterval,
-        uint256 loanDuration
-    ) external {
-
-    }
-
-
-    function calculateCurrentPeriod(
-        uint256 loanStartTime,
         uint256 repaymentInterval
-    ) public view returns (uint256) {
-        
+    ) external onlyValidPool {
+        repaymentDetails[msg.sender].gracePenaltyRate = gracePenaltyRate;
+        repaymentDetails[msg.sender].gracePeriodFraction = gracePeriodFraction;
+        repaymentDetails[msg.sender].numberOfTotalRepayments = numberOfTotalRepayments;
+        repaymentDetails[msg.sender].loanDuration = repaymentInterval.mul(numberOfTotalRepayments);
     }
 
-    function interestPerSecond(uint256 _principle, uint256 _borrowRate)
-        public
-        view
-        returns (uint256)
-    {
-        
-    }
-
-    function amountPerPeriod(
-        uint256 _activeBorrowAmount,
-        uint256 _repaymentInterval,
-        uint256 _borrowRate
-    ) public view returns (uint256) {
-        
-    }
 
     function calculateRepayAmount(
-        uint256 activeBorrowAmount,
-        uint256 repaymentInterval,
+        address poolID,
         uint256 borrowRate,
+        uint256 activePrincipal,
         uint256 loanStartTime,
-        uint256 nextDuePeriod,
-        uint256 periodInWhichExtensionhasBeenRequested
-    ) public view isPoolInitialized returns (uint256, uint256) {
-        
+        uint256 repaymentInterval
+        ) public view returns(uint256) {
+
+        uint256 yearInSeconds = 365 days;
+        // assuming repaymentInterval is in seconds
+        uint256 currentPeriod = (block.timestamp.sub(loanStartTime)).div(repaymentInterval);
+
+        uint256 interestPerSecond = activePrincipal
+                                           .mul(borrowRate)
+                                           .div(yearInSeconds);
+
+        uint256 periodEndTime = loanStartTime.add((currentPeriod.add(1)).mul(repaymentInterval));
+
+        uint256 interestDueTillPeriodEnd = interestPerSecond
+                                                  .mul((periodEndTime)
+                                                    .sub(repaymentDetails[poolID].repaymentPeriodCovered));
+        return interestDueTillPeriodEnd;
     }
 
+    event InterestRepaid(address poolID, uint256 repayAmount); // Made during current period interest repayment
+    event MissedRepaymentRepaid(address poolID); // Previous period's interest is repaid fully
+    event PartialExtensionRepaymentMade(address poolID); // Previous period's interest is repaid partially
+
     function repayAmount(
+        address poolID,
         uint256 amount,
-        uint256 activeBorrowAmount,
+        uint256 activePrincipal,
         uint256 repaymentInterval,
         uint256 borrowRate,
         uint256 loanStartTime,
-        uint256 nextDuePeriod,
-        uint256 periodInWhichExtensionhasBeenRequested
-    ) public isPoolInitialized returns (uint256, uint256) {
-        
+        bool isLoanExtensionActive
+    ) public isPoolInitialized returns (bool) {
+        //repayAmount() in Pool.sol is already performing pool status check - confirm this
+
+        // assuming repaymentInterval is in seconds
+
+        uint256 yearInSeconds = 365 days;
+        uint256 interestPerSecond = activePrincipal
+                                           .mul(borrowRate)
+                                           .div(yearInSeconds);
+
+        uint256 interestDueTillPeriodEnd = calculateRepayAmount(poolID,
+                                                                borrowRate, 
+                                                                activePrincipal, 
+                                                                loanStartTime, 
+                                                                repaymentInterval);
+
+
+        if (isLoanExtensionActive == false) {
+            // might consider transferring interestDueTillPeriodEnd and refunding the rest
+            require(amount < interestDueTillPeriodEnd,
+                    "Repayments - amount is greater than interest due this period.");
+            
+            // TODO add transfer
+
+            uint256 periodCovered = amount
+                                            .div(interestPerSecond);
+
+            repaymentDetails[poolID].repaymentPeriodCovered = repaymentDetails[poolID].repaymentPeriodCovered
+                                                              .add(periodCovered);
+
+            emit InterestRepaid(poolID, amount);
+
+        }
+        else {
+            if (amount >= repaymentDetails[poolID].repaymentOverdue) {
+                repaymentDetails[poolID].repaymentOverdue = 0;
+                isLoanExtensionActive = false;
+                amount = amount.sub(repaymentDetails[poolID].repaymentOverdue);
+                emit MissedRepaymentRepaid(poolID);
+
+                // might consider transferring interestDueTillPeriodEnd and refunding the rest
+                require(amount < interestDueTillPeriodEnd,
+                        "Repayments - amount is greater than interest due this period.");
+
+                //TODO make token transfer
+                uint256 periodCovered = amount
+                                                .div(interestPerSecond);
+
+                repaymentDetails[poolID].repaymentPeriodCovered = repaymentDetails[poolID].repaymentPeriodCovered
+                                                                  .add(periodCovered);
+                emit InterestRepaid(poolID, amount);
+            }
+
+            else {
+
+                //TODO make token transfer
+                repaymentDetails[poolID].repaymentOverdue = repaymentDetails[poolID].repaymentOverdue
+                                                            .sub(amount);
+                amount = 0;
+
+                emit PartialExtensionRepaymentMade(poolID);
+            }
+        }
+
+        // returning the status of whether previous interval's interest has been repaid or not
+        return isLoanExtensionActive;
+
     }
 
     // function TotalDueamountLeft() public view{
@@ -90,21 +157,38 @@ contract Repayments is RepaymentStorage {
     //     return(intervalLeft.mul(amountPerPeriod()));
     // }
 
-    function requestExtension(uint256 extensionVoteEndTime)
+    /*function requestExtension(uint256 extensionVoteEndTime)
         external isPoolInitialized
         returns (uint256)
     {
         
-    }
+    }*/
 
-    function voteOnExtension(
-        address lender,
-        uint256 lastVoteTime,
-        uint256 extensionVoteEndTime,
-        uint256 balance,
-        uint256 totalExtensionSupport
-    ) external isPoolInitialized returns (uint256, uint256) {
+
+    //event LoanExtensionRequest(address poolID);
+
+    /*function requestExtension(address poolID)
+        external isPoolInitialized
+    {
+        require(repaymentDetails[poolID].extensionsGranted > extensionVoteEndTime,
+                "Borrower : Extension period has ended.");
+
+        repaymentDetails[poolID].extensionRequested = true;
+
+        emit LoanExtensionRequest(poolID);
+    }*/
+
+
+    /*function voteOnExtension(address poolID,
+                             address voter,
+                             uint256 votingPower,
+                             uint256 extensionAcceptanceThreshold)
+        external 
+        isPoolInitialized 
+        returns (uint256, uint256) {
         
+        require()
+
     }
 
     function resultOfVoting(
@@ -115,4 +199,16 @@ contract Repayments is RepaymentStorage {
     ) external isPoolInitialized returns (uint256) {
         
     }
+
+    function updatePoolFactory(address _poolFactory) external onlyOwner {
+        poolFactory = IPoolFactory(_poolFactory);
+    }
+
+    function updateVotingExtensionlength(uint256 _votingExtensionPeriod) external onlyOwner {
+        votingExtensionlength = _votingExtensionPeriod;
+    }
+
+    function updateVotingPassRatio(uint256 _votingPassRatio) external onlyOwner {
+        votingPassRatio = _votingPassRatio;
+    }*/
 }
