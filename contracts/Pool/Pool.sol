@@ -12,8 +12,7 @@ import "../interfaces/ISavingsAccount.sol";
 import "../interfaces/IPool.sol";
 
 // TODO: set modifiers to disallow any transfers directly
-contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
-
+contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -58,7 +57,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
     uint256 public liquiditySharesTokenAddress;
     LoanStatus public loanStatus;
     uint256 public totalExtensionSupport; // sum of weighted votes for extension
-    address public investedTo;  // invest contract
+    address public investedTo; // invest contract
     mapping(address => LendingDetails) public lenders;
     uint256 public extensionVoteEndTime;
     uint256 public noOfGracePeriodsTaken;
@@ -69,18 +68,21 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
     event OpenBorrowPoolTerminated();
     event OpenBorrowPoolClosed();
     event OpenBorrowPoolDefaulted();
-    event CollateralAdded(address borrower,uint256 amount,uint256 sharesReceived);
-    event MarginCallCollateralAdded(address borrower,address lender,uint256 amount,uint256 sharesReceived);
-    event CollateralWithdrawn(address user, uint256 amount);
-    event liquiditySupplied(
-        uint256 amountSupplied,
-        address lenderAddress
-    );
-    event AmountBorrowed(address borrower, uint256 amount);
-    event liquiditywithdrawn(
+    event CollateralAdded(
+        address borrower,
         uint256 amount,
-        address lenderAddress
+        uint256 sharesReceived
     );
+    event MarginCallCollateralAdded(
+        address borrower,
+        address lender,
+        uint256 amount,
+        uint256 sharesReceived
+    );
+    event CollateralWithdrawn(address user, uint256 amount);
+    event liquiditySupplied(uint256 amountSupplied, address lenderAddress);
+    event AmountBorrowed(address borrower, uint256 amount);
+    event liquiditywithdrawn(uint256 amount, address lenderAddress);
     event CollateralCalled(address lenderAddress);
     event lenderVoted(address Lender);
     event LoanDefaulted();
@@ -88,22 +90,34 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
     event PoolLiquidated(address liquidator);
 
     modifier OnlyBorrower {
-        require(msg.sender == borrower, "Pool::OnlyBorrower - Only borrower can invoke");
+        require(
+            msg.sender == borrower,
+            "Pool::OnlyBorrower - Only borrower can invoke"
+        );
         _;
     }
 
     modifier isLender(address _lender) {
-        require(balanceOf(_lender) != 0, "Pool::isLender - Lender doesn't have any lTokens for the pool");
+        require(
+            balanceOf(_lender) != 0,
+            "Pool::isLender - Lender doesn't have any lTokens for the pool"
+        );
         _;
     }
 
     modifier onlyOwner {
-        require(msg.sender == IPoolFactory(PoolFactory).owner(), "Pool::onlyOwner - Only owner can invoke");
+        require(
+            msg.sender == IPoolFactory(PoolFactory).owner(),
+            "Pool::onlyOwner - Only owner can invoke"
+        );
         _;
     }
 
     modifier isPoolActive {
-        require(loanStatus == LoanStatus.ACTIVE, "Pool::isPoolActive - Pool is  not active");
+        require(
+            loanStatus == LoanStatus.ACTIVE,
+            "Pool::isPoolActive - Pool is  not active"
+        );
         _;
     }
 
@@ -197,10 +211,8 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
             _sharesReceived = _savingAccount.transferFrom(msg.sender, address(this), _liquidityshare, _collateralAsset,_investedTo);
         }
         baseLiquidityShares = baseLiquidityShares.add(_sharesReceived);
-        emit CollateralAdded(msg.sender,_amount,_sharesReceived);
-    } 
-
-
+        emit CollateralAdded(msg.sender, _amount, _sharesReceived);
+    }
 
     function addCollateralInMarginCall(address _lender,  uint256 _amount,bool _transferFromSavingsAccount) external payable override
     {
@@ -229,10 +241,16 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         }
 
         extraLiquidityShares = extraLiquidityShares.add(_sharesReceived);
-        lenders[_lender].extraLiquidityShares = lenders[_lender].extraLiquidityShares.add(_sharesReceived);
-        emit MarginCallCollateralAdded(msg.sender,_lender,_amount,_sharesReceived);
-    }	    
-    
+        lenders[_lender].extraLiquidityShares = lenders[_lender]
+            .extraLiquidityShares
+            .add(_sharesReceived);
+        emit MarginCallCollateralAdded(
+            msg.sender,
+            _lender,
+            _amount,
+            _sharesReceived
+        );
+    }
 
     function withdrawBorrowedAmount()
         external
@@ -251,44 +269,44 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
             "Pool::withdrawBorrowedAmount - Loan is not in ACTIVE state"
         );
         uint256 _currentCollateralRatio = getCurrentCollateralRatio();
-        require(_currentCollateralRatio > collateralRatio.sub(IPoolFactory(PoolFactory).collateralVolatilityThreshold()), "Pool::withdrawBorrowedAmount - The current collateral amount does not permit the loan.");
+        require(
+            _currentCollateralRatio >
+                collateralRatio.sub(
+                    IPoolFactory(PoolFactory).collateralVolatilityThreshold()
+                ),
+            "Pool::withdrawBorrowedAmount - The current collateral amount does not permit the loan."
+        );
 
         uint256 _tokensLent = totalSupply();
         IERC20(borrowAsset).transfer(borrower, _tokensLent);
-        
+
         delete matchCollateralRatioEndTime;
-        emit AmountBorrowed(
-            msg.sender,
-            _tokensLent
-        );   
+        emit AmountBorrowed(msg.sender, _tokensLent);
     }
 
+    function repayAmount(uint256 amount) external OnlyBorrower isPoolActive {}
 
-    function repayAmount(uint256 amount)
-        external
-        OnlyBorrower
-        isPoolActive
-    {
-        
-    }
-
-    function withdrawAllCollateral()
-        external
-        OnlyBorrower
-    {
+    function withdrawAllCollateral() external OnlyBorrower {
         LoanStatus _status = loanStatus;
         require(
             _status == LoanStatus.CLOSED || _status == LoanStatus.CANCELLED,
             "Pool::withdrawAllCollateral: Loan is not CLOSED or CANCELLED"
         );
 
-        uint256 _collateralShares = baseLiquidityShares.add(extraLiquidityShares);
-        uint256 _sharesReceived = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()).transfer(msg.sender,_collateralShares,collateralAsset,investedTo);
+        uint256 _collateralShares =
+            baseLiquidityShares.add(extraLiquidityShares);
+        uint256 _sharesReceived =
+            ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount())
+                .transfer(
+                collateralAsset,
+                msg.sender,
+                investedTo,
+                _collateralShares
+            );
         emit CollateralWithdrawn(msg.sender, _sharesReceived);
         delete baseLiquidityShares;
         delete extraLiquidityShares;
     }
-
 
     function lend(address _lender, uint256 _amountLent) external payable{
         require(loanStatus == LoanStatus.COLLECTION, "Pool::lend - The pool should be in Collection Period.");
@@ -324,10 +342,17 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         
     }
 
-    function transferFrom(address _sender, address _recipient, uint256 _amount) public virtual override returns (bool) {
-        
-    }
+    function transfer(address _recipient, uint256 _amount)
+        public
+        override
+        returns (bool)
+    {}
 
+    function transferFrom(
+        address _sender,
+        address _recipient,
+        uint256 _amount
+    ) public virtual override returns (bool) {}
 
     function cancelOpenBorrowPool()
         external
@@ -385,8 +410,6 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         emit OpenBorrowPoolClosed();
     }
 
-    function calculateLendingRate(uint256 s) public pure returns (uint256) {
-        
     }
 
     // Note - Only when cancelled or terminated, lender can withdraw
@@ -395,33 +418,18 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
     {
     }
 
+    // Note - Only when cancelled or terminated, lender can withdraw
+    function withdrawLiquidity(address lenderAddress) external {}
 
-    function resultOfVoting() external {
-        
-    }
+    function resultOfVoting() external {}
 
-    function requestExtension() external OnlyBorrower isPoolActive
-    {
-        
-    }
+    function requestExtension() external OnlyBorrower isPoolActive {}
 
+    function voteOnExtension() external isPoolActive {}
 
-    function voteOnExtension() external isPoolActive 
-    {
-        
-    }
+    function requestCollateralCall() public {}
 
-    function requestCollateralCall()
-        public
-    {
-        
-    }
-
-    
-
-    function transferRepayImpl(address repayment) external onlyOwner {
-        
-    }
+    function transferRepayImpl(address repayment) external onlyOwner {}
 
     // function transferLenderImpl(address lenderImpl) external onlyOwner {
     //     require(lenderImpl != address(0), "Borrower: Lender address");
@@ -532,6 +540,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         uint256 _correspondingBorrowTokens=
             correspondingBorrowTokens(_collateralLiquidityShare);
 
+    function liquidatePool() external {}
 
         address _liquidityShareAddress = IYield(_investedTo).liquidityToken(_collateralAsset);
  
@@ -679,7 +688,13 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
 
     }
 
+    function calculatewithdrawRepayment(address lender)
+        public
+        view
+        returns (uint256)
+    {}
 
+    function _withdrawRepayment(address lender) internal {}
 
     // function getLenderCurrentCollateralRatio(address lender) public view returns(uint256){
 
@@ -687,7 +702,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
 
     // function addCollateralMarginCall(address lender,uint256 amount) external payable
     // {
-    //     require(loanStatus == LoanStatus.ACTIVE, "Pool::deposit - Loan needs to be in Active stage to deposit"); // update loan status during next interaction after collection period 
+    //     require(loanStatus == LoanStatus.ACTIVE, "Pool::deposit - Loan needs to be in Active stage to deposit"); // update loan status during next interaction after collection period
     //     require(lenders[lender].marginCallEndTime > block.timestamp, "Pool::deposit - Can't Add after time is completed");
     //     _deposit(_amount);
     // }
