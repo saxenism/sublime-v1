@@ -68,21 +68,17 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
     event OpenBorrowPoolTerminated();
     event OpenBorrowPoolClosed();
     event OpenBorrowPoolDefaulted();
-    event CollateralAdded(
-        address borrower,
-        uint256 amount,
-        uint256 sharesReceived
-    );
-    event MarginCallCollateralAdded(
-        address borrower,
-        address lender,
-        uint256 amount,
-        uint256 sharesReceived
-    );
+    event CollateralAdded(address borrower,uint256 amount,uint256 sharesReceived);
+    event MarginCallCollateralAdded(address borrower,address lender,uint256 amount,uint256 sharesReceived);
+    // TODO:  Is this declaration correct or the other one
+    // event Liquiditywithdrawn(
+    //     uint256 amount,
+    //     uint256 sharesReceived
+    // );
     event CollateralWithdrawn(address user, uint256 amount);
     event liquiditySupplied(uint256 amountSupplied, address lenderAddress);
     event AmountBorrowed(address borrower, uint256 amount);
-    event liquiditywithdrawn(uint256 amount, address lenderAddress);
+    event Liquiditywithdrawn(uint256 amount, address lenderAddress);
     event CollateralCalled(address lenderAddress);
     event lenderVoted(address Lender);
     event LoanDefaulted();
@@ -207,8 +203,8 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
             }
         }
         else{
-            uint256 _liquidityshare = IYield(_investedTo).getTokensForShares(_amount, _collateralAsset);
-            _sharesReceived = _savingAccount.transferFrom(msg.sender, address(this), _liquidityshare, _collateralAsset,_investedTo);
+            // uint256 _liquidityshare = IYield(_investedTo).getTokensForShares(_amount, _collateralAsset);
+            _sharesReceived = _savingAccount.transferFrom(_collateralAsset, msg.sender, address(this), _investedTo, _liquidityshare);
         }
         baseLiquidityShares = baseLiquidityShares.add(_sharesReceived);
         emit CollateralAdded(msg.sender, _amount, _sharesReceived);
@@ -237,7 +233,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         }
         else{
             uint256 _liquidityshare = IYield(_investedTo).getTokensForShares(_amount, _collateralAsset);
-            _sharesReceived = _savingAccount.transferFrom(msg.sender, address(this), _liquidityshare, _collateralAsset,_investedTo);
+            _sharesReceived = _savingAccount.transferFrom(_collateralAsset, msg.sender, address(this), _investedTo, _liquidityshare);
         }
 
         extraLiquidityShares = extraLiquidityShares.add(_sharesReceived);
@@ -251,6 +247,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
             _sharesReceived
         );
     }
+    
 
     function withdrawBorrowedAmount()
         external
@@ -338,10 +335,6 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         
     }
 
-    function transfer(address _recipient, uint256 _amount) public override returns(bool) {
-        
-    }
-
     function transfer(address _recipient, uint256 _amount)
         public
         override
@@ -382,7 +375,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         }
         else{
             uint256 _collateralShares = baseLiquidityShares.add(extraLiquidityShares);
-            ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()).transfer(IPoolFactory(PoolFactory).owner(), _collateralShares, collateralAsset, investedTo);
+            ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()).transfer(collateralAsset, IPoolFactory(PoolFactory).owner(), investedTo, _collateralShares);
         }
         _pause();
         loanStatus = LoanStatus.TERMINATED; 
@@ -410,16 +403,56 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         emit OpenBorrowPoolClosed();
     }
 
-    }
+    // Note - Only when closed, cancelled or terminated, lender can withdraw
+    //burns all shares and returns total remaining repayments along with provided liquidity
+    function withdrawLiquidity() external isLender(msg.sender) {
+        LoanStatus _loanStatus = loanStatus;
+        require(
+            _loanStatus == LoanStatus.CLOSED ||
+                _loanStatus == LoanStatus.CANCELLED ||
+                _loanStatus == LoanStatus.DEFAULTED,
+            "Pool::withdrawLiquidity - Pool is not closed, cancelled or defaulted."
+        );
 
-    // Note - Only when cancelled or terminated, lender can withdraw
-    function withdrawLiquidity(address lenderAddress)
-        external
-    {
-    }
+        //get total repayments collected as per loan status (for closed, it returns 0)
+        uint256 _due = calculateWithdrawRepayment(msg.sender);
 
-    // Note - Only when cancelled or terminated, lender can withdraw
-    function withdrawLiquidity(address lenderAddress) external {}
+        //gets amount through liquidity shares
+        uint256 _balance = balanceOf(msg.sender);
+        burnFrom(msg.sender, _balance);
+
+        if (_loanStatus == LoanStatus.DEFAULTED) {
+            uint256 _totalAsset;
+            if (borrowAsset != address(0)) {
+                _totalAsset = IERC20(borrowAsset).balanceOf(address(this));
+            } else {
+                _totalAsset = address(this).balance;
+            }
+
+            //assuming their will be no tokens in pool in any case except liquidation (to be checked) or we should store the amount in liquidate()
+            _balance = _balance.mul(_totalAsset).div(totalSupply());
+        }
+
+        _due = _balance.add(_due);
+
+        lenders[msg.sender].amountWithdrawn = lenders[msg.sender]
+            .amountWithdrawn
+            .add(_due);
+
+        //transfer repayment
+        //TODO: to decide which contract will contain this
+        _withdrawRepayment(msg.sender);
+        //to add transfer if not included in above (can be transferred with liquidity)
+
+        //transfer liquidity provided
+        if (borrowAsset != address(0)) {
+            IERC20(borrowAsset).transfer(msg.sender, _balance);
+        } else {
+            msg.sender.transfer(_balance);
+        }
+        // TODO: Something wrong in the below event. Please have a look
+        emit Liquiditywithdrawn(_due, msg.sender);
+    }
 
     function resultOfVoting() external {}
 
@@ -564,8 +597,6 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         uint256 _correspondingBorrowTokens=
             correspondingBorrowTokens(_collateralLiquidityShare);
 
-    function liquidatePool() external {}
-
         address _liquidityShareAddress = IYield(_investedTo).liquidityToken(_collateralAsset);
  
         if (borrowAsset == address(0)){
@@ -583,7 +614,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
     
 
         if(_transferToSavingsAccount == true){
-            uint256 _sharesReceived = _savingAccount.transfer(msg.sender,_collateralLiquidityShare,_collateralAsset,investedTo);
+            uint256 _sharesReceived = _savingAccount.transfer(_collateralAsset, msg.sender, investedTo, _collateralLiquidityShare);
             emit lenderLiquidated(msg.sender, lender,_sharesReceived);
         }
         else{
@@ -645,11 +676,11 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         }
         address _investedTo = investedTo;
         if(_transferToSavingsAccount == true){
-            uint256 _sharesReceived = _savingAccount.transfer(msg.sender, _collateralLiquidityShare, _collateralAsset, _investedTo);
+            uint256 _sharesReceived = _savingAccount.transfer(_collateralAsset, msg.sender, _investedTo, _collateralLiquidityShare);
         }
         else{
             if(_recieveLiquidityShare == true){
-                uint256 _sharesReceived = _savingAccount.transfer(msg.sender, _collateralLiquidityShare, _collateralAsset, _investedTo);
+                uint256 _sharesReceived = _savingAccount.transfer(_collateralAsset, msg.sender, _investedTo, _collateralLiquidityShare);
                 address _addressOfTheLiquidityToken = IYield(_investedTo).liquidityToken(_collateralAsset);
                 IERC20(_addressOfTheLiquidityToken).transfer(msg.sender, _sharesReceived);
             }
@@ -700,16 +731,12 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         
     }
 
-    function calculatewithdrawRepayment(address lender) public view returns(uint256)
+    function calculateWithdrawRepayment(address lender)
+        public
+        view
+        returns (uint256)
     {
-        
-    }
-
-
-    function _withdrawRepayment(address lender) internal {
-
-        
-
+        if (loanStatus == LoanStatus.CANCELLED) return 0;
     }
 
     function calculatewithdrawRepayment(address lender)

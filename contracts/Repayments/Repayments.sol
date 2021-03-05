@@ -179,7 +179,7 @@ contract Repayments is RepaymentStorage {
     }*/
 
 
-    /*unction voteOnExtension(address poolID,
+    /*function voteOnExtension(address poolID,
                              address voter,
                              uint256 votingPower,
                              uint256 extensionAcceptanceThreshold)
@@ -210,5 +210,5 @@ contract Repayments is RepaymentStorage {
 
     function updateVotingPassRatio(uint256 _votingPassRatio) external onlyOwner {
         votingPassRatio = _votingPassRatio;
-    }
+    }*/
 }
