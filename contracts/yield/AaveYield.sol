@@ -74,7 +74,22 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
         lendingPoolAddressesProvider = _lendingPoolAddressesProvider;
     }
 
-    function updateSavingAccount(address payable _savingsAccount)
+    /**
+     * @dev Used to get liquidity token address from asset address
+     * @param asset the address of underlying token
+     * @return aToken address of liquidity token
+     **/
+    function liquidityToken(address asset)
+        public
+        view
+        override
+        returns (address aToken)
+    {
+        (aToken, , ) = IProtocolDataProvider(protocolDataProvider)
+            .getReserveTokensAddresses(asset);
+    }
+
+    function updateSavingsAccount(address payable _savingsAccount)
         external
         onlyOwner
     {
@@ -113,11 +128,8 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
         onlyOwner
         returns (uint256 received)
     {
-        (address aToken, , ) =
-            IProtocolDataProvider(protocolDataProvider)
-                .getReserveTokensAddresses(_asset);
-
-        uint256 amount = IERC20(aToken).balanceOf(address(this));
+        uint256 amount =
+            IERC20(liquidityToken(_asset)).balanceOf(address(this));
 
         if (_asset == address(0)) {
             received = _withdrawETH(amount);
@@ -193,14 +205,12 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
      **/
     function getTokensForShares(uint256 shares, address asset)
         external
-        view
+
         override
         returns (uint256 amount)
     {
         if (shares == 0) return 0;
-        (address aToken, , ) =
-            IProtocolDataProvider(protocolDataProvider)
-                .getReserveTokensAddresses(asset);
+        address aToken = liquidityToken(asset);
 
         (, , , , , , , uint256 liquidityIndex, , ) =
             IProtocolDataProvider(protocolDataProvider).getReserveData(asset);
@@ -235,8 +245,7 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
         internal
         returns (address aToken, uint256 sharesReceived)
     {
-        (aToken, , ) = IProtocolDataProvider(protocolDataProvider)
-            .getReserveTokensAddresses(asset);
+        aToken = liquidityToken(asset);
 
         uint256 aTokensBefore = IERC20(aToken).balanceOf(address(this));
 
@@ -278,9 +287,7 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
         internal
         returns (uint256 tokensReceived)
     {
-        (address aToken, , ) =
-            IProtocolDataProvider(protocolDataProvider)
-                .getReserveTokensAddresses(asset);
+        address aToken = liquidityToken(asset);
 
         address lendingPool =
             ILendingPoolAddressesProvider(lendingPoolAddressesProvider)
