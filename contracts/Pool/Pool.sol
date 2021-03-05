@@ -190,7 +190,8 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
             }
         }
         else{
-            _sharesReceived = _savingAccount.transferFrom(borrower, address(this), _liquidityshare, _collateralAsset,_investedTo);
+            uint256 _liquidityshare = IYield(_investedTo).getTokensForShares(_amount, _collateralAsset);
+            _sharesReceived = _savingAccount.transferFrom(msg.sender, address(this), _liquidityshare, _collateralAsset,_investedTo);
         }
         baseLiquidityShares = baseLiquidityShares.add(_sharesReceived);
         emit CollateralAdded(msg.sender,_amount,_sharesReceived);
@@ -208,7 +209,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         ISavingsAccount _savingAccount = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
         address _collateralAsset = collateralAsset;
         address _investedTo = investedTo;
-        uint256 _liquidityshare = IYield(_investedTo).getTokensForShares(_amount, _collateralAsset);
+        
 
         if(!_transferFromSavingsAccount){
             if(_collateralAsset == address(0)) {
@@ -216,12 +217,12 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
                 _sharesReceived = _savingAccount.deposit{value:msg.value}(_amount,_collateralAsset,_investedTo, address(this));
             }
             else{
-                IERC20(collateralAsset).approve(_investedTo, _amount);
                 _sharesReceived = _savingAccount.deposit(_amount,_collateralAsset,_investedTo, address(this));
             }
         }
         else{
-            _sharesReceived = _savingAccount.transferFrom(borrower, address(this), _liquidityshare, _collateralAsset,_investedTo);
+            uint256 _liquidityshare = IYield(_investedTo).getTokensForShares(_amount, _collateralAsset);
+            _sharesReceived = _savingAccount.transferFrom(msg.sender, address(this), _liquidityshare, _collateralAsset,_investedTo);
         }
 
         extraLiquidityShares = extraLiquidityShares.add(_sharesReceived);
@@ -234,7 +235,8 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         external
         OnlyBorrower override
     {
-        if(loanStatus == LoanStatus.COLLECTION && loanStartTime < block.timestamp) {
+        LoanStatus _poolStatus = loanStatus;
+        if(_poolStatus == LoanStatus.COLLECTION && loanStartTime < block.timestamp) {
             if(totalSupply() < borrowAmountRequested.mul(minborrowAmountFraction).div(100)) {
                 loanStatus = LoanStatus.CANCELLED;
                 return;
@@ -242,8 +244,8 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
             loanStatus = LoanStatus.ACTIVE;
         }
         require(
-            loanStatus == LoanStatus.ACTIVE,
-            "Borrower: Loan is not in ACTIVE state"
+            (loanStatus == LoanStatus.ACTIVE) && (matchCollateralRatioEndTime!=0),
+            "Pool::withdrawBorrowedAmount - Loan is not in ACTIVE state"
         );
         uint256 _currentCollateralRatio = getCurrentCollateralRatio();
         require(_currentCollateralRatio > collateralRatio.sub(IPoolFactory(PoolFactory).collateralVolatilityThreshold()), "Pool::withdrawBorrowedAmount - The current collateral amount does not permit the loan.");
@@ -285,8 +287,30 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
     }
 
 
-    function lend(address _lender, uint256 _amountLent) external {
-        
+    function lend(address _lender, uint256 _amountLent) external payable{
+        require(loanStatus == LoanStatus.COLLECTION, "Pool::lend - The pool should be in Collection Period.");
+
+        uint256 _amount = _amountLent;
+        uint256 _borrowAmountNeeded = borrowAmountRequested;
+        if(_amountLent.add(totalSupply()) > _borrowAmountNeeded) {
+            _amount = _borrowAmountNeeded.sub(totalSupply());
+        }
+
+        address _borrowToken = borrowAsset;
+        if(_borrowToken == address(0)) {
+            require(_amountLent == msg.value, "Pool::lend - Ether value is not same as parameter passed");
+            if(_amount != _amountLent) {
+                msg.sender.send(_amountLent.sub(_amount));
+            }
+        } else {
+            IERC20(_borrowToken).transferFrom(
+                msg.sender,
+                address(this),
+                _amount
+            );
+        }
+        mint(_lender, _amount);
+        emit liquiditySupplied(_amount, _lender);
     }
 
     function _beforeTransfer(address _user) internal {
@@ -366,7 +390,6 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
     function withdrawLiquidity(address lenderAddress)
         external
     {
-        
     }
 
 
