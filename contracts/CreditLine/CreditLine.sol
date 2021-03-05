@@ -381,7 +381,7 @@ contract CreditLine is CreditLineStorage {
         creditLineUsage[creditLineHash].totalInterestRepaid = 0;
         creditLineUsage[creditLineHash].interestTillLastUpdate = 0;
 
-        emit CreditLineReset(bytes32 creditLineHash);
+        emit CreditLineReset(creditLineHash);
     }
 
     /**
@@ -408,7 +408,7 @@ contract CreditLine is CreditLineStorage {
                 "CreditLine: Cannot be closed since not repaid.");
 
         require(creditLineUsage[creditLineHash].interestTillLastUpdate == 0,
-                "CreditLine: Cannot be closed since not repaid.")
+                "CreditLine: Cannot be closed since not repaid.");
 
         creditLineInfo[creditLineHash].currentStatus = creditLineStatus.CLOSED;
 
@@ -448,7 +448,7 @@ contract CreditLine is CreditLineStorage {
         uint currentCollateralRatio = calculateCurrentCollateralRatio(creditLineHash);
 
         require(currentCollateralRatio < creditLineInfo[creditLineHash].liquidationThreshold,
-                "CreditLine: Collateral ratio is higher than liquidation threshold")
+                "CreditLine: Collateral ratio is higher than liquidation threshold");
 
         if(creditLineInfo[creditLineHash].autoLiquidation == true) {
             require(msg.sender == creditLineInfo[creditLineHash].lender,
