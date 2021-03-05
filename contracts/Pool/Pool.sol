@@ -171,7 +171,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
 
         require(_amount != 0, "Pool::deposit - collateral amount");
         uint256 _sharesReceived;
-        ISavingAccount _savingAccount = ISavingAccount(IPoolFactory(PoolFactory).savingsAccount());
+        ISavingsAccount _savingAccount = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
         address _collateralAsset = collateralAsset;
         address _investedTo = investedTo;
         uint256 _liquidityshare = IYield(_investedTo).getTokensForShares(_amount, _collateralAsset);
@@ -201,7 +201,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         require(_amount !=0, "Pool::addCollateralMarginCall - collateral amount");
 
         uint256 _sharesReceived;
-        ISavingAccount _savingAccount = ISavingAccount(IPoolFactory(PoolFactory).savingsAccount());
+        ISavingsAccount _savingAccount = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
         address _collateralAsset = collateralAsset;
         address _investedTo = investedTo;
         uint256 _liquidityshare = IYield(_investedTo).getTokensForShares(_amount, _collateralAsset);
@@ -274,7 +274,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         );
 
         uint256 _collateralShares = baseLiquidityShares.add(extraLiquidityShares);
-        uint256 _sharesReceived = ISavingAccount(IPoolFactory(PoolFactory).savingsAccount()).transfer(msg.sender,_collateralShares,collateralAsset,investedTo);
+        uint256 _sharesReceived = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()).transfer(msg.sender,_collateralShares,collateralAsset,investedTo);
         emit CollateralWithdrawn(msg.sender, _sharesReceived);
         delete baseLiquidityShares;
         delete extraLiquidityShares;
