@@ -353,6 +353,22 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
     //todo: add more details here
     event Liquidated(address liquidator, address lender);
 
+    function interestPerSecond(uint _principle) public view returns(uint256){
+        
+    }
+
+    function amountLenderPerPeriod(address lender) public view returns(uint256){
+        
+    }
+
+    function calculateCurrentPeriod() public view returns(uint256){
+        
+    }
+
+    function amountPerPeriod() public view returns(uint256){
+        
+    }
+
     function interestTillNow(uint256 balance, uint256 _interestPerPeriod) public view returns(uint256){
         uint256 _repaymentLength = repaymentInterval;
         uint256 _loanStartedAt = loanStartTime;
@@ -434,22 +450,6 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
 
     
     // Withdraw Repayment, Also all the extra state variables are added here only for the review
-
-    function interestPerSecond(uint _principle) public view returns(uint256){
-        
-    }
-
-    function amountLenderPerPeriod(address lender) public view returns(uint256){
-        
-    }
-
-    function calculateCurrentPeriod() public view returns(uint256){
-        
-    }
-
-    function amountPerPeriod() public view returns(uint256){
-        
-    }
     
     function withdrawRepayment() external payable {
         
