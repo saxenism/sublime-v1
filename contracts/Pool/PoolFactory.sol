@@ -3,7 +3,7 @@ pragma solidity 0.7.0;
 
 import "../Proxy.sol";
 import "../interfaces/IPoolFactory.sol";
-import "../interfaces/IBorrower.sol";
+import "../interfaces/IVerification.sol";
 import "../interfaces/IStrategyRegistry.sol";
 import "../interfaces/IRepayment.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -18,7 +18,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
 
     bytes4 public initializeFunctionId; //  bytes4(keccak256("initialize(uint256,address,address,address,uint256,uint256,uint256,uint256,bool)"))
     address public poolImpl;
-    address public borrowerRegistry;
+    address public userRegistry;
     address public strategyRegistry;
     address public override repaymentImpl;
     address public override priceOracle;
@@ -35,7 +35,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     mapping(address => bool) isCollateralToken;
     
 
-    mapping(address => bool) public override registry;
+    mapping(address => bool) public override openBorrowPoolRegistry;
 
     Limits poolSizeLimit;
     Limits collateralRatioLimit;
@@ -46,7 +46,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     event PoolCreated(address pool, address borrower);
     event InitializeFunctionUpdated(bytes4 updatedFunctionId);
     event PoolLogicUpdated(address updatedPoolLogic);
-    event BorrowerRegistryUpdated(address updatedBorrowerRegistry);
+    event UserRegistryUpdated(address updatedBorrowerRegistry);
     event StrategyRegistryUpdated(address updatedStrategyRegistry);
     event RepaymentImplUpdated(address updatedRepaymentImpl);
     event PriceOracleUpdated(address updatedPriceOracle);
@@ -59,12 +59,12 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     event LimitsUpdated(string limitType, uint256 max, uint256 min);
 
     modifier onlyPool() {
-        require(registry[msg.sender], "PoolFactory::onlyPool - Only pool can destroy itself");
+        require(openBorrowPoolRegistry[msg.sender], "PoolFactory::onlyPool - Only pool can destroy itself");
         _;
     }
 
     modifier onlyBorrower() {
-        require(IBorrower(borrowerRegistry).isBorrower(msg.sender), "PoolFactory::onlyBorrower - Only a valid Borrower can create Pool");
+        require(IVerification(userRegistry).isUser(msg.sender), "PoolFactory::onlyBorrower - Only a valid Borrower can create Pool");
         _;
     }
 
@@ -74,7 +74,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
 
     function initialize(
         address _poolImpl, 
-        address _borrowerRegistry, 
+        address _userRegistry, 
         address _strategyRegistry, 
         address _admin, 
         uint256 _collectionPeriod,
@@ -91,7 +91,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         OwnableUpgradeable.__Ownable_init();
         OwnableUpgradeable.transferOwnership(_admin);
         poolImpl = _poolImpl;
-        borrowerRegistry = _borrowerRegistry;
+        userRegistry = _userRegistry;
         strategyRegistry = _strategyRegistry;
 
         collectionPeriod = _collectionPeriod;
@@ -131,7 +131,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         bytes memory data = abi.encodeWithSelector(initializeFunctionId, _poolSize, _minBorrowAmountFraction, msg.sender, _borrowTokenType, _collateralTokenType, _collateralRatio, _borrowRate, _repaymentInterval, _noOfRepaymentIntervals, _investedTo, _collateralAmount, _transferFromSavingsAccount, gracePeriodPenaltyFraction);
         // TODO: Setting 0x00 as admin, so that it is not upgradable. Remove the upgradable functionality to optimize
         address pool = address((new SublimeProxy){value: msg.value}(poolImpl, address(0), data));
-        registry[pool] = true;
+        openBorrowPoolRegistry[pool] = true;
         IRepayment(repaymentImpl).initializeRepayment(_noOfRepaymentIntervals, _repaymentInterval);
         emit PoolCreated(pool, msg.sender);
 
@@ -150,7 +150,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     }
 
     function destroyPool() public onlyPool {
-        delete registry[msg.sender];
+        delete openBorrowPoolRegistry[msg.sender];
     }
 
     function updateInitializeFunctionId(bytes4 _functionId) external onlyOwner {
@@ -163,9 +163,9 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         emit PoolLogicUpdated(_poolLogic);
     }
 
-    function updateBorrowerRegistry(address _borrowerRegistry) external onlyOwner {
-        borrowerRegistry = _borrowerRegistry;
-        emit BorrowerRegistryUpdated(_borrowerRegistry);
+    function updateUserRegistry(address _userRegistry) external onlyOwner {
+        userRegistry = _userRegistry;
+        emit UserRegistryUpdated(_userRegistry);
     }
 
     function updateStrategyRegistry(address _strategyRegistry) external onlyOwner {
