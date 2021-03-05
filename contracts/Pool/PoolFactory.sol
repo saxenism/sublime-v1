@@ -20,9 +20,9 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     address public poolImpl;
     address public borrowerRegistry;
     address public strategyRegistry;
-    address public override savingsAccount;
     address public override repaymentImpl;
     address public override priceOracle;
+    address public override savingsAccount;
 
     uint256 public override collectionPeriod;
     uint256 public override matchCollateralRatioInterval;
@@ -83,13 +83,17 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         uint256 _collateralVolatilityThreshold,
         uint256 _gracePeriodPenaltyFraction,
         bytes4 _initializeFunctionId,
-        uint256 _liquidatorRewardFraction
+        uint256 _liquidatorRewardFraction,
+        address _repaymentImpl,
+        address _priceOracle,
+        address _savingsAccount
     ) external initializer {
         OwnableUpgradeable.__Ownable_init();
         OwnableUpgradeable.transferOwnership(_admin);
         poolImpl = _poolImpl;
         borrowerRegistry = _borrowerRegistry;
         strategyRegistry = _strategyRegistry;
+
         collectionPeriod = _collectionPeriod;
         matchCollateralRatioInterval = _matchCollateralRatioInterval;
         marginCallDuration = _marginCallDuration;
@@ -97,6 +101,9 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         gracePeriodPenaltyFraction = _gracePeriodPenaltyFraction;
         initializeFunctionId = _initializeFunctionId;
         liquidatorRewardFraction = _liquidatorRewardFraction;
+        repaymentImpl = _repaymentImpl;
+        priceOracle = _priceOracle;
+        savingsAccount = _savingsAccount;
     }
 
     function createPool(
@@ -125,7 +132,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         // TODO: Setting 0x00 as admin, so that it is not upgradable. Remove the upgradable functionality to optimize
         address pool = address((new SublimeProxy){value: msg.value}(poolImpl, address(0), data));
         registry[pool] = true;
-        // TODO: Initialize repayments
+        IRepayment(repaymentImpl).initializeRepayment(_noOfRepaymentIntervals, _repaymentInterval);
         emit PoolCreated(pool, msg.sender);
 
     }

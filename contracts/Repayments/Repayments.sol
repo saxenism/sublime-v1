@@ -38,12 +38,12 @@ contract Repayments is RepaymentStorage {
 
     function initializeRepayment(
         uint256 numberOfTotalRepayments,
-        uint256 loanDuration
+        uint256 repaymentInterval
     ) external onlyValidPool {
         repaymentDetails[msg.sender].gracePenaltyRate = gracePenaltyRate;
         repaymentDetails[msg.sender].gracePeriodFraction = gracePeriodFraction;
         repaymentDetails[msg.sender].numberOfTotalRepayments = numberOfTotalRepayments;
-        repaymentDetails[msg.sender].loanDuration = loanDuration;
+        repaymentDetails[msg.sender].loanDuration = repaymentInterval.mul(numberOfTotalRepayments);
     }
 
 
