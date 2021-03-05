@@ -369,7 +369,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         
     }
 
-    function interestTillNow(uint256 balance, uint256 _interestPerPeriod) public view returns(uint256){
+    function interestTillNow(uint256 balance, uint256 _interestPerPeriod) public returns(uint256){
         uint256 _repaymentLength = repaymentInterval;
         uint256 _loanStartedAt = loanStartTime;
         uint256 _totalSupply = totalSupply();
@@ -402,11 +402,17 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         }
     }
 
-    function calculateCollateralRatio(uint256 _interestPerPeriod, uint256 _currentCollateralTokens, uint256 balance) public view returns(uint256){
+    function calculateCollateralRatio(uint256 _interestPerPeriod, uint256 balance, uint256 _liquidityShares) public returns(uint256){
         uint256 _interest = interestTillNow(balance, _interestPerPeriod);
+        address _collateralAsset = collateralAsset;
         uint256 _ratioOfPrices =
             IPriceOracle(IPoolFactory(PoolFactory).priceOracle())
-                .getLatestPrice(collateralAsset, borrowAsset);
+                .getLatestPrice(_collateralAsset, borrowAsset);
+        uint256 _currentCollateralTokens =
+            IYield(investedTo).getTokensForShares(
+                _liquidityShares,
+                _collateralAsset
+            );
         uint256 _ratio = (_currentCollateralTokens.mul(_ratioOfPrices).div(100000000)).div(
             balance.add(_interest)
         );
@@ -414,12 +420,8 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
     }
 
     function getCurrentCollateralRatio() public returns (uint256) {
-        uint256 _currentCollateralTokens =
-            IYield(investedTo).getTokensForShares(
-                baseLiquidityShares.add(extraLiquidityShares),
-                collateralAsset
-            );
-        return(calculateCollateralRatio(amountPerPeriod(), _currentCollateralTokens, totalSupply()));
+        uint256 _liquidityShares = baseLiquidityShares.add(extraLiquidityShares);
+        return(calculateCollateralRatio(amountPerPeriod(), totalSupply(), _liquidityShares));
     }
 
     function getCurrentCollateralRatio(address _lender)
@@ -427,14 +429,9 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         returns (uint256 _ratio)
     {
         uint256 _balanceOfLender = balanceOf(_lender);
-        uint256 _currentCollateralTokens =
-            IYield(investedTo).getTokensForShares(
-                (baseLiquidityShares.mul(_balanceOfLender).div(totalSupply()))
-                    .add(lenders[_lender].extraLiquidityShares),
-                collateralAsset
-            );
-        
-        return(calculateCollateralRatio(amountLenderPerPeriod(_lender), _currentCollateralTokens, _balanceOfLender));
+        uint256 _liquidityShares = (baseLiquidityShares.mul(_balanceOfLender).div(totalSupply()))
+                    .add(lenders[_lender].extraLiquidityShares); 
+        return(calculateCollateralRatio(amountLenderPerPeriod(_lender), _balanceOfLender, _liquidityShares));
     }
    
     function liquidateLender(address lender)
