@@ -5,6 +5,7 @@ import "../Proxy.sol";
 import "../interfaces/IPoolFactory.sol";
 import "../interfaces/IBorrower.sol";
 import "../interfaces/IStrategyRegistry.sol";
+import "../interfaces/IRepayment.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
@@ -34,7 +35,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     mapping(address => bool) isCollateralToken;
     
 
-    mapping(address => bool) public registry;
+    mapping(address => bool) public override registry;
 
     Limits poolSizeLimit;
     Limits collateralRatioLimit;
@@ -42,6 +43,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     Limits repaymentIntervalLimit;
     Limits noOfRepaymentIntervalsLimit;
 
+    event PoolCreated(address pool, address borrower);
     event InitializeFunctionUpdated(bytes4 updatedFunctionId);
     event PoolLogicUpdated(address updatedPoolLogic);
     event BorrowerRegistryUpdated(address updatedBorrowerRegistry);
@@ -110,7 +112,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         uint256 _collateralAmount,
         bool _transferFromSavingsAccount
     ) payable external onlyBorrower {
-        require(_minBorrowAmountFraction <= 10**18, "PoolFactory::createPool - invalid min borrow fraction");
+        require(_minBorrowAmountFraction <= 10**8, "PoolFactory::createPool - invalid min borrow fraction");
         require(isBorrowToken[_borrowTokenType], "PoolFactory::createPool - Invalid borrow token type");
         require(isCollateralToken[_collateralTokenType], "PoolFactory::createPool - Invalid collateral token type");
         require(IStrategyRegistry(strategyRegistry).registry(_investedTo), "PoolFactory::createPool - Invalid strategy");
@@ -123,6 +125,9 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         // TODO: Setting 0x00 as admin, so that it is not upgradable. Remove the upgradable functionality to optimize
         address pool = address((new SublimeProxy){value: msg.value}(poolImpl, address(0), data));
         registry[pool] = true;
+        // TODO: Initialize repayments
+        emit PoolCreated(pool, msg.sender);
+
     }
 
     function isWithinLimits(uint256 _value, uint256 _min, uint256 _max) internal pure returns(bool) {
