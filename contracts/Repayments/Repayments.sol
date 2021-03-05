@@ -21,7 +21,7 @@ contract Repayments is RepaymentStorage {
     }
 
     modifier onlyValidPool {
-        require(poolFactory.registry(msg.sender), "Repayments::onlyValidPool - Invalid Pool");
+        require(poolFactory.openBorrowPoolRegistry(msg.sender), "Repayments::onlyValidPool - Invalid Pool");
         _;
     }
 
