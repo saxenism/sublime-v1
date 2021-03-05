@@ -316,7 +316,14 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
             loanStatus == LoanStatus.ACTIVE,
             "Pool::closeLoan - The pool can only be closed if the loan is Active."
         );
-        // TODO: check if the loan has beencompletely repayed.
+        uint256 _totalAsset;
+        if (borrowAsset != address(0)) {
+            _totalAsset = IERC20(borrowAsset).balanceOf(address(this));
+        } else {
+            _totalAsset = address(this).balance;
+        }
+        // assuming that the principle is transferred to the pool.
+        require(nextDuePeriod==0 && _totalAsset>totalSupply(), "Pool::closeLoan - The loan has not been fully repayed.");
         loanStatus = LoanStatus.CLOSED;
         _pause();
         emit OpenBorrowPoolClosed();
