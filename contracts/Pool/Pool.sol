@@ -190,7 +190,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
             }
         }
         else{
-            uint256 _liquidityshare = IYield(_investedTo).getTokensForShares(_amount, _collateralAsset);
+            // uint256 _liquidityshare = IYield(_investedTo).getTokensForShares(_amount, _collateralAsset);
             _sharesReceived = _savingAccount.transferFrom(msg.sender, address(this), _liquidityshare, _collateralAsset,_investedTo);
         }
         baseLiquidityShares = baseLiquidityShares.add(_sharesReceived);
@@ -354,7 +354,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         }
         else{
             uint256 _collateralShares = baseLiquidityShares.add(extraLiquidityShares);
-            ISavingAccount(IPoolFactory(PoolFactory).SavingAccount()).transfer(IPoolFactory(PoolFactory).owner(), _collateralShares, collateralAsset, investedTo);
+            ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()).transfer(IPoolFactory(PoolFactory).owner(), _collateralShares, collateralAsset, investedTo);
         }
         _pause();
         loanStatus = LoanStatus.TERMINATED; 
