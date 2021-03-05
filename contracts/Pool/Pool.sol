@@ -369,7 +369,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         
     }
 
-    function interestTillNow(uint256 balance, uint256 _interestPerPeriod) public returns(uint256){
+    function interestTillNow(uint256 _balance, uint256 _interestPerPeriod) public returns(uint256){
         uint256 _repaymentLength = repaymentInterval;
         uint256 _loanStartedAt = loanStartTime;
         uint256 _totalSupply = totalSupply();
@@ -385,7 +385,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
                 )
             );
         uint256 _extraInterest =
-            interestPerSecond(balance).mul(
+            interestPerSecond(_balance).mul(
                 ((calculateCurrentPeriod().add(1)).mul(_repaymentLength))
                     .add(_loanStartedAt)
                     .sub(block.timestamp)
@@ -402,8 +402,8 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         }
     }
 
-    function calculateCollateralRatio(uint256 _interestPerPeriod, uint256 balance, uint256 _liquidityShares) public returns(uint256){
-        uint256 _interest = interestTillNow(balance, _interestPerPeriod);
+    function calculateCollateralRatio(uint256 _interestPerPeriod, uint256 _balance, uint256 _liquidityShares) public returns(uint256){
+        uint256 _interest = interestTillNow(_balance, _interestPerPeriod);
         address _collateralAsset = collateralAsset;
         uint256 _ratioOfPrices =
             IPriceOracle(IPoolFactory(PoolFactory).priceOracle())
@@ -414,7 +414,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
                 _collateralAsset
             );
         uint256 _ratio = (_currentCollateralTokens.mul(_ratioOfPrices).div(100000000)).div(
-            balance.add(_interest)
+            _balance.add(_interest)
         );
         return(_ratio);
     }
