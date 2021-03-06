@@ -566,6 +566,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
             "Pool::requestExtension - Extension requested already"
         );
         require(periodWhenExtensionIsPassed > noOfRepaymentIntervals,"Pool::requestExtension: you have already been given an extension,No more extension");
+        totalExtensionSupport = 0;
         uint256 _gracePeriodFraction = IPoolFactory(PoolFactory).gracePeriodFraction();
         uint256 _gracePeriod = (repaymentInterval*_gracePeriodFraction).div(100000000);
         uint256 _nextDueTime = (nextDuePeriod.mul(repaymentInterval)).add(loanStartTime);
