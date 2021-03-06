@@ -50,7 +50,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
     uint256 public repaymentInterval;
     address public collateralAsset;
     
-    uint256 public periodWhenExtensionIsRequested;
+    uint256 public periodWhenExtensionIsPassed;
     uint256 public baseLiquidityShares;
     uint256 public extraLiquidityShares;
     uint256 public liquiditySharesTokenAddress;
@@ -82,6 +82,11 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
     event CollateralCalled(address lenderAddress);
     event lenderVoted(address Lender);
     event LoanDefaulted();
+    event votingPassed(uint256 nextDuePeriod,uint256 periodWhenExtensionIsPassed);
+    event votingFailed(uint256 nextDuePeriod);
+    event lenderVoted(address lender,uint256 totalExtensionSupport,uint256 lastVoteTime);
+    event extensionRequested(uint256 extensionVoteEndTime);
+
 
     modifier OnlyBorrower {
         require(msg.sender == borrower, "Pool::OnlyBorrower - Only borrower can invoke");
@@ -445,7 +450,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
                     borrowRate,
                     _loanStartedAt,
                     nextDuePeriod,
-                    periodWhenExtensionIsRequested
+                    periodWhenExtensionIsPassed
                 )
             );
         uint256 _extraInterest =
@@ -554,6 +559,51 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
 
     }
 
+    function requestExtension() external isPoolActive OnlyBorrower
+    {
+        uint256 _extensionVoteEndTime = extensionVoteEndTime;
+        require(
+            block.timestamp > _extensionVoteEndTime,
+            "Pool::requestExtension - Extension requested already"
+        );
+        require(periodWhenExtensionIsPassed > noOfRepaymentIntervals,"Pool::requestExtension: you have already been given an extension,No more extension");
+        uint256 _gracePeriodFraction = IPoolFactory(PoolFactory).gracePeriodFraction();
+        uint256 _gracePeriod = (repaymentInterval*_gracePeriodFraction).div(100000000);
+        uint256 _nextDueTime = (nextDuePeriod.mul(repaymentInterval)).add(loanStartTime);
+        _extensionVoteEndTime = (_nextDueTime).add(_gracePeriod);
+        extensionVoteEndTime = _extensionVoteEndTime;
+        emit extensionRequested(_extensionVoteEndTime);
+    }
+
+    function voteOnExtension() external isPoolActive{
+        
+        uint256 _extensionVoteEndTime = extensionVoteEndTime;
+        require(
+            block.timestamp < _extensionVoteEndTime,
+            "Pool::voteOnExtension - Voting is over"
+        );
+        require(balanceOf(msg.sender)!=0,"Pool::voteOnExtension - Not a valid lender for pool");
+
+        uint256 _votingExtensionlength = IPoolFactory(PoolFactory).votingExtensionlength();
+        uint256 _lastVoteTime = lenders[msg.sender].lastVoteTime;
+
+        require(
+            _lastVoteTime < _extensionVoteEndTime.sub(_votingExtensionlength),
+            "Pool::voteOnExtension - you have already voted"
+        );
+        _lastVoteTime = block.timestamp;
+        totalExtensionSupport = totalExtensionSupport.add(balanceOf(msg.sender));
+        uint256 _votingPassRatio = IPoolFactory(PoolFactory).votingPassRatio();
+        lenders[msg.sender].lastVoteTime = _lastVoteTime;
+        emit lenderVoted(msg.sender,totalExtensionSupport,_lastVoteTime);
+        
+        if (((totalExtensionSupport)) >= (totalSupply().mul(_votingPassRatio)).div(100000000)) {
+            periodWhenExtensionIsPassed = calculateCurrentPeriod();
+            nextDuePeriod = nextDuePeriod.add(1);
+            emit votingPassed(nextDuePeriod,periodWhenExtensionIsPassed);
+        }
+        
+    }
 
 
     // function getLenderCurrentCollateralRatio(address lender) public view returns(uint256){
