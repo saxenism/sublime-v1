@@ -83,7 +83,6 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
     event lenderVoted(address Lender);
     event LoanDefaulted();
     event votingPassed(uint256 nextDuePeriod,uint256 periodWhenExtensionIsPassed);
-    event votingFailed(uint256 nextDuePeriod);
     event lenderVoted(address lender,uint256 totalExtensionSupport,uint256 lastVoteTime);
     event extensionRequested(uint256 extensionVoteEndTime);
 
