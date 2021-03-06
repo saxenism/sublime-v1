@@ -292,7 +292,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
 
     function lend(address _lender, uint256 _amountLent) external payable{
         require(loanStatus == LoanStatus.COLLECTION, "Pool::lend - The pool should be in Collection Period.");
-
+        require(block.timestamp< loanStartTime, "Pool::lend - The collection period of the pool is over.");
         uint256 _amount = _amountLent;
         uint256 _borrowAmountNeeded = borrowAmountRequested;
         if(_amountLent.add(totalSupply()) > _borrowAmountNeeded) {
