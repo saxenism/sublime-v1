@@ -584,7 +584,11 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
             )).div(10**8)).mul(liquidatorRewardFraction).div(10**8);
     }
 
-    function isRepaymentDone() public returns(uint256){
+    function checkRepayment() public {
+        _isRepaymentDone();
+    }
+
+    function _isRepaymentDone() internal returns(LoanStatus){
         // TODO
         return loanStatus;
     }
@@ -596,9 +600,9 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
             _poolStatus == LoanStatus.DEFAULTED,
             "Pool::liquidatePool - Borrower Extra time to match collateral is running"
         );
-
+        LoanStatus _currentPoolStatus;
         if(_poolStatus!=LoanStatus.DEFAULTED){
-            LoanStatus _currentPoolStatus = isRepaymentDone();
+            _currentPoolStatus = _isRepaymentDone();
         }
         require(_currentPoolStatus==LoanStatus.DEFAULTED, "Pool::liquidatePool - No reason to liquidate the pool");
         ISavingsAccount _savingAccount = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
