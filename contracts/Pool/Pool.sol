@@ -577,17 +577,16 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
     function correspondingBorrowTokens(uint256 _liquidityShares) public returns(uint256){
         uint256 _collateralTokens = IYield(investedTo).getTokensForShares(_liquidityShares, collateralAsset);
         uint256 _correspondingBorrowTokens = 
-            _collateralTokens.mul(IPriceOracle(IPoolFactory(PoolFactory).priceOracle()).getLatestPrice(
+            (_collateralTokens.mul(IPriceOracle(IPoolFactory(PoolFactory).priceOracle()).div(10**8)).getLatestPrice(
                 borrowAsset,
                 collateralAsset
-            )).mul(liquidatorRewardFraction).div(100);
+            )).mul(liquidatorRewardFraction).div(10**8);
     }
 
 
     function liquidatePool(bool _transferToSavingsAccount, bool _recieveLiquidityShare) external payable {
-        LoanStatus _poolStatus = loanStatus;
         require(
-            _poolStatus == LoanStatus.DEFAULTED || ((_poolStatus == LoanStatus.TERMINATED) && (matchCollateralRatioEndTime == 0)),
+            loanStatus == LoanStatus.DEFAULTED,
             "Pool::liquidateLender - Borrower Extra time to match collateral is running"
         );
 
@@ -611,11 +610,11 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
             );
         }
         address _investedTo = investedTo;
-        if(_transferToSavingsAccount == true){
+        if(_transferToSavingsAccount){
             uint256 _sharesReceived = _savingAccount.transfer(msg.sender, _collateralLiquidityShare, _collateralAsset, _investedTo);
         }
         else{
-            if(_recieveLiquidityShare == true){
+            if(_recieveLiquidityShare){
                 uint256 _sharesReceived = _savingAccount.transfer(msg.sender, _collateralLiquidityShare, _collateralAsset, _investedTo);
                 address _addressOfTheLiquidityToken = IYield(_investedTo).liquidityToken(_collateralAsset);
                 IERC20(_addressOfTheLiquidityToken).transfer(msg.sender, _sharesReceived);
