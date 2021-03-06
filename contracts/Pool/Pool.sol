@@ -12,8 +12,7 @@ import "../interfaces/ISavingsAccount.sol";
 import "../interfaces/IPool.sol";
 
 // TODO: set modifiers to disallow any transfers directly
-contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
-
+contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -57,7 +56,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
     uint256 public liquiditySharesTokenAddress;
     LoanStatus public loanStatus;
     uint256 public totalExtensionSupport; // sum of weighted votes for extension
-    address public investedTo;  // invest contract
+    address public investedTo; // invest contract
     mapping(address => LendingDetails) public lenders;
     uint256 public extensionVoteEndTime;
     uint256 public noOfGracePeriodsTaken;
@@ -76,7 +75,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         address lenderAddress
     );
     event AmountBorrowed(address borrower, uint256 amount);
-    event liquiditywithdrawn(
+    event Liquiditywithdrawn(
         uint256 amount,
         address lenderAddress
     );
@@ -386,32 +385,81 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         
     }
 
-    // Note - Only when cancelled or terminated, lender can withdraw
-    function withdrawLiquidity(address lenderAddress)
-        external
-    {
+    // Note - Only when closed, cancelled or terminated, lender can withdraw
+    //burns all shares and returns total remaining repayments along with provided liquidity
+    function withdrawLiquidity() external isLender(msg.sender) {
+        LoanStatus _loanStatus = loanStatus;
+        require(
+            _loanStatus == LoanStatus.CLOSED ||
+                _loanStatus == LoanStatus.CANCELLED ||
+                _loanStatus == LoanStatus.DEFAULTED,
+            "Pool::withdrawLiquidity - Pool is not closed, cancelled or defaulted."
+        );
+
+        //get total repayments collected as per loan status (for closed, it returns 0)
+        uint256 _due = calculateWithdrawRepayment(msg.sender);
+
+        //gets amount through liquidity shares
+        uint256 _balance = balanceOf(msg.sender);
+        burnFrom(msg.sender, _balance);
+
+        if (_loanStatus == LoanStatus.DEFAULTED) {
+            uint256 _totalAsset;
+            if (borrowAsset != address(0)) {
+                _totalAsset = IERC20(borrowAsset).balanceOf(address(this));
+            } else {
+                _totalAsset = address(this).balance;
+            }
+
+            //assuming their will be no tokens in pool in any case except liquidation (to be checked) or we should store the amount in liquidate()
+            _balance = _balance.mul(_totalAsset).div(totalSupply());
+        }
+
+        _due = _balance.add(_due);
+
+        lenders[msg.sender].amountWithdrawn = lenders[msg.sender]
+            .amountWithdrawn
+            .add(_due);
+
+        //transfer repayment
+        //TODO: to decide which contract will contain this
+        _withdrawRepayment(msg.sender);
+        //to add transfer if not included in above (can be transferred with liquidity)
+
+        //transfer liquidity provided
+        if (borrowAsset != address(0)) {
+            IERC20(borrowAsset).transfer(msg.sender, _balance);
+        } else {
+            msg.sender.transfer(_balance);
+        }
+
+        emit Liquiditywithdrawn(_due, msg.sender);
     }
 
+    /**
+     * @dev This function is executed by lender to exercise margin call
+     * @dev It will revert in case collateral ratio is not below expected value
+     * or the lender has already called it.
+     */
+    function requestMarginCall() external isPoolActive isLender(msg.sender) {
+        require(
+            lenders[msg.sender].marginCallEndTime < block.timestamp,
+            "Pool::requestMarginCall margin call already requested"
+        );
 
-    function resultOfVoting() external {
-        
-    }
+        require(
+            collateralRatio >
+                getCurrentCollateralRatio(msg.sender).add(
+                    IPoolFactory(PoolFactory).collateralVolatilityThreshold()
+                ),
+            "Pool::requestMarginCall collateral ratio has not reached threshold yet"
+        );
 
-    function requestExtension() external OnlyBorrower isPoolActive
-    {
-        
-    }
+        lenders[msg.sender].marginCallEndTime = block.timestamp.add(
+            IPoolFactory(PoolFactory).marginCallDuration()
+        );
 
-
-    function voteOnExtension() external isPoolActive 
-    {
-        
-    }
-
-    function requestCollateralCall()
-        public
-    {
-        
+        emit CollateralCalled(msg.sender);
     }
 
     
@@ -539,9 +587,12 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         
     }
 
-    function calculatewithdrawRepayment(address lender) public view returns(uint256)
+    function calculateWithdrawRepayment(address lender)
+        public
+        view
+        returns (uint256)
     {
-        
+        if (loanStatus == LoanStatus.CANCELLED) return 0;
     }
 
 
