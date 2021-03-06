@@ -239,6 +239,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         if(loanStatus == LoanStatus.COLLECTION && loanStartTime < block.timestamp) {
             if(totalSupply() < borrowAmountRequested.mul(minborrowAmountFraction).div(100)) {
                 loanStatus = LoanStatus.CANCELLED;
+                withdrawAllCollateral();
                 return;
             }
             loanStatus = LoanStatus.ACTIVE;
@@ -270,7 +271,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
     }
 
     function withdrawAllCollateral()
-        external
+        internal
         OnlyBorrower
     {
         LoanStatus _status = loanStatus;
@@ -308,32 +309,44 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         external
         OnlyBorrower
     {   
-        
+        require(
+            block.timestamp<matchCollateralRatioEndTime, "Pool::cancelOpenBorrowPool - The pool cannot be cancelled when the status is active."
+        );
+        loanStatus = LoanStatus.CANCELLED;
+        withdrawAllCollateral();
+        _pause(); 
+        emit OpenBorrowPoolCancelled();
     }
 
-
-    
     function terminateOpenBorrowPool()
         external
         onlyOwner
     {
-        
+        LoanStatus _poolStatus = loanStatus;
+        require(
+            _poolStatus == LoanStatus.ACTIVE || _poolStatus == LoanStatus.COLLECTION,
+            "Pool::terminateOpenBorrowPool - The pool can only be terminated if it is Active or Collection Period."
+        );
+        uint256 _collateralShares = baseLiquidityShares.add(extraLiquidityShares);
+        ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()).transfer(IPoolFactory(PoolFactory).owner(), _collateralShares, collateralAsset, investedTo);
+        _pause();
+        loanStatus = LoanStatus.TERMINATED; 
+        emit OpenBorrowPoolTerminated();
     }
 
-    // TODO: repay function will invoke this fn
     function closeLoan()
-        internal
-        // onlyOwner // TODO: to be updated  --fixed
+        external   
+        OnlyBorrower
     {
-        
-    }
-
-    // TODO: When repay is missed (interest/principle) call this
-    function defaultLoan()
-        internal
-        // onlyOwner // TODO: to be updated
-    {
-        
+        require(
+            loanStatus == LoanStatus.ACTIVE,
+            "Pool::closeLoan - The pool can only be closed if the loan is Active."
+        );
+        require(nextDuePeriod==0, "Pool::closeLoan - The loan has not been fully repayed.");
+        loanStatus = LoanStatus.CLOSED;
+        withdrawAllCollateral();
+        _pause();
+        emit OpenBorrowPoolClosed();
     }
 
     function calculateLendingRate(uint256 s) public pure returns (uint256) {
