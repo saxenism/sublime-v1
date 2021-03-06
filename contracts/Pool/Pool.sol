@@ -361,10 +361,30 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         
     }
 
-    function requestCollateralCall()
-        public
-    {
-        
+    /**
+     * @dev This function is executed by lender to exercise margin call
+     * @dev It will revert in case collateral ratio is not below expected value
+     * or the lender has already called it.
+     */
+    function requestMarginCall() external isPoolActive isLender(msg.sender) {
+        require(
+            lenders[msg.sender].marginCallEndTime < block.timestamp,
+            "Pool::requestMarginCall margin call already requested"
+        );
+
+        require(
+            collateralRatio >
+                getCurrentCollateralRatio(msg.sender).add(
+                    IPoolFactory(PoolFactory).collateralVolatilityThreshold()
+                ),
+            "Pool::requestMarginCall collateral ratio has not reached threshold yet"
+        );
+
+        lenders[msg.sender].marginCallEndTime = block.timestamp.add(
+            IPoolFactory(PoolFactory).marginCallDuration()
+        );
+
+        emit CollateralCalled(msg.sender);
     }
 
     
