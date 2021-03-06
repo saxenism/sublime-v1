@@ -268,7 +268,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
     }
 
     function withdrawAllCollateral()
-        external
+        public
         OnlyBorrower
     {
         LoanStatus _status = loanStatus;
