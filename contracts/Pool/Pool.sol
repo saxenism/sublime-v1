@@ -347,6 +347,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
             _poolStatus == LoanStatus.ACTIVE || _poolStatus == LoanStatus.COLLECTION,
             "Pool::terminateOpenBorrowPool - The pool can only be terminated if it is Active or Collection Period."
         );
+        uint256 _collateralShares = baseLiquidityShares.add(extraLiquidityShares);
         ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()).transfer(IPoolFactory(PoolFactory).owner(), _collateralShares, collateralAsset, investedTo);
         _pause();
         loanStatus = LoanStatus.TERMINATED; 
