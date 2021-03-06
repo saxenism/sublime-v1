@@ -548,13 +548,12 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
             _amountReceived = _savingAccount.transfer(msg.sender, _collateralLiquidityShare, _collateralAsset, investedTo);
         }
         else{
+            _amountReceived = _savingAccount.withdraw(_collateralTokens, _collateralAsset, _investedTo, _recieveLiquidityShare);
             if(_recieveLiquidityShare){
                 address _liquidityShareAddress = IYield(_investedTo).liquidityToken(_collateralAsset);
-                _amountReceived = _savingAccount.withdraw(_collateralTokens, _collateralAsset, _investedTo, true);
                 IERC20(_liquidityShareAddress).transfer(msg.sender, _amountReceived);
             }
             else{
-                _amountReceived = _savingAccount.withdraw(_collateralTokens, _collateralAsset, _investedTo, false);
                 if(_collateralAsset == address(0)){
                     msg.sender.send(_amountReceived);
                 }
@@ -574,8 +573,8 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         burnFrom(lender,balanceOf(lender));
         delete lenders[lender];
         emit lenderLiquidated(msg.sender, lender, _amountReceived);
-
     }
+
     function correspondingBorrowTokens(uint256 _liquidityShares) public returns(uint256){
         uint256 _collateralTokens = IYield(investedTo).getTokensForShares(_liquidityShares, collateralAsset);
         uint256 _correspondingBorrowTokens = 
@@ -585,13 +584,23 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
             )).div(10**8)).mul(liquidatorRewardFraction).div(10**8);
     }
 
+    function isRepaymentDone() public returns(uint256){
+        // TODO
+        return loanStatus;
+    }
+
 
     function liquidatePool(bool _transferToSavingsAccount, bool _recieveLiquidityShare) external payable {
+        LoanStatus _poolStatus = loanStatus;
         require(
-            loanStatus == LoanStatus.DEFAULTED,
-            "Pool::liquidateLender - Borrower Extra time to match collateral is running"
+            _poolStatus == LoanStatus.DEFAULTED,
+            "Pool::liquidatePool - Borrower Extra time to match collateral is running"
         );
 
+        if(_poolStatus!=LoanStatus.DEFAULTED){
+            LoanStatus _currentPoolStatus = isRepaymentDone();
+        }
+        require(_currentPoolStatus==LoanStatus.DEFAULTED, "Pool::liquidatePool - No reason to liquidate the pool");
         ISavingsAccount _savingAccount = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
      
         address _collateralAsset = collateralAsset;
