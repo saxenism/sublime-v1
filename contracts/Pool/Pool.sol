@@ -289,7 +289,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
 
     function lend(address _lender, uint256 _amountLent) external payable{
         require(loanStatus == LoanStatus.COLLECTION, "Pool::lend - The pool should be in Collection Period.");
-
+        require(block.timestamp< loanStartTime, "Pool::lend - The collection period of the pool is over.");
         uint256 _amount = _amountLent;
         uint256 _borrowAmountNeeded = borrowAmountRequested;
         if(_amountLent.add(totalSupply()) > _borrowAmountNeeded) {
@@ -330,11 +330,9 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         external
         OnlyBorrower
     {   
-        LoanStatus _poolStatus = loanStatus;
         require(
-            _poolStatus == LoanStatus.COLLECTION || (_poolStatus == LoanStatus.ACTIVE && block.timestamp<matchCollateralRatioEndTime), "Pool::cancelOpenBorrowPool - The pool cannot be cancelled when the status is active."
+            block.timestamp<matchCollateralRatioEndTime, "Pool::cancelOpenBorrowPool - The pool cannot be cancelled when the status is active."
         );
-        require(matchCollateralRatioEndTime == 0, "Pool::cancelOpenBorrowPool - The borrowedAmount has already been withdrawn.");
         loanStatus = LoanStatus.CANCELLED;
         _pause(); 
         emit OpenBorrowPoolCancelled();
@@ -349,13 +347,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
             _poolStatus == LoanStatus.ACTIVE || _poolStatus == LoanStatus.COLLECTION,
             "Pool::terminateOpenBorrowPool - The pool can only be terminated if it is Active or Collection Period."
         );
-        if (matchCollateralRatioEndTime == 0){
-            emit LoanDefaulted();
-        }
-        else{
-            uint256 _collateralShares = baseLiquidityShares.add(extraLiquidityShares);
-            ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()).transfer(IPoolFactory(PoolFactory).owner(), _collateralShares, collateralAsset, investedTo);
-        }
+        ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()).transfer(IPoolFactory(PoolFactory).owner(), _collateralShares, collateralAsset, investedTo);
         _pause();
         loanStatus = LoanStatus.TERMINATED; 
         emit OpenBorrowPoolTerminated();
@@ -369,14 +361,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
             loanStatus == LoanStatus.ACTIVE,
             "Pool::closeLoan - The pool can only be closed if the loan is Active."
         );
-        uint256 _totalAsset;
-        if (borrowAsset != address(0)) {
-            _totalAsset = IERC20(borrowAsset).balanceOf(address(this));
-        } else {
-            _totalAsset = address(this).balance;
-        }
-        // assuming that the principle is transferred to the pool.
-        require(nextDuePeriod==0 && _totalAsset>totalSupply(), "Pool::closeLoan - The loan has not been fully repayed.");
+        require(nextDuePeriod==0, "Pool::closeLoan - The loan has not been fully repayed.");
         loanStatus = LoanStatus.CLOSED;
         _pause();
         emit OpenBorrowPoolClosed();
