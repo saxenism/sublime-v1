@@ -519,7 +519,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
                 getCurrentCollateralRatio(lender),
             "Pool::liquidateLender - collateral ratio has not reached threshold yet"
         );
-
+        require(balanceOf(lender)!=0, "The user has already transferred all this tokens.");
         ISavingsAccount _savingAccount = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
      
         address _collateralAsset = collateralAsset;
@@ -570,7 +570,9 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         else{
             _sharesReceived = _savingAccount.deposit(_correspondingBorrowTokens, _borrowAsset, _investedTo, address(this));
         }
-        _savingAccount.transfer(msg.sender, _sharesReceived, _borrowAsset, investedTo);
+        _savingAccount.transfer(lender, _sharesReceived, _borrowAsset, investedTo);
+        burnFrom(lender,balanceOf(lender));
+        delete lenders[lender];
         emit lenderLiquidated(msg.sender, lender, _amountReceived);
 
     }
