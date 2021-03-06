@@ -237,6 +237,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         if(loanStatus == LoanStatus.COLLECTION && loanStartTime < block.timestamp) {
             if(totalSupply() < borrowAmountRequested.mul(minborrowAmountFraction).div(100)) {
                 loanStatus = LoanStatus.CANCELLED;
+                withdrawAllCollateral();
                 return;
             }
             loanStatus = LoanStatus.ACTIVE;
@@ -268,7 +269,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
     }
 
     function withdrawAllCollateral()
-        public
+        internal
         OnlyBorrower
     {
         LoanStatus _status = loanStatus;
