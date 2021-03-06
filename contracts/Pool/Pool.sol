@@ -600,11 +600,18 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         emit lenderVoted(msg.sender,totalExtensionSupport,_lastVoteTime);
         
         if (((totalExtensionSupport)) >= (totalSupply().mul(_votingPassRatio)).div(100000000)) {
-            periodWhenExtensionIsPassed = calculateCurrentPeriod();
+            uint256 _currentPeriod = calculateCurrentPeriod();
+            uint256 _nextDueTime = (nextDuePeriod.mul(repaymentInterval)).add(loanStartTime);
+            if(block.timestamp > _nextDueTime){
+                periodWhenExtensionIsPassed = _currentPeriod.sub(1);
+            }
+            else{
+                periodWhenExtensionIsPassed = _currentPeriod;
+            }
+            extensionVoteEndTime = block.timestamp;   // voting is over
             nextDuePeriod = nextDuePeriod.add(1);
             emit votingPassed(nextDuePeriod,periodWhenExtensionIsPassed);
         }
-        
     }
 
 
