@@ -23,7 +23,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
 
     //user -> strategy -> token (underlying address) -> amount (shares)
     mapping(address => mapping(address => mapping(address => uint256)))
-        public userLockedBalance;
+        public override userLockedBalance;
 
     //user => asset => to => amount
     mapping(address => mapping(address => mapping(address => uint256)))

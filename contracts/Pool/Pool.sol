@@ -524,9 +524,6 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         emit Liquiditywithdrawn(_due, msg.sender);
     }
 
-    function resultOfVoting() external {}
-
-    function requestExtension() external OnlyBorrower isPoolActive {}
 
     /**
      * @dev This function is executed by lender to exercise margin call

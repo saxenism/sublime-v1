@@ -31,6 +31,8 @@ contract CreditLineStorage is OwnableUpgradeable {
         uint256 accrueInterest;
     }*/
 
+
+
     struct CreditLineUsageVars {
         uint256 principal;
         uint256 totalInterestRepaid;
@@ -51,9 +53,8 @@ contract CreditLineStorage is OwnableUpgradeable {
         address collateralAsset;
         creditLineStatus currentStatus;
         bool autoLiquidation;
-        mapping(address => uint256) sharesInStrategy;
     }
-
+    mapping(bytes32 => mapping(address => uint256)) collateralShareInStrategy;
     mapping(bytes32 => CreditLineUsageVars) public creditLineUsage;
     mapping(bytes32 => CreditLineVars) public creditLineInfo;
 }

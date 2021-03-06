@@ -91,4 +91,8 @@ interface ISavingsAccount {
         address investedTo,
         uint256 amount
     ) external returns (uint256);
+
+    function userLockedBalance(address user,address asset,address strategy) external view returns (uint256);
+
+
 }

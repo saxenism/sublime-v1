@@ -4,9 +4,13 @@ pragma solidity 0.7.0;
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./CreditLineStorage.sol";
-import "../interfaces/IPriceOracle.sol";
 import "../interfaces/IPoolFactory.sol";
-import "../interfaces/ISavingAccount.sol";
+import "../interfaces/IPriceOracle.sol";
+import "../interfaces/IYield.sol";
+import "../interfaces/IRepayment.sol";
+import "../interfaces/ISavingsAccount.sol";
+import "../interfaces/IStrategyRegistry.sol";
+
 /**
  * @title Credit Line contract with Methods related to credit Line
  * @notice Implements the functions related to Credit Line
@@ -20,6 +24,7 @@ contract CreditLine is CreditLineStorage {
     using SafeMath for uint256;
 
     address public PoolFactory;
+    address public strategyRegistry;
 
     /**
      * @dev checks if Credit Line exists
@@ -146,18 +151,6 @@ contract CreditLine is CreditLineStorage {
             return newInterestAccrued;
         }
 
-    //function update
-
-    // /**
-    //  * @dev Used to set Initial Values for a creditLine whenever a CreditLine is Created
-    //  * @param creditLineHash creditLine Hash of the CreditLine 
-    // */
-    // function setRepayments(bytes32 creditLineHash) internal {
-
-    //     creditLineUsage[creditLineHash] = _repaymentTemp;
-    // }
-
-
     /**
      * @dev used to request a credit line by a borrower
      * @param lender lender from whom creditLine is requested
@@ -264,43 +257,43 @@ contract CreditLine is CreditLineStorage {
     }
 
 
-    //TODO :- Make the function to accept ether as well
-    /**
-     * @dev used to withdraw assest from credit line 
-     * @param borrowAmount amount which borrower wants to withdraw from credit line
-     * @param creditLineHash Credit line hash which represents the credit Line Unique Hash
-    */
+  
+    // /**
+    //  * @dev used to withdraw assest from credit line 
+    //  * @param borrowAmount amount which borrower wants to withdraw from credit line
+    //  * @param creditLineHash Credit line hash which represents the credit Line Unique Hash
+    // */
 
-    
-    function transferFromTo(uint256 _assest, uint256 _amount, uint256 creditLineHash, address sender, address recipient) internal {
+    function transferFromTo(address _asset, uint256 _amount, bytes32 creditLineHash, address sender, address recipient) internal {
 
         address[] memory _strategyList = IStrategyRegistry(strategyRegistry).getStrategies();
-        ISavingAccount _savingAccount = ISavingAccount(IPoolFactory(PoolFactory).SavingAccount());
+        ISavingsAccount _savingAccount = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
         uint256 _activeAmount;
         uint256 liquidityShares;
 
         for (uint256 index = 0; index < _strategyList.length; index++) {
             liquidityShares = _savingAccount.userLockedBalance(sender, _asset, _strategyList[index]);
             if (liquidityShares > 0) {
-                uint256 _tokenInStrategy = IYield(_strategyList[index]).getTokensForShares(liquidityShares, _assest);
+                uint256 _tokenInStrategy = IYield(_strategyList[index]).getTokensForShares(liquidityShares, _asset);
                 _activeAmount = _activeAmount.add(_tokenInStrategy);
                 if(_activeAmount>_amount){
-                    uint256 _remainingliquidityShares = (_activeAmount.sub(_amount)).mul(liquidityShares).div(tokenInStrategy);
-                    _savingAccount.transferFrom(_collateralAsset, sender, recipient, _strategyList[index], _remainingliquidityShares);
-                    creditLineInfo[creditLineHash].sharesInStrategy[_strategyList[index]] = creditLineInfo[creditLineHash].sharesInStrategy[_strategyList[index]].add(_remainingliquidityShares);
+                    uint256 _remainingliquidityShares = (_activeAmount.sub(_amount)).mul(liquidityShares).div(_tokenInStrategy);
+                    _savingAccount.transferFrom(_asset, sender, recipient, _strategyList[index], _remainingliquidityShares);
+                    collateralShareInStrategy[creditLineHash][_strategyList[index]] = collateralShareInStrategy[creditLineHash][_strategyList[index]].add(_remainingliquidityShares);
                     return;
                 }
                 else{
-                    _savingAccount.transferFrom(_assest, sender, recipient, _strategyList[index], liquidityShares);
-                    creditLineInfo[creditLineHash].sharesInStrategy[_strategyList[index]] = creditLineInfo[creditLineHash].sharesInStrategy[_strategyList[index]].add(liquidityShares);
+                    _savingAccount.transferFrom(_asset, sender, recipient, _strategyList[index], liquidityShares);
+                    collateralShareInStrategy[creditLineHash][_strategyList[index]] = collateralShareInStrategy[creditLineHash][_strategyList[index]].add(liquidityShares);
                 }   
             }
         }
         require(_activeAmount >= _amount,"insufficient balance");
     }
 
-    function _depositCollateral(uint256 _collateralAsset,uint256 _collateralAmount, address strategy, bytes32 creditLineHash) payable internal {
+    function _depositCollateral(address _collateralAsset,uint256 _collateralAmount, address strategy, bytes32 creditLineHash,bool _transferCollateralFromSavingAccount) internal payable{
 
+        ISavingsAccount _savingAccount = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
         uint256 _sharesReceived;
         if(_transferCollateralFromSavingAccount){
             transferFromTo(_collateralAsset,_collateralAmount, creditLineHash, msg.sender, address(this));
@@ -313,17 +306,17 @@ contract CreditLine is CreditLineStorage {
             else{                
                 _sharesReceived = _savingAccount.deposit(_collateralAmount,_collateralAsset, strategy, address(this));
             }
-            creditLineInfo[creditLineHash].sharesInStrategy[strategy] = creditLineInfo[creditLineHash].sharesInStrategy[strategy].add(_sharesReceived);
+            collateralShareInStrategy[creditLineHash][strategy] = collateralShareInStrategy[creditLineHash][strategy].add(_sharesReceived);
         }
 
     }
 
-    function _withdrawAmount(uint256 _asset, uint256 _amountInTokens, uint256 creditLineHash) internal {
+    function _withdrawAmount(address _asset, uint256 _amountInTokens, bytes32 creditLineHash) internal {
 
         address _lender = creditLineInfo[creditLineHash].lender;
         address[] memory _strategyList = IStrategyRegistry(strategyRegistry).getStrategies();
-        ISavingAccount _savingAccount = ISavingAccount(IPoolFactory(PoolFactory).SavingAccount());
-                uintntmount;
+        ISavingsAccount _savingAccount = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
+        uint amount;
         uint256 liquidityShares;
         for (uint256 index = 0; index < _strategyList.length; index++) {
             liquidityShares = _savingAccount.userLockedBalance(msg.sender, _asset, _strategyList[index]);
@@ -331,12 +324,12 @@ contract CreditLine is CreditLineStorage {
                 uint256 tokenInStrategy = IYield(_strategyList[index]).getTokensForShares(liquidityShares, _asset);
                 amount = amount.add(tokenInStrategy);
                 if(amount>_amountInTokens){
-                    uint256 remainingliquidityShares = (amount.sub(_asset)).mul(liquidityShares).div(tokenInStrategy);
-                    _savingAccount.withdraw(remainingliquidityShares, _asset, _strategyList[index], false);
+                    uint256 remainingliquidityShares = (amount.sub(_amountInTokens)).mul(liquidityShares).div(tokenInStrategy);
+                    _savingAccount.withdraw(msg.sender,remainingliquidityShares, _asset, _strategyList[index], false);
                     return;
                 }
                 else{
-                    _savingAccount.withdraw(liquidityShares, _asset, _strategyList[index], false);
+                    _savingAccount.withdraw(msg.sender,liquidityShares, _asset, _strategyList[index], false);
                 }   
             }
         }
@@ -362,7 +355,7 @@ contract CreditLine is CreditLineStorage {
 
         address _defaultStrategy = IStrategyRegistry(strategyRegistry).getStrategies()[0];
         address _collateralAsset = creditLineInfo[creditLineHash].collateralAsset;        
-        _depositCollateral(_collateralAsset, _collateralAmount, _defaultStrategy);
+        _depositCollateral(_collateralAsset, _collateralAmount, _defaultStrategy,creditLineHash,_transferCollateralFromSavingAccount);
 
 
 
@@ -421,14 +414,14 @@ contract CreditLine is CreditLineStorage {
         require(asset == creditLineInfo[creditLineHash].borrowAsset,
                 "CreditLine: Asset does not match.");
                 
-        address _borrowAsset = creditLineUsage[creditLineHash].borrowAsset;
-        address _lender = creditLineUsage[creditLineHash].lender;
-        ISavingAccount _savingAccount = ISavingAccount(IPoolFactory(PoolFactory).SavingAccount());
+        address _borrowAsset = creditLineInfo[creditLineHash].borrowAsset;
+        address _lender = creditLineInfo[creditLineHash].lender;
+        ISavingsAccount _savingAccount = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
         address _defaultStrategy = IStrategyRegistry(strategyRegistry).getStrategies()[0];
         uint256 _sharesReceived;
         if(_transferFromSavingAccount == false){
             if(_borrowAsset == address(0)){
-                require(msg.value == _amount, "Pool::deposit - value to transfer doesn't match argument");
+                require(msg.value == repayAmount, "Pool::deposit - value to transfer doesn't match argument");
                 _sharesReceived = _savingAccount.deposit{value:msg.value}(repayAmount,_borrowAsset, _defaultStrategy, address(this));
             }
             else{
@@ -548,14 +541,13 @@ contract CreditLine is CreditLineStorage {
     }
 
 
-    function calculateTotalCollateralTokens(bytes32 creditLineHash) external returns(uint256 amount){
-        address _collateralAsset = creditLineUsage[creditLineHash].collateralAsset;
+    function calculateTotalCollateralTokens(bytes32 creditLineHash) public returns(uint256 amount){
+        address _collateralAsset = creditLineInfo[creditLineHash].collateralAsset;
         address[] memory _strategyList = IStrategyRegistry(strategyRegistry).getStrategies();
-        ISavingAccount _savingAccount = ISavingAccount(IPoolFactory(PoolFactory).SavingAccount());
-        uint256 amount;
+        ISavingsAccount _savingAccount = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
         uint256 liquidityShares;
         for (uint256 index = 0; index < _strategyList.length; index++) {
-            liquidityShares = creditLineInfo[creditLineHash].sharesInStrategy[_strategyList[index]];
+            liquidityShares = collateralShareInStrategy[creditLineHash][_strategyList[index]];
             uint256 tokenInStrategy = IYield(_strategyList[index]).getTokensForShares(liquidityShares, _collateralAsset);
             amount = amount.add(tokenInStrategy);
         }   
@@ -575,8 +567,8 @@ contract CreditLine is CreditLineStorage {
                 "CreditLine: Collateral ratio is higher than liquidation threshold");
         
 
-        address _collateralAsset = creditLineUsage[creditLineHash].collateralAsset;
-        address _lender = creditLineUsage[creditLineHash].lender;
+        address _collateralAsset = creditLineInfo[creditLineHash].collateralAsset;
+        address _lender = creditLineInfo[creditLineHash].lender;
         uint256 _totalCollateralToken = calculateTotalCollateralTokens(creditLineHash);
 
         if(creditLineInfo[creditLineHash].autoLiquidation) {
@@ -595,7 +587,7 @@ contract CreditLine is CreditLineStorage {
             transferFromTo(_collateralAsset, _totalCollateralToken, creditLineHash, address(this), msg.sender);
         }
 
-        delete creditLineInfo[creditLineHash].sharesInStrategy;
+        delete creditLineInfo[creditLineHash];
     }
 
 
