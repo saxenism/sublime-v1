@@ -193,7 +193,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
             }
         }
         else{
-            _sharesReceived = _savingAccount.transferFrom(borrower, address(this), _liquidityshare, _collateralAsset,_investedTo);
+            _sharesReceived = _savingAccount.transferFrom(msg.sender, address(this), _liquidityshare, _collateralAsset,_investedTo);
         }
         baseLiquidityShares = baseLiquidityShares.add(_sharesReceived);
         emit CollateralAdded(msg.sender,_amount,_sharesReceived);
@@ -219,12 +219,11 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
                 _sharesReceived = _savingAccount.deposit{value:msg.value}(_amount,_collateralAsset,_investedTo, address(this));
             }
             else{
-                IERC20(collateralAsset).approve(_investedTo, _amount);
                 _sharesReceived = _savingAccount.deposit(_amount,_collateralAsset,_investedTo, address(this));
             }
         }
         else{
-            _sharesReceived = _savingAccount.transferFrom(borrower, address(this), _liquidityshare, _collateralAsset,_investedTo);
+            _sharesReceived = _savingAccount.transferFrom(msg.sender, address(this), _liquidityshare, _collateralAsset,_investedTo);
         }
 
         extraLiquidityShares = extraLiquidityShares.add(_sharesReceived);
@@ -565,8 +564,11 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
             block.timestamp > _extensionVoteEndTime,
             "Pool::requestExtension - Extension requested already"
         );
+
+        // This check is required so that borrower doesn't ask for more extension if previously an extension is already granted
         require(periodWhenExtensionIsPassed > noOfRepaymentIntervals,"Pool::requestExtension: you have already been given an extension,No more extension");
-        totalExtensionSupport = 0;
+
+        totalExtensionSupport = 0;   // As we can multiple voting every time new voting start we have to make previous votes 0
         uint256 _gracePeriodFraction = IPoolFactory(PoolFactory).gracePeriodFraction();
         uint256 _gracePeriod = (repaymentInterval*_gracePeriodFraction).div(100000000);
         uint256 _nextDueTime = (nextDuePeriod.mul(repaymentInterval)).add(loanStartTime);
@@ -585,7 +587,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         require(balanceOf(msg.sender)!=0,"Pool::voteOnExtension - Not a valid lender for pool");
 
         uint256 _votingExtensionlength = IPoolFactory(PoolFactory).votingExtensionlength();
-        uint256 _lastVoteTime = lenders[msg.sender].lastVoteTime;
+        uint256 _lastVoteTime = lenders[msg.sender].lastVoteTime;    //Lender last vote time need to store it as it checks that a lender only votes once 
 
         require(
             _lastVoteTime < _extensionVoteEndTime.sub(_votingExtensionlength),
