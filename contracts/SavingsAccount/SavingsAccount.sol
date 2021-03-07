@@ -64,7 +64,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         strategyRegistry = _strategyRegistry;
     }
 
-    function depositFrom(
+    function depositTo(
         uint256 amount,
         address asset,
         address strategy,
@@ -73,7 +73,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
     ) external payable override returns (uint256 sharesReceived) {
         require(
             to != address(0),
-            "SavingsAccount::depositFrom receiver address should not be zero address"
+            "SavingsAccount::depositTo receiver address should not be zero address"
         );
 
         sharesReceived = _deposit(amount, asset, strategy, from);
