@@ -530,10 +530,12 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         uint256 _correspondingBorrowTokens=
             correspondingBorrowTokens(_collateralLiquidityShare);
         address _borrowAsset = borrowAsset;
+        uint256 _sharesReceived;
         if (_borrowAsset == address(0)){
             if(msg.value<_correspondingBorrowTokens){
                 revert("Pool::liquidateLender - Not enough tokens");
             }
+            _sharesReceived = _savingAccount.deposit{value:msg.value}(msg.value, _borrowAsset, _investedTo, address(this));
         }
         else{
             IERC20(_borrowAsset).transferFrom(
@@ -541,8 +543,10 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
                 address(this),
                 _correspondingBorrowTokens
             );
+            _sharesReceived = _savingAccount.deposit(_correspondingBorrowTokens, _borrowAsset, _investedTo, address(this));
         }
         _withdrawRepayment(lender);
+        _savingAccount.transfer(lender, _sharesReceived, _borrowAsset, investedTo);
         uint256 _amountReceived;
         if(_transferToSavingsAccount){
             _amountReceived = _savingAccount.transfer(msg.sender, _collateralLiquidityShare, _collateralAsset, investedTo);
@@ -562,14 +566,6 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
                 }
             }
         }
-        uint256 _sharesReceived;
-        if(_borrowAsset == address(0)) {
-            _sharesReceived = _savingAccount.deposit{value:msg.value}(_correspondingBorrowTokens, _borrowAsset, _investedTo, address(this));
-        }
-        else{
-            _sharesReceived = _savingAccount.deposit(_correspondingBorrowTokens, _borrowAsset, _investedTo, address(this));
-        }
-        _savingAccount.transfer(lender, _sharesReceived, _borrowAsset, investedTo);
         burnFrom(lender,balanceOf(lender));
         delete lenders[lender];
         emit lenderLiquidated(msg.sender, lender, _amountReceived);
@@ -598,13 +594,8 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
     }
 
     function liquidatePool(bool _transferToSavingsAccount, bool _recieveLiquidityShare) external payable {
-        LoanStatus _poolStatus = loanStatus;
-        require(
-            _poolStatus == LoanStatus.DEFAULTED,
-            "Pool::liquidatePool - Borrower Extra time to match collateral is running"
-        );
         LoanStatus _currentPoolStatus;
-        if(_poolStatus!=LoanStatus.DEFAULTED){
+        if(loanStatus!=LoanStatus.DEFAULTED){
             _currentPoolStatus = _isRepaymentDone();
         }
         require(_currentPoolStatus==LoanStatus.DEFAULTED, "Pool::liquidatePool - No reason to liquidate the pool");
