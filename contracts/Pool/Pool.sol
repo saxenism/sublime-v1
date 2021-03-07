@@ -440,6 +440,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
 
         //transfer extra liquidity shares
         uint256 _liquidityshare = lenders[_from].extraLiquidityShares;
+        if (_liquidityshare == 0) return;
 
         uint256 toTransfer = _liquidityshare;
         if (_amount != balanceOf(_from)) {
@@ -449,6 +450,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         lenders[_from].extraLiquidityShares = lenders[_from]
             .extraLiquidityShares
             .sub(toTransfer);
+
         lenders[_to].extraLiquidityShares = lenders[_to]
             .extraLiquidityShares
             .add(toTransfer);
