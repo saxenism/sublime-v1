@@ -320,8 +320,6 @@ contract Pool is Initializable, IPool {
         emit AmountBorrowed(msg.sender, _tokensLent);
     }
 
-    function repayAmount(uint256 amount) external OnlyBorrower isPoolActive {}
-
     function withdrawAllCollateral() internal OnlyBorrower {
         LoanStatus _status = poolVars.loanStatus;
         require(
@@ -387,11 +385,11 @@ contract Pool is Initializable, IPool {
         require(msg.sender == address(poolToken));
         require(
             lenders[_from].marginCallEndTime != 0,
-            "Pool::_beforeTransfer - Cannot transfer as Margin call is made by the sender"
+            "Pool::beforeTransfer - Cannot transfer as Margin call is made by the sender"
         );
         require(
             lenders[_to].marginCallEndTime != 0,
-            "Pool::_beforeTransfer - Cannot transfer as Margin call is made by the receiver"
+            "Pool::beforeTransfer - Cannot transfer as Margin call is made by the receiver"
         );
 
         //Withdraw repayments for user
