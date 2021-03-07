@@ -37,6 +37,15 @@ interface ISavingsAccount {
         address user
     ) external payable returns (uint256 sharesReceived);
 
+    
+    function depositTo(
+        uint256 amount,
+        address asset,
+        address strategy,
+        address from,
+        address to
+    ) external payable returns (uint256 sharesReceived);
+
     /**
      * @dev Used to switch saving strategy of an asset
      * @param currentStrategy initial strategy of asset

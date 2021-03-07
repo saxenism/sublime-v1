@@ -31,6 +31,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
 
     struct LendingDetails {
         uint256 amountWithdrawn;
+        uint256 repaymentWithdrawn;
         // bool lastVoteValue; // last vote value is not neccesary as in once cycle user can vote only once
         uint256 lastVoteTime;
         uint256 marginCallEndTime;
@@ -988,6 +989,58 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         return _currentPeriod;
     }
 
+    function calculateRepaymentWithdrawable(address _lender) internal view returns (uint256) {
+        uint256 _totalRepaidAmount = IRepayment(Repayment).getTotalRepaidAmount(address(this));
+
+        uint256 _amountWithdrawable = (balanceOf(_lender).mul(_totalRepaidAmount)
+                                                        .div(totalSupply()))
+                                                        .sub(lenders[_lender].repaymentWithdrawn);
+
+        return _amountWithdrawable;
+
+    }
+
+    
+    // Withdraw Repayment, Also all the extra state variables are added here only for the review
+    
+    function withdrawRepayment(bool _withdrawToSavingsAccount) external isLender(msg.sender) {
+        LoanStatus _loanStatus = loanStatus;
+
+        uint256 _amountToWithdraw = calculateRepaymentWithdrawable(msg.sender);
+        uint256 _sharesReceived;
+        address _investedTo = address(0); //add defaultStrategy
+        if (_withdrawToSavingsAccount) {
+            ISavingsAccount _savingsAccount = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
+
+            if(borrowAsset == address(0)) {
+                // add check to see if _amount is available or not
+                _sharesReceived = _savingsAccount.depositTo{value: _amountToWithdraw}(_amountToWithdraw,
+                                                                                      borrowAsset,
+                                                                                      _investedTo,
+                                                                                      address(this),
+                                                                                      msg.sender); // deposit from pool to lender
+            }
+            else {
+                _sharesReceived = _savingsAccount.depositTo(_amountToWithdraw,
+                                                          borrowAsset,
+                                                          _investedTo,
+                                                          address(this),
+                                                          msg.sender);
+            }
+        }
+        else{
+            if (borrowAsset == address(0)) {
+                // should conisder transfer instead
+                msg.sender.send(_amountToWithdraw);
+            }
+            else {
+                IERC20(borrowAsset).transferFrom(address(this),
+                                                msg.sender,
+                                                _amountToWithdraw);
+            }
+        }
+        lenders[msg.sender].repaymentWithdrawn = lenders[msg.sender].repaymentWithdrawn.add(_amountToWithdraw);
+    }
     // Withdraw Repayment, Also all the extra state variables are added here only for the review
 
     function withdrawRepayment() external payable {}
