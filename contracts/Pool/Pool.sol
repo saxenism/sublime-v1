@@ -1039,7 +1039,7 @@ contract Pool is Initializable, IPool {
 
     function getLoanStatus() public view override returns (uint256) {
         return uint256(poolVars.loanStatus);
-
+    }
 
     receive() external payable {
         require(
