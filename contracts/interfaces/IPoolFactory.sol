@@ -18,5 +18,4 @@ interface IPoolFactory {
     function votingPassRatio() external view returns(uint256);
     function gracePeriodFraction() external view returns(uint256);
 
-
 }

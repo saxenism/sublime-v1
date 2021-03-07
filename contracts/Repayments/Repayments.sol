@@ -63,10 +63,10 @@ contract Repayments is RepaymentStorage {
                                            .mul(borrowRate)
                                            .div(yearInSeconds);
 
-        uint256 periodEndTime = loanStartTime.add((currentPeriod.add(1)).mul(repaymentInterval));
+        // uint256 periodEndTime = (currentPeriod.add(1)).mul(repaymentInterval);
 
         uint256 interestDueTillPeriodEnd = interestPerSecond
-                                                  .mul((periodEndTime)
+                                                  .mul((repaymentInterval)
                                                     .sub(repaymentDetails[poolID].repaymentPeriodCovered));
         return interestDueTillPeriodEnd;
     }
@@ -89,17 +89,21 @@ contract Repayments is RepaymentStorage {
 
         // assuming repaymentInterval is in seconds
 
-        uint256 yearInSeconds = 365 days;
-        uint256 interestPerSecond = activePrincipal
-                                           .mul(borrowRate)
-                                           .div(yearInSeconds);
+        uint256 interestPerSecond;
+        uint256 interestDueTillPeriodEnd;
 
-        uint256 interestDueTillPeriodEnd = calculateRepayAmount(poolID,
+        {
+            uint256 yearInSeconds = 365 days;
+            interestPerSecond = activePrincipal
+                                            .mul(borrowRate)
+                                            .div(yearInSeconds);
+
+            interestDueTillPeriodEnd = calculateRepayAmount(poolID,
                                                                 borrowRate, 
                                                                 activePrincipal, 
                                                                 loanStartTime, 
                                                                 repaymentInterval);
-
+        }
 
         if (isLoanExtensionActive == false) {
             // might consider transferring interestDueTillPeriodEnd and refunding the rest
