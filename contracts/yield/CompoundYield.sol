@@ -214,4 +214,7 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable {
             initialAssetBalance
         );
     }
+
+    //to apply check
+    receive() external payable {}
 }

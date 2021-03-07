@@ -1062,6 +1062,14 @@ contract Pool is Initializable, IPool {
         }
     }
 
+
+    receive() external payable {
+        require(
+            msg.sender == IPoolFactory(PoolFactory).savingsAccount(),
+            "Pool::receive invalid transaction"
+        );
+    }
+
     // function getLenderCurrentCollateralRatio(address lender) public view returns(uint256){
 
     // }
