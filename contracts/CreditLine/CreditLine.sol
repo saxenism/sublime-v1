@@ -148,7 +148,7 @@ contract CreditLine is CreditLineStorage {
         }
 
 
-     function transferFromSavingAccount(address _asset, uint256 _amount, bytes32 creditLineHash, address sender, address recipient) internal {
+     function transferFromSavingAccount(address _asset, uint256 _amount, address sender, address recipient) internal {
 
         address[] memory _strategyList = IStrategyRegistry(strategyRegistry).getStrategies();
         ISavingsAccount _savingAccount = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
@@ -364,7 +364,7 @@ contract CreditLine is CreditLineStorage {
         creditLineUsage[creditLineHash].principal = creditLineUsage[creditLineHash].principal.add(borrowAmount);
         creditLineUsage[creditLineHash].lastPrincipalUpdateTime = block.timestamp;
 
-        transferFromSavingAccount(_borrowAsset,borrowAmount,creditLineHash,_lender,address(this));
+        transferFromSavingAccount(_borrowAsset,borrowAmount,_lender,address(this));
         _withdrawAmount(creditLineInfo[creditLineHash].borrowAsset, borrowAmount,creditLineHash);
         if(creditLineInfo[creditLineHash].borrowAsset==address(0)){
             msg.sender.transfer(borrowAmount);
@@ -413,7 +413,7 @@ contract CreditLine is CreditLineStorage {
             _savingAccount.transfer(_borrowAsset, _lender, _defaultStrategy, _sharesReceived);
         }
         else{
-            transferFromSavingAccount(_borrowAsset, repayAmount, creditLineHash, msg.sender, creditLineInfo[creditLineHash].lender);
+            transferFromSavingAccount(_borrowAsset, repayAmount, msg.sender, creditLineInfo[creditLineHash].lender);
         }
 
     }
@@ -547,7 +547,7 @@ contract CreditLine is CreditLineStorage {
         }
         else {
             require(msg.sender == creditLineInfo[creditLineHash].lender,"CreditLine: Liquidation can only be performed by lender.");
-            transferFromSavingAccount(_collateralAsset, _totalCollateralToken, creditLineHash, address(this), msg.sender);
+            transferFromSavingAccount(_collateralAsset, _totalCollateralToken, address(this), msg.sender);
         }
 
         delete creditLineInfo[creditLineHash];
