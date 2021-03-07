@@ -5,12 +5,8 @@ pragma experimental ABIEncoderV2;
 interface IRepayment {
 
 
-    function initializePool(
+    function initializeRepayment(
         uint256 numberOfTotalRepayments,
-        uint256 votingExtensionlength,
-        uint256 amountPaidforInstallment,
-        uint256 gracepenaltyRate,
-        uint256 gracePeriodInterval,
         uint256 loanDuration
     ) external;
 
