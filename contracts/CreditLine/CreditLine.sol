@@ -472,7 +472,12 @@ contract CreditLine is CreditLineStorage {
 
 
 
-
+    receive() external payable {
+        require(
+            msg.sender == IPoolFactory(PoolFactory).savingsAccount(),
+            "CreditLine::receive invalid transaction"
+        );
+    }
 
     // Think about threshHold liquidation 
     // only one type of token is accepted check for that

@@ -7,8 +7,12 @@ import "../interfaces/IVerification.sol";
 import "../interfaces/IStrategyRegistry.sol";
 import "../interfaces/IRepayment.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "./PoolToken.sol";
 
 contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
+
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
     struct Limits {
         // TODO: Optimize to uint128 or even less
@@ -131,9 +135,10 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         require(isWithinLimits(_borrowRate, borrowRateLimit.min, borrowRateLimit.max), "PoolFactory::createPool - Borrow rate not within limits");
         require(isWithinLimits(_noOfRepaymentIntervals, noOfRepaymentIntervalsLimit.min, noOfRepaymentIntervalsLimit.max), "PoolFactory::createPool - Loan duration not within limits");
         require(isWithinLimits(_repaymentInterval, repaymentIntervalLimit.min, repaymentIntervalLimit.max), "PoolFactory::createPool - Repayment interval not within limits");
-        bytes memory data = abi.encodeWithSelector(initializeFunctionId, _poolSize, _minBorrowAmountFraction, msg.sender, _borrowTokenType, _collateralTokenType, _collateralRatio, _borrowRate, _repaymentInterval, _noOfRepaymentIntervals, _investedTo, _collateralAmount, _transferFromSavingsAccount, gracePeriodPenaltyFraction);
+        bytes memory data = abi.encodeWithSelector(initializeFunctionId, _poolSize, _minBorrowAmountFraction, msg.sender, _borrowTokenType, _collateralTokenType, _collateralRatio, _borrowRate, _repaymentInterval, _noOfRepaymentIntervals, _investedTo, _collateralAmount, _transferFromSavingsAccount);
         // TODO: Setting 0x00 as admin, so that it is not upgradable. Remove the upgradable functionality to optimize
         address pool = address((new SublimeProxy){value: msg.value}(poolImpl, address(0), data));
+        address poolToken = address(new PoolToken("Open Borrow Pool Tokens", "OBPT", pool));
         openBorrowPoolRegistry[pool] = true;
         IRepayment(repaymentImpl).initializeRepayment(_noOfRepaymentIntervals, _repaymentInterval);
         emit PoolCreated(pool, msg.sender);
