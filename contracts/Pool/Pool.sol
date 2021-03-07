@@ -565,8 +565,7 @@ contract Pool is Initializable, IPool {
         IPoolFactory _poolFactory = IPoolFactory(PoolFactory);
         uint256 _interest = IRepayment(_poolFactory.repaymentImpl()).calculateRepayAmount(address(this),
                                                                                             poolConstants.borrowRate,
-                                                                                            _loanStartedAt,
-                                                                                            poolConstants.repaymentInterval);
+                                                                                            _loanStartedAt);
         return _interest;
     }
 

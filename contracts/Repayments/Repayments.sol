@@ -54,18 +54,17 @@ contract Repayments is RepaymentStorage {
     function calculateRepayAmount(
         address poolID,
         uint256 borrowRate,
-        uint256 loanStartTime,
-        uint256 repaymentInterval
+        uint256 loanStartTime
         ) public view returns(uint256) {
         // assuming repaymentInterval is in seconds
-        uint256 currentPeriod = (block.timestamp.sub(loanStartTime)).div(repaymentInterval);
+        uint256 currentPeriod = (block.timestamp.sub(loanStartTime)).div(repaymentDetails[poolID].repaymentInterval);
 
         uint256 interestPerSecond = repaymentDetails[poolID].activePrincipal.mul(borrowRate).div(yearInSeconds);
 
         // uint256 periodEndTime = (currentPeriod.add(1)).mul(repaymentInterval);
 
         uint256 interestDueTillPeriodEnd = interestPerSecond
-                                                  .mul((repaymentInterval)
+                                                  .mul((repaymentDetails[poolID].repaymentInterval)
                                                     .sub(repaymentDetails[poolID].repaymentPeriodCovered));
         return interestDueTillPeriodEnd;
     }
@@ -97,8 +96,7 @@ contract Repayments is RepaymentStorage {
 
             interestDueTillPeriodEnd = calculateRepayAmount(poolID,
                                                                 borrowRate, 
-                                                                loanStartTime, 
-                                                                repaymentDetails[poolID].repaymentInterval);
+                                                                loanStartTime);
         }
 
         if (isLoanExtensionActive == false) {

@@ -30,8 +30,7 @@ interface IRepayment {
     function calculateRepayAmount(
         address poolID,
         uint256 borrowRate,
-        uint256 loanStartTime,
-        uint256 repaymentInterval
+        uint256 loanStartTime
     ) external view returns (uint256);
 
     function repayAmount(
