@@ -3,7 +3,6 @@ pragma solidity 0.7.0;
 
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
-// import "@openzeppelin/contracts-upgradeable/presets/ERC20PresetMinterPauserUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "../interfaces/IPoolFactory.sol";
 import "../interfaces/IPriceOracle.sol";
@@ -162,30 +161,28 @@ contract Pool is Initializable, IPool {
         uint256 _collateralAmount,
         bool _transferFromSavingsAccount
     ) external initializer {
-        {
-            poolConstants.borrowAmountRequested = _borrowAmountRequested;
-            poolConstants.minborrowAmountFraction = _minborrowAmountFraction;
-            poolConstants.borrower = _borrower;
-            poolConstants.borrowAsset = _borrowAsset;
-            poolConstants.collateralAsset = _collateralAsset;
-            poolConstants.collateralRatio = _collateralRatio;
-            poolConstants.borrowRate = _borrowRate;
-            poolConstants.repaymentInterval = _repaymentInterval;
-            poolConstants.noOfRepaymentIntervals = _noOfRepaymentIntervals;
-            poolConstants.investedTo = _investedTo;
-        }
+        uint256 _collectionPeriod = IPoolFactory(msg.sender).collectionPeriod();
+        poolConstants = PoolConstants(
+            _borrower,
+            _borrowAmountRequested,
+            _minborrowAmountFraction,
+            block.timestamp.add(_collectionPeriod),
+            block.timestamp.add(_collectionPeriod).add(IPoolFactory(msg.sender).matchCollateralRatioInterval()),
+            _borrowAsset,
+            _collateralRatio,
+            _borrowRate,
+            _noOfRepaymentIntervals,
+            _repaymentInterval,
+            _collateralAsset,
+            _investedTo
+        );
 
         PoolFactory = msg.sender;
 
         depositCollateral(_collateralAmount, _transferFromSavingsAccount);
-        uint256 _collectionPeriod = IPoolFactory(msg.sender).collectionPeriod();
-        poolConstants.loanStartTime = block.timestamp.add(_collectionPeriod);
-        poolConstants.matchCollateralRatioEndTime = block.timestamp.add(_collectionPeriod).add(
-            IPoolFactory(msg.sender).matchCollateralRatioInterval()
-        );
     }
 
-    function setPoolToken(address _poolToken) public {
+    function setPoolToken(address _poolToken) external override {
         require(msg.sender == PoolFactory);
         poolToken = PoolToken(_poolToken);
     }
@@ -318,6 +315,8 @@ contract Pool is Initializable, IPool {
                 ),
             "Pool::withdrawBorrowedAmount - The current collateral amount does not permit the loan."
         );
+        uint256 _noOfRepaymentIntervals = poolConstants.noOfRepaymentIntervals;
+        IRepayment(IPoolFactory(PoolFactory).repaymentImpl()).initializeRepayment(_noOfRepaymentIntervals, _noOfRepaymentIntervals.mul(poolConstants.repaymentInterval));
 
         uint256 _tokensLent = poolToken.totalSupply();
         IERC20(poolConstants.borrowAsset).transfer(poolConstants.borrower, _tokensLent);
@@ -555,8 +554,8 @@ contract Pool is Initializable, IPool {
     // }
 
     // event PoolLiquidated(bytes32 poolHash, address liquidator, uint256 amount);
-    //todo: add more details here
-    event Liquidated(address liquidator, address lender);
+    // //todo: add more details here
+    // event Liquidated(address liquidator, address lender);
 
     // function amountPerPeriod() public view returns (uint256) {}
 

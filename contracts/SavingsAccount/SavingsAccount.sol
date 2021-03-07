@@ -368,14 +368,6 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         return amount;
     }
 
-    function depositTo(
-        uint256 amount,
-        address asset,
-        address strategy,
-        address from,
-        address to
-    ) external payable override returns (uint256 sharesReceived) {}
-
     receive() external payable {
         require(
             IStrategyRegistry(strategyRegistry).registry(msg.sender),
