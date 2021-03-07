@@ -214,14 +214,21 @@ contract Pool is Initializable, IPool {
                 );
                 _sharesReceived = _savingAccount.deposit{value: msg.value}(
                     _amount,
-                    _depositFrom,
                     _asset,
                     _investedTo
                 );
             } else {
+                IERC20(_asset).safeTransferFrom(
+                    _depositFrom,
+                    _depositTo,
+                    _amount
+                );
+                IERC20(_asset).safeApprove(
+                    address(_savingAccount),
+                    _amount
+                );
                 _sharesReceived = _savingAccount.deposit(
                     _amount,
-                    _depositFrom,
                     _asset,
                     _investedTo
                 );
@@ -699,8 +706,7 @@ contract Pool is Initializable, IPool {
                 _sharesReceived = _savingAccount.deposit{value: msg.value}(
                     msg.value,
                     _borrowAsset,
-                    _investedTo,
-                    address(this)
+                    _investedTo
                 );
             } else {
                 IERC20(_borrowAsset).transferFrom(
@@ -711,8 +717,7 @@ contract Pool is Initializable, IPool {
                 _sharesReceived = _savingAccount.deposit(
                     _correspondingBorrowTokens,
                     _borrowAsset,
-                    _investedTo,
-                    address(this)
+                    _investedTo
                 );
             }
 
@@ -858,7 +863,6 @@ contract Pool is Initializable, IPool {
                     _investedTo,
                     _recieveLiquidityShare
                 );
-
             if (_recieveLiquidityShare) {
                 address _addressOfTheLiquidityToken =
                     IYield(_investedTo).liquidityToken(_collateralAsset);
@@ -936,14 +940,12 @@ contract Pool is Initializable, IPool {
                 _sharesReceived = _savingsAccount.depositTo{value: _amountToWithdraw}(_amountToWithdraw,
                                                                                       poolConstants.borrowAsset,
                                                                                       _investedTo,
-                                                                                      address(this),
                                                                                       _lender); // deposit from pool to lender
             }
             else {
                 _sharesReceived = _savingsAccount.depositTo(_amountToWithdraw,
                                                           poolConstants.borrowAsset,
                                                           _investedTo,
-                                                          address(this),
                                                           _lender);
             }
         }

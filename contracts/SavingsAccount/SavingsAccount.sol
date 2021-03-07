@@ -68,7 +68,6 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         uint256 amount,
         address asset,
         address strategy,
-        address from,
         address to
     ) external payable override returns (uint256 sharesReceived) {
         require(
@@ -76,7 +75,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
             "SavingsAccount::depositTo receiver address should not be zero address"
         );
 
-        sharesReceived = _deposit(amount, asset, strategy, from);
+        sharesReceived = _deposit(amount, asset, strategy);
 
         userLockedBalance[to][asset][strategy] = userLockedBalance[to][asset][
             strategy
@@ -93,29 +92,26 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
      * @param amount amount of asset deposited
      * @param asset address of asset deposited
      * @param strategy address of strategy to invest in
-     * @param user address of user depositing into savings account
      */
     function deposit(
         uint256 amount,
         address asset,
-        address strategy,
-        address user
+        address strategy
     ) external payable override returns (uint256 sharesReceived) {
-        sharesReceived = _deposit(amount, asset, strategy, user);
+        sharesReceived = _deposit(amount, asset, strategy);
 
-        userLockedBalance[user][asset][strategy] = userLockedBalance[user][
-            asset
-        ][strategy]
+        userLockedBalance[msg.sender][asset][strategy] = userLockedBalance[
+            msg.sender
+        ][asset][strategy]
             .add(sharesReceived);
 
-        emit Deposited(user, amount, asset, strategy);
+        emit Deposited(msg.sender, amount, asset, strategy);
     }
 
     function _deposit(
         uint256 amount,
         address asset,
-        address strategy,
-        address user
+        address strategy
     ) internal returns (uint256 sharesReceived) {
         require(
             amount != 0,
@@ -123,13 +119,12 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         );
 
         if (strategy != address(0)) {
-            sharesReceived = _depositToYield(amount, asset, strategy, user);
+            sharesReceived = _depositToYield(amount, asset, strategy);
         } else {
             sharesReceived = amount;
             if (asset != address(0)) {
-                IERC20(asset).transferFrom(user, address(this), amount);
+                IERC20(asset).transferFrom(msg.sender, address(this), amount);
             } else {
-                if (msg.value != amount) payable(user).transfer(msg.value);
                 require(
                     msg.value == amount,
                     "SavingsAccount::deposit ETH sent must be equal to amount"
@@ -141,8 +136,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
     function _depositToYield(
         uint256 amount,
         address asset,
-        address strategy,
-        address user
+        address strategy
     ) internal returns (uint256 sharesReceived) {
         require(
             IStrategyRegistry(strategyRegistry).registry(strategy),
@@ -151,12 +145,16 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
 
         if (asset == address(0)) {
             sharesReceived = IYield(strategy).lockTokens{value: amount}(
-                user,
+                msg.sender,
                 asset,
                 amount
             );
         } else {
-            sharesReceived = IYield(strategy).lockTokens(user, asset, amount);
+            sharesReceived = IYield(strategy).lockTokens(
+                msg.sender,
+                asset,
+                amount
+            );
         }
     }
 
@@ -206,8 +204,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
             sharesReceived = _depositToYield(
                 tokensReceived,
                 asset,
-                newStrategy,
-                address(this)
+                newStrategy
             );
         }
 
