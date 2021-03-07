@@ -671,13 +671,18 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
             (loanStatus == LoanStatus.ACTIVE) && (block.timestamp > matchCollateralRatioEndTime),
             "Pool::liquidateLender - Borrower Extra time to match collateral is running"
         );
-        uint256 _marginCallEndTime = lenders[lender].marginCallEndTime;
-        require(_marginCallEndTime!=0, "No margin call has been called.");
-        require(
-            _marginCallEndTime <
-                block.timestamp,
-            "Pool::liquidateLender - period for depositing extra collateral not ended"
-        );
+
+        //avoid stack too deep
+        {
+            uint256 _marginCallEndTime = lenders[lender].marginCallEndTime;
+            require(_marginCallEndTime!=0, "No margin call has been called.");
+            require(
+                _marginCallEndTime <
+                    block.timestamp,
+                "Pool::liquidateLender - period for depositing extra collateral not ended"
+            );
+        }
+        
         require(
             collateralRatio.sub(
                 IPoolFactory(PoolFactory).collateralVolatilityThreshold()
@@ -717,13 +722,13 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
             _sharesReceived = _savingAccount.deposit(_correspondingBorrowTokens, _borrowAsset, _investedTo, address(this));
         }
         _withdrawRepayment(lender);
-        _savingAccount.transfer(lender, _sharesReceived, _borrowAsset, investedTo);
+        _savingAccount.transfer(_borrowAsset, lender, investedTo, _sharesReceived);
         uint256 _amountReceived;
         if(_transferToSavingsAccount){
-            _amountReceived = _savingAccount.transfer(msg.sender, _collateralLiquidityShare, _collateralAsset, investedTo);
+            _amountReceived = _savingAccount.transfer(_collateralAsset, msg.sender, investedTo, _collateralLiquidityShare);
         }
         else{
-            _amountReceived = _savingAccount.withdraw(_collateralTokens, _collateralAsset, _investedTo, _recieveLiquidityShare);
+            _amountReceived = _savingAccount.withdraw(payable(address(this)), _collateralTokens, _collateralAsset, _investedTo, _recieveLiquidityShare);
             if(_recieveLiquidityShare){
                 address _liquidityShareAddress = IYield(_investedTo).liquidityToken(_collateralAsset);
                 IERC20(_liquidityShareAddress).transfer(msg.sender, _amountReceived);
@@ -792,11 +797,11 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         }
         address _investedTo = investedTo;
         if(_transferToSavingsAccount){
-            uint256 _sharesReceived = _savingAccount.transfer(msg.sender, _collateralLiquidityShare, _collateralAsset, _investedTo);
+            uint256 _sharesReceived = _savingAccount.transfer(_collateralAsset, msg.sender, _investedTo, _collateralLiquidityShare);
         }
         else{
             uint256 _collateralTokens = IYield(_investedTo).getTokensForShares(_collateralLiquidityShare, _collateralAsset);
-            uint256 _amountReceived = _savingAccount.withdraw(_collateralTokens, _collateralAsset, _investedTo, _recieveLiquidityShare);
+            uint256 _amountReceived = _savingAccount.withdraw(payable(address(this)), _collateralTokens, _collateralAsset, _investedTo, _recieveLiquidityShare);
             if(_recieveLiquidityShare){
                 address _addressOfTheLiquidityToken = IYield(_investedTo).liquidityToken(_collateralAsset);
                 IERC20(_addressOfTheLiquidityToken).transfer(msg.sender, _amountReceived);
