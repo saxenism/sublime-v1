@@ -43,7 +43,7 @@
   },
   "dependencies": {
     "@chainlink/contracts": "^0.1.6",
-    "@openzeppelin/contracts": "^3.4.0",
+    "@openzeppelin/contracts": "^3.4.1",
     "@openzeppelin/contracts-ethereum-package": "^3.0.0",
     "@openzeppelin/contracts-upgradeable": "^3.4.0",
     "ethereumjs-abi": "^0.6.8",
