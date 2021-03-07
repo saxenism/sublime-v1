@@ -449,7 +449,13 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
             "Pool::terminateOpenBorrowPool - The pool can only be terminated if it is Active or Collection Period."
         );
         uint256 _collateralShares = baseLiquidityShares.add(extraLiquidityShares);
-        ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()).transfer(IPoolFactory(PoolFactory).owner(), _collateralShares, collateralAsset, investedTo);
+        ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()).transfer(
+            collateralAsset,
+            IPoolFactory(PoolFactory).owner(),
+            investedTo,
+            _collateralShares
+        );
+
         _pause();
         loanStatus = LoanStatus.TERMINATED;
         emit OpenBorrowPoolTerminated();
@@ -524,7 +530,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
 
     function resultOfVoting() external {}
 
-    function requestExtension() external OnlyBorrower isPoolActive {}
+    // function requestExtension() external OnlyBorrower isPoolActive {}
 
     /**
      * @dev This function is executed by lender to exercise margin call
