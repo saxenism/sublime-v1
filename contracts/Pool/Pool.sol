@@ -581,7 +581,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
             (_collateralTokens.mul(IPriceOracle(IPoolFactory(PoolFactory).priceOracle()).getLatestPrice(
                 borrowAsset,
                 collateralAsset
-            )).div(10**8)).mul((10**8).sub(liquidatorRewardFraction)).div(10**8);
+            )).div(10**8)).mul(uint256(10**8).sub(liquidatorRewardFraction)).div(10**8);
     }
 
     function checkRepayment() public {
@@ -630,19 +630,18 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
             uint256 _sharesReceived = _savingAccount.transfer(msg.sender, _collateralLiquidityShare, _collateralAsset, _investedTo);
         }
         else{
+            uint256 _collateralTokens = IYield(_investedTo).getTokensForShares(_collateralLiquidityShare, _collateralAsset);
+            uint256 _amountReceived = _savingAccount.withdraw(_collateralTokens, _collateralAsset, _investedTo, _recieveLiquidityShare);
             if(_recieveLiquidityShare){
-                uint256 _sharesReceived = _savingAccount.transfer(msg.sender, _collateralLiquidityShare, _collateralAsset, _investedTo);
                 address _addressOfTheLiquidityToken = IYield(_investedTo).liquidityToken(_collateralAsset);
-                IERC20(_addressOfTheLiquidityToken).transfer(msg.sender, _sharesReceived);
+                IERC20(_addressOfTheLiquidityToken).transfer(msg.sender, _amountReceived);
             }
             else{
-                uint256 _collateralTokens = IYield(_investedTo).getTokensForShares(_collateralLiquidityShare, _collateralAsset);
-                _savingAccount.withdraw(_collateralTokens, _collateralAsset, _investedTo, false);
                 if(_collateralAsset == address(0)){
-                    msg.sender.send(_collateralTokens);
+                    msg.sender.send(_amountReceived);
                 }
                 else{
-                    IERC20(_collateralAsset).transfer(msg.sender, _collateralTokens);
+                    IERC20(_collateralAsset).transfer(msg.sender, _amountReceived);
                 }
             }
         }
