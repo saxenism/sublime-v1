@@ -3,7 +3,6 @@ pragma solidity 0.7.0;
 
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
-// import "@openzeppelin/contracts-upgradeable/presets/ERC20PresetMinterPauserUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "../interfaces/IPoolFactory.sol";
 import "../interfaces/IPriceOracle.sol";
@@ -162,30 +161,28 @@ contract Pool is Initializable, IPool {
         uint256 _collateralAmount,
         bool _transferFromSavingsAccount
     ) external initializer {
-        {
-            poolConstants.borrowAmountRequested = _borrowAmountRequested;
-            poolConstants.minborrowAmountFraction = _minborrowAmountFraction;
-            poolConstants.borrower = _borrower;
-            poolConstants.borrowAsset = _borrowAsset;
-            poolConstants.collateralAsset = _collateralAsset;
-            poolConstants.collateralRatio = _collateralRatio;
-            poolConstants.borrowRate = _borrowRate;
-            poolConstants.repaymentInterval = _repaymentInterval;
-            poolConstants.noOfRepaymentIntervals = _noOfRepaymentIntervals;
-            poolConstants.investedTo = _investedTo;
-        }
+        uint256 _collectionPeriod = IPoolFactory(msg.sender).collectionPeriod();
+        poolConstants = PoolConstants(
+            _borrower,
+            _borrowAmountRequested,
+            _minborrowAmountFraction,
+            block.timestamp.add(_collectionPeriod),
+            block.timestamp.add(_collectionPeriod).add(IPoolFactory(msg.sender).matchCollateralRatioInterval()),
+            _borrowAsset,
+            _collateralRatio,
+            _borrowRate,
+            _noOfRepaymentIntervals,
+            _repaymentInterval,
+            _collateralAsset,
+            _investedTo
+        );
 
         PoolFactory = msg.sender;
 
         depositCollateral(_collateralAmount, _transferFromSavingsAccount);
-        uint256 _collectionPeriod = IPoolFactory(msg.sender).collectionPeriod();
-        poolConstants.loanStartTime = block.timestamp.add(_collectionPeriod);
-        poolConstants.matchCollateralRatioEndTime = block.timestamp.add(_collectionPeriod).add(
-            IPoolFactory(msg.sender).matchCollateralRatioInterval()
-        );
     }
 
-    function setPoolToken(address _poolToken) public {
+    function setPoolToken(address _poolToken) external override {
         require(msg.sender == PoolFactory);
         poolToken = PoolToken(_poolToken);
     }
@@ -214,14 +211,21 @@ contract Pool is Initializable, IPool {
                 );
                 _sharesReceived = _savingAccount.deposit{value: msg.value}(
                     _amount,
-                    _depositFrom,
                     _asset,
                     _investedTo
                 );
             } else {
+                IERC20(_asset).safeTransferFrom(
+                    _depositFrom,
+                    _depositTo,
+                    _amount
+                );
+                IERC20(_asset).safeApprove(
+                    address(_savingAccount),
+                    _amount
+                );
                 _sharesReceived = _savingAccount.deposit(
                     _amount,
-                    _depositFrom,
                     _asset,
                     _investedTo
                 );
@@ -306,6 +310,8 @@ contract Pool is Initializable, IPool {
                 ),
             "Pool::withdrawBorrowedAmount - The current collateral amount does not permit the loan."
         );
+        uint256 _noOfRepaymentIntervals = poolConstants.noOfRepaymentIntervals;
+        IRepayment(IPoolFactory(PoolFactory).repaymentImpl()).initializeRepayment(_noOfRepaymentIntervals, _noOfRepaymentIntervals.mul(poolConstants.repaymentInterval));
 
         uint256 _tokensLent = poolToken.totalSupply();
         IERC20(poolConstants.borrowAsset).transfer(poolConstants.borrower, _tokensLent);
@@ -543,8 +549,8 @@ contract Pool is Initializable, IPool {
     // }
 
     // event PoolLiquidated(bytes32 poolHash, address liquidator, uint256 amount);
-    //todo: add more details here
-    event Liquidated(address liquidator, address lender);
+    // //todo: add more details here
+    // event Liquidated(address liquidator, address lender);
 
     // function amountPerPeriod() public view returns (uint256) {}
 
@@ -672,8 +678,7 @@ contract Pool is Initializable, IPool {
                 _sharesReceived = _savingAccount.deposit{value: msg.value}(
                     msg.value,
                     _borrowAsset,
-                    _investedTo,
-                    address(this)
+                    _investedTo
                 );
             } else {
                 IERC20(_borrowAsset).transferFrom(
@@ -684,8 +689,7 @@ contract Pool is Initializable, IPool {
                 _sharesReceived = _savingAccount.deposit(
                     _correspondingBorrowTokens,
                     _borrowAsset,
-                    _investedTo,
-                    address(this)
+                    _investedTo
                 );
             }
 
@@ -831,7 +835,6 @@ contract Pool is Initializable, IPool {
                     _investedTo,
                     _recieveLiquidityShare
                 );
-
             if (_recieveLiquidityShare) {
                 address _addressOfTheLiquidityToken =
                     IYield(_investedTo).liquidityToken(_collateralAsset);
@@ -909,14 +912,12 @@ contract Pool is Initializable, IPool {
                 _sharesReceived = _savingsAccount.depositTo{value: _amountToWithdraw}(_amountToWithdraw,
                                                                                       poolConstants.borrowAsset,
                                                                                       _investedTo,
-                                                                                      address(this),
                                                                                       _lender); // deposit from pool to lender
             }
             else {
                 _sharesReceived = _savingsAccount.depositTo(_amountToWithdraw,
                                                           poolConstants.borrowAsset,
                                                           _investedTo,
-                                                          address(this),
                                                           _lender);
             }
         }
@@ -1035,8 +1036,16 @@ contract Pool is Initializable, IPool {
         }
     }
 
+
     function getLoanStatus() public view override returns (uint256) {
         return uint256(poolVars.loanStatus);
+
+
+    receive() external payable {
+        require(
+            msg.sender == IPoolFactory(PoolFactory).savingsAccount(),
+            "Pool::receive invalid transaction"
+        );
     }
 
     // function getLenderCurrentCollateralRatio(address lender) public view returns(uint256){

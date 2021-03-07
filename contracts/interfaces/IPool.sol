@@ -21,4 +21,6 @@ interface IPool {
         address _to,
         uint256 _amount
     ) external ;
+
+    function setPoolToken(address _poolToken) external;
 }

@@ -139,8 +139,8 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         // TODO: Setting 0x00 as admin, so that it is not upgradable. Remove the upgradable functionality to optimize
         address pool = address((new SublimeProxy){value: msg.value}(poolImpl, address(0), data));
         address poolToken = address(new PoolToken("Open Borrow Pool Tokens", "OBPT", pool));
+        IPool(pool).setPoolToken(poolToken);
         openBorrowPoolRegistry[pool] = true;
-        IRepayment(repaymentImpl).initializeRepayment(_noOfRepaymentIntervals, _repaymentInterval);
         emit PoolCreated(pool, msg.sender);
 
     }

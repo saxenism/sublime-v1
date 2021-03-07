@@ -64,6 +64,27 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         strategyRegistry = _strategyRegistry;
     }
 
+    function depositTo(
+        uint256 amount,
+        address asset,
+        address strategy,
+        address to
+    ) external payable override returns (uint256 sharesReceived) {
+        require(
+            to != address(0),
+            "SavingsAccount::depositTo receiver address should not be zero address"
+        );
+
+        sharesReceived = _deposit(amount, asset, strategy);
+
+        userLockedBalance[to][asset][strategy] = userLockedBalance[to][asset][
+            strategy
+        ]
+            .add(sharesReceived);
+
+        emit Deposited(to, amount, asset, strategy);
+    }
+
     /**
      * @dev This function is used to deposit asset into savings account.
      * @dev It also helps in investing the asset.
@@ -71,25 +92,38 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
      * @param amount amount of asset deposited
      * @param asset address of asset deposited
      * @param strategy address of strategy to invest in
-     * @param user address of user depositing into savings account
      */
     function deposit(
         uint256 amount,
         address asset,
-        address strategy,
-        address user
+        address strategy
     ) external payable override returns (uint256 sharesReceived) {
+        sharesReceived = _deposit(amount, asset, strategy);
+
+        userLockedBalance[msg.sender][asset][strategy] = userLockedBalance[
+            msg.sender
+        ][asset][strategy]
+            .add(sharesReceived);
+
+        emit Deposited(msg.sender, amount, asset, strategy);
+    }
+
+    function _deposit(
+        uint256 amount,
+        address asset,
+        address strategy
+    ) internal returns (uint256 sharesReceived) {
         require(
             amount != 0,
-            "SavingsAccount::deposit Amount must be greater than zero"
+            "SavingsAccount::_deposit Amount must be greater than zero"
         );
 
         if (strategy != address(0)) {
-            sharesReceived = _depositToYield(amount, asset, strategy, user);
+            sharesReceived = _depositToYield(amount, asset, strategy);
         } else {
             sharesReceived = amount;
             if (asset != address(0)) {
-                IERC20(asset).transferFrom(user, address(this), amount);
+                IERC20(asset).transferFrom(msg.sender, address(this), amount);
             } else {
                 require(
                     msg.value == amount,
@@ -97,20 +131,12 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
                 );
             }
         }
-
-        userLockedBalance[user][asset][strategy] = userLockedBalance[user][
-            asset
-        ][strategy]
-            .add(sharesReceived);
-
-        emit Deposited(user, amount, asset, strategy);
     }
 
     function _depositToYield(
         uint256 amount,
         address asset,
-        address strategy,
-        address user
+        address strategy
     ) internal returns (uint256 sharesReceived) {
         require(
             IStrategyRegistry(strategyRegistry).registry(strategy),
@@ -119,12 +145,16 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
 
         if (asset == address(0)) {
             sharesReceived = IYield(strategy).lockTokens{value: amount}(
-                user,
+                msg.sender,
                 asset,
                 amount
             );
         } else {
-            sharesReceived = IYield(strategy).lockTokens(user, asset, amount);
+            sharesReceived = IYield(strategy).lockTokens(
+                msg.sender,
+                asset,
+                amount
+            );
         }
     }
 
@@ -174,8 +204,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
             sharesReceived = _depositToYield(
                 tokensReceived,
                 asset,
-                newStrategy,
-                address(this)
+                newStrategy
             );
         }
 
@@ -202,11 +231,6 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         address strategy,
         bool withdrawShares
     ) external override returns (uint256) {
-        require(
-            amount != 0,
-            "SavingsAccount::withdraw Amount must be greater than zero"
-        );
-
         require(
             amount != 0,
             "SavingsAccount::withdraw Amount must be greater than zero"
@@ -344,14 +368,10 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         return amount;
     }
 
-    function depositTo(
-        uint256 amount,
-        address asset,
-        address strategy,
-        address from,
-        address to
-    ) external payable override returns (uint256 sharesReceived) {
-
+    receive() external payable {
+        require(
+            IStrategyRegistry(strategyRegistry).registry(msg.sender),
+            "SavingsAccount::receive invalid transaction"
+        );
     }
-
 }
