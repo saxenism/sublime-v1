@@ -236,11 +236,6 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
             "SavingsAccount::withdraw Amount must be greater than zero"
         );
 
-        require(
-            amount != 0,
-            "SavingsAccount::withdraw Amount must be greater than zero"
-        );
-
         userLockedBalance[msg.sender][asset][strategy] = userLockedBalance[
             msg.sender
         ][asset][strategy]
@@ -371,5 +366,20 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
 
         //not sure
         return amount;
+    }
+
+    function depositTo(
+        uint256 amount,
+        address asset,
+        address strategy,
+        address from,
+        address to
+    ) external payable override returns (uint256 sharesReceived) {}
+
+    receive() external payable {
+        require(
+            IStrategyRegistry(strategyRegistry).registry(msg.sender),
+            "SavingsAccount::receive invalid transaction"
+        );
     }
 }
