@@ -588,11 +588,13 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
         _isRepaymentDone();
     }
 
-    function _isRepaymentDone() internal{
+    function _isRepaymentDone() internal returns (LoanStatus){
         uint256 gracePeriodFraction = IPoolFactory(PoolFactory).gracePeriodFraction();
         if(block.timestamp > (nextDuePeriod.mul(repaymentInterval)).add(loanStartTime).add(gracePeriodPenaltyFraction.mul(repaymentInterval))){
             loanStatus = LoanStatus.DEFAULTED;
+            return(LoanStatus.DEFAULTED);
         }
+        return(loanStatus);
     }
 
     function liquidatePool(bool _transferToSavingsAccount, bool _recieveLiquidityShare) external payable {
@@ -601,10 +603,10 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
             _poolStatus == LoanStatus.DEFAULTED,
             "Pool::liquidatePool - Borrower Extra time to match collateral is running"
         );
+        LoanStatus _currentPoolStatus;
         if(_poolStatus!=LoanStatus.DEFAULTED){
-            _isRepaymentDone();
+            _currentPoolStatus = _isRepaymentDone();
         }
-        LoanStatus _currentPoolStatus = loanStatus;
         require(_currentPoolStatus==LoanStatus.DEFAULTED, "Pool::liquidatePool - No reason to liquidate the pool");
         ISavingsAccount _savingAccount = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
      
