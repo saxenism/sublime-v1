@@ -21,7 +21,7 @@ contract Repayments is RepaymentStorage {
     }
 
     modifier onlyValidPool {
-        require(poolFactory.registry(msg.sender), "Repayments::onlyValidPool - Invalid Pool");
+        require(poolFactory.openBorrowPoolRegistry(msg.sender), "Repayments::onlyValidPool - Invalid Pool");
         _;
     }
 
@@ -206,7 +206,7 @@ contract Repayments is RepaymentStorage {
     }*/
 
 
-    /*unction voteOnExtension(address poolID,
+    /*function voteOnExtension(address poolID,
                              address voter,
                              uint256 votingPower,
                              uint256 extensionAcceptanceThreshold)
@@ -237,5 +237,5 @@ contract Repayments is RepaymentStorage {
 
     function updateVotingPassRatio(uint256 _votingPassRatio) external onlyOwner {
         votingPassRatio = _votingPassRatio;
-    }
+    }*/
 }
