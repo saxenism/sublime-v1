@@ -100,8 +100,7 @@ contract Repayments is RepaymentStorage {
             
             // TODO add transfer
 
-            uint256 periodCovered = amount
-                                            .div(interestPerSecond);
+            uint256 periodCovered = amount.div(interestPerSecond);
 
             repaymentDetails[poolID].repaymentPeriodCovered = repaymentDetails[poolID].repaymentPeriodCovered
                                                               .add(periodCovered);
@@ -121,8 +120,7 @@ contract Repayments is RepaymentStorage {
                         "Repayments - amount is greater than interest due this period.");
 
                 //TODO make token transfer
-                uint256 periodCovered = amount
-                                                .div(interestPerSecond);
+                uint256 periodCovered = amount.div(interestPerSecond);
 
                 repaymentDetails[poolID].repaymentPeriodCovered = repaymentDetails[poolID].repaymentPeriodCovered
                                                                   .add(periodCovered);
@@ -143,6 +141,10 @@ contract Repayments is RepaymentStorage {
         // returning the status of whether previous interval's interest has been repaid or not
         return isLoanExtensionActive;
 
+    }
+
+    function getTotalRepaidAmount(address poolID) external view returns(uint256) {
+        return repaymentDetails[poolID].totalRepaidAmount;
     }
 
     // function TotalDueamountLeft() public view{
