@@ -475,7 +475,7 @@ contract CreditLine is CreditLineStorage {
     receive() external payable {
         require(
             msg.sender == IPoolFactory(PoolFactory).savingsAccount(),
-            "Pool::receive invalid transaction"
+            "CreditLine::receive invalid transaction"
         );
     }
 

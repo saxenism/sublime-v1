@@ -350,7 +350,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
     receive() external payable {
         require(
             IStrategyRegistry(strategyRegistry).registry(msg.sender),
-            "Pool::receive invalid transaction"
+            "SavingsAccount::receive invalid transaction"
         );
     }
 }
