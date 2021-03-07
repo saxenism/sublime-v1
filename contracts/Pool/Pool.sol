@@ -51,7 +51,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
     address public collateralAsset;
 
     uint256 public liquidatorRewardFraction;
-    
+
     uint256 public periodWhenExtensionIsPassed;
     uint256 public baseLiquidityShares;
     uint256 public extraLiquidityShares;
@@ -86,7 +86,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
     //     uint256 sharesReceived
     // );
     event CollateralWithdrawn(address user, uint256 amount);
-    event liquiditySupplied(uint256 amountSupplied, address lenderAddress);
+    event liquiditySupplied(uint256 amountSuppliised, address lenderAddress);
     event AmountBorrowed(address borrower, uint256 amount);
     event Liquiditywithdrawn(uint256 amount, address lenderAddress);
     event CollateralCalled(address lenderAddress);
@@ -98,10 +98,16 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         uint256 _tokenReceived
     );
     event PoolLiquidated(address liquidator);
-    event votingPassed(uint256 nextDuePeriod,uint256 periodWhenExtensionIsPassed);
-    event lenderVoted(address lender,uint256 totalExtensionSupport,uint256 lastVoteTime);
+    event votingPassed(
+        uint256 nextDuePeriod,
+        uint256 periodWhenExtensionIsPassed
+    );
+    event lenderVoted(
+        address lender,
+        uint256 totalExtensionSupport,
+        uint256 lastVoteTime
+    );
     event extensionRequested(uint256 extensionVoteEndTime);
-
 
     modifier OnlyBorrower {
         require(
@@ -309,9 +315,11 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         }
 
         extraLiquidityShares = extraLiquidityShares.add(_sharesReceived);
+
         lenders[_lender].extraLiquidityShares = lenders[_lender]
             .extraLiquidityShares
             .add(_sharesReceived);
+
         emit MarginCallCollateralAdded(
             msg.sender,
             _lender,
@@ -359,10 +367,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
 
     function repayAmount(uint256 amount) external OnlyBorrower isPoolActive {}
 
-    function withdrawAllCollateral()
-        internal
-        OnlyBorrower
-    {
+    function withdrawAllCollateral() internal OnlyBorrower {
         LoanStatus _status = loanStatus;
         require(
             _status == LoanStatus.CLOSED || _status == LoanStatus.CANCELLED,
@@ -384,10 +389,15 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         delete extraLiquidityShares;
     }
 
-
-    function lend(address _lender, uint256 _amountLent) external payable{
-        require(loanStatus == LoanStatus.COLLECTION, "Pool::lend - The pool should be in Collection Period.");
-        require(block.timestamp< loanStartTime, "Pool::lend - The collection period of the pool is over.");
+    function lend(address _lender, uint256 _amountLent) external payable {
+        require(
+            loanStatus == LoanStatus.COLLECTION,
+            "Pool::lend - The pool should be in Collection Period."
+        );
+        require(
+            block.timestamp < loanStartTime,
+            "Pool::lend - The collection period of the pool is over."
+        );
         uint256 _amount = _amountLent;
         uint256 _borrowAmountNeeded = borrowAmountRequested;
         if (_amountLent.add(totalSupply()) > _borrowAmountNeeded) {
@@ -414,30 +424,74 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         emit liquiditySupplied(_amount, _lender);
     }
 
-    function _beforeTransfer(address _user) internal {}
+    function _beforeTransfer(
+        address _from,
+        address _to,
+        uint256 _amount
+    ) internal {
+        require(
+            lenders[_from].marginCallEndTime != 0,
+            "Pool::_beforeTransfer - Cannot transfer as Margin call is made by the user"
+        );
+
+        //Withdraw repayments for user
+        _withdrawRepayment(_from);
+        _withdrawRepayment(_to);
+
+        //transfer extra liquidity shares
+        uint256 _liquidityshare = lenders[_from].extraLiquidityShares;
+
+        uint256 toTransfer = _liquidityshare;
+        if (_amount != balanceOf(_from)) {
+            toTransfer = (_amount.mul(_liquidityshare)).div(balanceOf(_from));
+        }
+
+        lenders[_from].extraLiquidityShares = lenders[_from]
+            .extraLiquidityShares
+            .sub(toTransfer);
+        lenders[_to].extraLiquidityShares = lenders[_to]
+            .extraLiquidityShares
+            .add(toTransfer);
+    }
 
     function transfer(address _recipient, uint256 _amount)
         public
         override
         returns (bool)
-    {}
+    {
+        require(!paused(), "Pool::transfer - token transfer while paused");
+        _beforeTransfer(_msgSender(), _recipient, _amount);
+        _transfer(_msgSender(), _recipient, _amount);
+        return true;
+    }
 
     function transferFrom(
         address _sender,
         address _recipient,
         uint256 _amount
-    ) public virtual override returns (bool) {}
+    ) public virtual override returns (bool) {
+        require(!paused(), "Pool::transferFrom - token transfer while paused");
+        _beforeTransfer(_sender, _recipient, _amount);
+        _transfer(_sender, _recipient, _amount);
+        _approve(
+            _sender,
+            _msgSender(),
+            allowance(_sender, _msgSender()).sub(
+                _amount,
+                "ERC20: transfer amount exceeds allowance"
+            )
+        );
+        return true;
+    }
 
-    function cancelOpenBorrowPool()
-        external
-        OnlyBorrower
-    {   
+    function cancelOpenBorrowPool() external OnlyBorrower {
         require(
-            block.timestamp<matchCollateralRatioEndTime, "Pool::cancelOpenBorrowPool - The pool cannot be cancelled when the status is active."
+            block.timestamp < matchCollateralRatioEndTime,
+            "Pool::cancelOpenBorrowPool - The pool cannot be cancelled when the status is active."
         );
         loanStatus = LoanStatus.CANCELLED;
         withdrawAllCollateral();
-        _pause(); 
+        _pause();
         emit OpenBorrowPoolCancelled();
     }
 
@@ -448,8 +502,14 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
                 _poolStatus == LoanStatus.COLLECTION,
             "Pool::terminateOpenBorrowPool - The pool can only be terminated if it is Active or Collection Period."
         );
-        uint256 _collateralShares = baseLiquidityShares.add(extraLiquidityShares);
-        ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()).transfer(IPoolFactory(PoolFactory).owner(), _collateralShares, collateralAsset, investedTo);
+        uint256 _collateralShares =
+            baseLiquidityShares.add(extraLiquidityShares);
+        ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()).transfer(
+            collateralAsset,
+            IPoolFactory(PoolFactory).owner(),
+            investedTo,
+            _collateralShares
+        );
         _pause();
         loanStatus = LoanStatus.TERMINATED;
         emit OpenBorrowPoolTerminated();
@@ -460,16 +520,17 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
             loanStatus == LoanStatus.ACTIVE,
             "Pool::closeLoan - The pool can only be closed if the loan is Active."
         );
-        require(nextDuePeriod==0, "Pool::closeLoan - The loan has not been fully repayed.");
+        require(
+            nextDuePeriod == 0,
+            "Pool::closeLoan - The loan has not been fully repayed."
+        );
         loanStatus = LoanStatus.CLOSED;
         withdrawAllCollateral();
         _pause();
         emit OpenBorrowPoolClosed();
     }
 
-    function calculateLendingRate(uint256 s) public pure returns (uint256) {
-        
-    }
+    function calculateLendingRate(uint256 s) public pure returns (uint256) {}
 
     // Note - Only when closed, cancelled or terminated, lender can withdraw
     //burns all shares and returns total remaining repayments along with provided liquidity
@@ -524,7 +585,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
 
     function resultOfVoting() external {}
 
-    function requestExtension() external OnlyBorrower isPoolActive {}
+    // function requestExtension() external OnlyBorrower isPoolActive {}
 
     /**
      * @dev This function is executed by lender to exercise margin call
@@ -856,14 +917,9 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         returns (uint256)
     {}
 
-    function _withdrawRepayment(address lender) internal {
+    function _withdrawRepayment(address lender) internal {}
 
-        
-
-    }
-
-    function requestExtension() external isPoolActive OnlyBorrower
-    {
+    function requestExtension() external isPoolActive OnlyBorrower {
         uint256 _extensionVoteEndTime = extensionVoteEndTime;
         require(
             block.timestamp > _extensionVoteEndTime,
@@ -871,54 +927,67 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         );
 
         // This check is required so that borrower doesn't ask for more extension if previously an extension is already granted
-        require(periodWhenExtensionIsPassed > noOfRepaymentIntervals,"Pool::requestExtension: you have already been given an extension,No more extension");
+        require(
+            periodWhenExtensionIsPassed > noOfRepaymentIntervals,
+            "Pool::requestExtension: you have already been given an extension,No more extension"
+        );
 
-        totalExtensionSupport = 0;   // As we can multiple voting every time new voting start we have to make previous votes 0
-        uint256 _gracePeriodFraction = IPoolFactory(PoolFactory).gracePeriodFraction();
-        uint256 _gracePeriod = (repaymentInterval*_gracePeriodFraction).div(100000000);
-        uint256 _nextDueTime = (nextDuePeriod.mul(repaymentInterval)).add(loanStartTime);
+        totalExtensionSupport = 0; // As we can multiple voting every time new voting start we have to make previous votes 0
+        uint256 _gracePeriodFraction =
+            IPoolFactory(PoolFactory).gracePeriodFraction();
+        uint256 _gracePeriod =
+            (repaymentInterval * _gracePeriodFraction).div(100000000);
+        uint256 _nextDueTime =
+            (nextDuePeriod.mul(repaymentInterval)).add(loanStartTime);
         _extensionVoteEndTime = (_nextDueTime).add(_gracePeriod);
         extensionVoteEndTime = _extensionVoteEndTime;
         emit extensionRequested(_extensionVoteEndTime);
     }
 
-    function voteOnExtension() external isPoolActive{
-        
+    function voteOnExtension() external isPoolActive {
         uint256 _extensionVoteEndTime = extensionVoteEndTime;
         require(
             block.timestamp < _extensionVoteEndTime,
             "Pool::voteOnExtension - Voting is over"
         );
-        require(balanceOf(msg.sender)!=0,"Pool::voteOnExtension - Not a valid lender for pool");
+        require(
+            balanceOf(msg.sender) != 0,
+            "Pool::voteOnExtension - Not a valid lender for pool"
+        );
 
-        uint256 _votingExtensionlength = IPoolFactory(PoolFactory).votingExtensionlength();
-        uint256 _lastVoteTime = lenders[msg.sender].lastVoteTime;    //Lender last vote time need to store it as it checks that a lender only votes once 
+        uint256 _votingExtensionlength =
+            IPoolFactory(PoolFactory).votingExtensionlength();
+        uint256 _lastVoteTime = lenders[msg.sender].lastVoteTime; //Lender last vote time need to store it as it checks that a lender only votes once
 
         require(
             _lastVoteTime < _extensionVoteEndTime.sub(_votingExtensionlength),
             "Pool::voteOnExtension - you have already voted"
         );
         _lastVoteTime = block.timestamp;
-        totalExtensionSupport = totalExtensionSupport.add(balanceOf(msg.sender));
+        totalExtensionSupport = totalExtensionSupport.add(
+            balanceOf(msg.sender)
+        );
         uint256 _votingPassRatio = IPoolFactory(PoolFactory).votingPassRatio();
         lenders[msg.sender].lastVoteTime = _lastVoteTime;
-        emit lenderVoted(msg.sender,totalExtensionSupport,_lastVoteTime);
-        
-        if (((totalExtensionSupport)) >= (totalSupply().mul(_votingPassRatio)).div(100000000)) {
+        emit lenderVoted(msg.sender, totalExtensionSupport, _lastVoteTime);
+
+        if (
+            ((totalExtensionSupport)) >=
+            (totalSupply().mul(_votingPassRatio)).div(100000000)
+        ) {
             uint256 _currentPeriod = calculateCurrentPeriod();
-            uint256 _nextDueTime = (nextDuePeriod.mul(repaymentInterval)).add(loanStartTime);
-            if(block.timestamp > _nextDueTime){
+            uint256 _nextDueTime =
+                (nextDuePeriod.mul(repaymentInterval)).add(loanStartTime);
+            if (block.timestamp > _nextDueTime) {
                 periodWhenExtensionIsPassed = _currentPeriod.sub(1);
-            }
-            else{
+            } else {
                 periodWhenExtensionIsPassed = _currentPeriod;
             }
-            extensionVoteEndTime = block.timestamp;   // voting is over
+            extensionVoteEndTime = block.timestamp; // voting is over
             nextDuePeriod = nextDuePeriod.add(1);
-            emit votingPassed(nextDuePeriod,periodWhenExtensionIsPassed);
+            emit votingPassed(nextDuePeriod, periodWhenExtensionIsPassed);
         }
     }
-
 
     // function getLenderCurrentCollateralRatio(address lender) public view returns(uint256){
 
