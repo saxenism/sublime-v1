@@ -178,21 +178,22 @@ contract CreditLine is CreditLineStorage {
 
         address[] memory _strategyList = IStrategyRegistry(strategyRegistry).getStrategies();
         uint256 _activeAmount;
-        
-        for (uint256 index = 0; index < _strategyList.length; index++) {
-            uint256 liquidityShares = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()).userLockedBalance(sender, _asset, _strategyList[index]);
+        uint256 _tokenInStrategy;
+        uint256 liquidityShares;
+        uint256 index;
+        for (index = 0; index < _strategyList.length; index++) {
+            liquidityShares = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()).userLockedBalance(sender, _asset, _strategyList[index]);
             if (liquidityShares > 0) {
-                uint256 _tokenInStrategy = IYield(_strategyList[index]).getTokensForShares(liquidityShares, _asset);
+                _tokenInStrategy = IYield(_strategyList[index]).getTokensForShares(liquidityShares, _asset);
                 _activeAmount = _activeAmount.add(_tokenInStrategy);
                 if(_activeAmount>_amount){
-                    ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()).transferFrom(_asset, sender, recipient, _strategyList[index], liquidityShares.sub((_activeAmount.sub(_amount)).mul(liquidityShares).div(_tokenInStrategy)));
-                    collateralShareInStrategy[creditLineHash][_strategyList[index]] = collateralShareInStrategy[creditLineHash][_strategyList[index]].add(liquidityShares.sub((_activeAmount.sub(_amount)).mul(liquidityShares).div(_tokenInStrategy)));
+                    liquidityShares = liquidityShares.sub((_activeAmount.sub(_amount)).mul(liquidityShares).div(_tokenInStrategy));
+                }
+                ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()).transferFrom(_asset, sender, recipient, _strategyList[index], liquidityShares);
+                collateralShareInStrategy[creditLineHash][_strategyList[index]] = collateralShareInStrategy[creditLineHash][_strategyList[index]].add(liquidityShares);
+                if(_activeAmount>_amount){
                     return;
                 }
-                else{
-                    ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()).transferFrom(_asset, sender, recipient, _strategyList[index], liquidityShares);
-                    collateralShareInStrategy[creditLineHash][_strategyList[index]] = collateralShareInStrategy[creditLineHash][_strategyList[index]].add(liquidityShares);
-                }   
             }
         }
         require(_activeAmount >= _amount,"insufficient balance");
