@@ -33,15 +33,13 @@ interface ISavingsAccount {
     function deposit(
         uint256 amount,
         address asset,
-        address strategy,
-        address user
+        address strategy
     ) external payable returns (uint256 sharesReceived);
 
     function depositTo(
         uint256 amount,
         address asset,
         address strategy,
-        address from,
         address to
     ) external payable returns (uint256 sharesReceived);
 
