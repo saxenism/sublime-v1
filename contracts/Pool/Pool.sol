@@ -214,8 +214,6 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
             ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
         address _collateralAsset = collateralAsset;
         address _investedTo = investedTo;
-        uint256 _liquidityshare =
-            IYield(_investedTo).getTokensForShares(_amount, _collateralAsset);
 
         if (!_transferFromSavingsAccount) {
             if (_collateralAsset == address(0)) {
@@ -238,7 +236,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
                 );
             }
         } else {
-            // uint256 _liquidityshare = IYield(_investedTo).getTokensForShares(_amount, _collateralAsset);
+            uint256 _liquidityshare = IYield(_investedTo).getTokensForShares(_amount, _collateralAsset);
             _sharesReceived = _savingAccount.transferFrom(
                 _collateralAsset,
                 msg.sender,
@@ -664,11 +662,14 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         bool _recieveLiquidityShare
     ) public payable {
         require(
-            block.timestamp > matchCollateralRatioEndTime,
+            (loanStatus == LoanStatus.ACTIVE) && (block.timestamp > matchCollateralRatioEndTime),
             "Pool::liquidateLender - Borrower Extra time to match collateral is running"
         );
+        uint256 _marginCallEndTime = lenders[lender].marginCallEndTime;
+        require(_marginCallEndTime!=0, "No margin call has been called.");
         require(
-            lenders[lender].marginCallEndTime < block.timestamp,
+            _marginCallEndTime <
+                block.timestamp,
             "Pool::liquidateLender - period for depositing extra collateral not ended"
         );
         require(
@@ -677,12 +678,9 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
             ) > getCurrentCollateralRatio(lender),
             "Pool::liquidateLender - collateral ratio has not reached threshold yet"
         );
-
-        ISavingsAccount _savingAccount =
-            ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
-
-        uint256 _collateralShareOfLender;
-        uint256 _amountToBeRepaid;
+        require(balanceOf(lender)!=0, "The user has already transferred all this tokens.");
+        ISavingsAccount _savingAccount = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
+     
         address _collateralAsset = collateralAsset;
         address _investedTo = investedTo;
         uint256 _collateralLiquidityShare =
@@ -696,106 +694,78 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
 
         uint256 _correspondingBorrowTokens =
             correspondingBorrowTokens(_collateralLiquidityShare);
-
-        address _liquidityShareAddress =
-            IYield(_investedTo).liquidityToken(_collateralAsset);
-
-        if (borrowAsset == address(0)) {
-            if (msg.value < _correspondingBorrowTokens) {
-                revert("Pool::liquidatePool - Not enough tokens");
+        address _borrowAsset = borrowAsset;
+        uint256 _sharesReceived;
+        if (_borrowAsset == address(0)){
+            if(msg.value<_correspondingBorrowTokens){
+                revert("Pool::liquidateLender - Not enough tokens");
             }
-        } else {
-            IERC20(borrowAsset).transferFrom(
+            _sharesReceived = _savingAccount.deposit{value:msg.value}(msg.value, _borrowAsset, _investedTo, address(this));
+        }
+        else{
+            IERC20(_borrowAsset).transferFrom(
                 msg.sender,
                 address(this),
                 _correspondingBorrowTokens
             );
+            _sharesReceived = _savingAccount.deposit(_correspondingBorrowTokens, _borrowAsset, _investedTo, address(this));
         }
-
-        if (_transferToSavingsAccount == true) {
-            uint256 _sharesReceived =
-                _savingAccount.transfer(
-                    _collateralAsset,
-                    msg.sender,
-                    investedTo,
-                    _collateralLiquidityShare
-                );
-            emit lenderLiquidated(msg.sender, lender, _sharesReceived);
-        } else {
-            if (_recieveLiquidityShare == true) {
-                uint256 _liquidityShareReceived =
-                    _savingAccount.withdraw(
-                        payable(address(this)),
-                        _collateralTokens,
-                        _collateralAsset,
-                        _investedTo,
-                        true
-                    );
-                IERC20(_liquidityShareAddress).transfer(
-                    msg.sender,
-                    _liquidityShareReceived
-                );
-                emit lenderLiquidated(
-                    msg.sender,
-                    lender,
-                    _liquidityShareReceived
-                );
-            } else {
-                uint256 _tokenReceived =
-                    _savingAccount.withdraw(
-                        payable(address(this)),
-                        _collateralTokens,
-                        _collateralAsset,
-                        _investedTo,
-                        false
-                    );
-                if (_collateralAsset == address(0)) {
-                    msg.sender.send(_tokenReceived);
-                } else {
-                    IERC20(_collateralAsset).transfer(
-                        msg.sender,
-                        _tokenReceived
-                    );
+        _withdrawRepayment(lender);
+        _savingAccount.transfer(lender, _sharesReceived, _borrowAsset, investedTo);
+        uint256 _amountReceived;
+        if(_transferToSavingsAccount){
+            _amountReceived = _savingAccount.transfer(msg.sender, _collateralLiquidityShare, _collateralAsset, investedTo);
+        }
+        else{
+            _amountReceived = _savingAccount.withdraw(_collateralTokens, _collateralAsset, _investedTo, _recieveLiquidityShare);
+            if(_recieveLiquidityShare){
+                address _liquidityShareAddress = IYield(_investedTo).liquidityToken(_collateralAsset);
+                IERC20(_liquidityShareAddress).transfer(msg.sender, _amountReceived);
+            }
+            else{
+                if(_collateralAsset == address(0)){
+                    msg.sender.send(_amountReceived);
                 }
-                emit lenderLiquidated(msg.sender, lender, _tokenReceived);
+                else{
+                    IERC20(_collateralAsset).transfer(msg.sender, _amountReceived);
+                }
             }
         }
+        burnFrom(lender,balanceOf(lender));
+        delete lenders[lender];
+        emit lenderLiquidated(msg.sender, lender, _amountReceived);
     }
 
-    function correspondingBorrowTokens(uint256 _liquidityShares)
-        public
-        returns (uint256)
-    {
-        uint256 _collateralTokens =
-            IYield(investedTo).getTokensForShares(
-                _liquidityShares,
+    function correspondingBorrowTokens(uint256 _liquidityShares) public returns(uint256){
+        uint256 _collateralTokens = IYield(investedTo).getTokensForShares(_liquidityShares, collateralAsset);
+        uint256 _correspondingBorrowTokens = 
+            (_collateralTokens.mul(IPriceOracle(IPoolFactory(PoolFactory).priceOracle()).getLatestPrice(
+                borrowAsset,
                 collateralAsset
-            );
-        uint256 _correspondingBorrowTokens =
-            _collateralTokens
-                .mul(
-                IPriceOracle(IPoolFactory(PoolFactory).priceOracle())
-                    .getLatestPrice(borrowAsset, collateralAsset)
-            )
-                .mul(liquidatorRewardFraction)
-                .div(100);
+            )).div(10**8)).mul(uint256(10**8).sub(liquidatorRewardFraction)).div(10**8);
     }
 
-    function liquidatePool(
-        bool _transferToSavingsAccount,
-        bool _recieveLiquidityShare
-    ) external payable {
-        LoanStatus _poolStatus = loanStatus;
-        require(
-            _poolStatus == LoanStatus.DEFAULTED ||
-                ((_poolStatus == LoanStatus.TERMINATED) &&
-                    (matchCollateralRatioEndTime == 0)),
-            "Pool::liquidateLender - Borrower Extra time to match collateral is running"
-        );
+    function checkRepayment() public {
+        _isRepaymentDone();
+    }
 
-        ISavingsAccount _savingAccount =
-            ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
+    function _isRepaymentDone() internal returns (LoanStatus){
+        uint256 gracePeriodFraction = IPoolFactory(PoolFactory).gracePeriodFraction();
+        if(block.timestamp > (nextDuePeriod.mul(repaymentInterval)).add(loanStartTime).add(gracePeriodPenaltyFraction.mul(repaymentInterval))){
+            loanStatus = LoanStatus.DEFAULTED;
+            return(LoanStatus.DEFAULTED);
+        }
+        return(loanStatus);
+    }
 
+    function liquidatePool(bool _transferToSavingsAccount, bool _recieveLiquidityShare) external payable {
+        LoanStatus _currentPoolStatus;
+        if(loanStatus!=LoanStatus.DEFAULTED){
+            _currentPoolStatus = _isRepaymentDone();
+        }
+        require(_currentPoolStatus==LoanStatus.DEFAULTED, "Pool::liquidatePool - No reason to liquidate the pool");
+        ISavingsAccount _savingAccount = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
+     
         address _collateralAsset = collateralAsset;
         address _borrowAsset = borrowAsset;
         uint256 _collateralLiquidityShare =
@@ -815,49 +785,22 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
             );
         }
         address _investedTo = investedTo;
-        if (_transferToSavingsAccount == true) {
-            uint256 _sharesReceived =
-                _savingAccount.transfer(
-                    _collateralAsset,
-                    msg.sender,
-                    _investedTo,
-                    _collateralLiquidityShare
-                );
-        } else {
-            if (_recieveLiquidityShare == true) {
-                uint256 _sharesReceived =
-                    _savingAccount.transfer(
-                        _collateralAsset,
-                        msg.sender,
-                        _investedTo,
-                        _collateralLiquidityShare
-                    );
-                address _addressOfTheLiquidityToken =
-                    IYield(_investedTo).liquidityToken(_collateralAsset);
-                IERC20(_addressOfTheLiquidityToken).transfer(
-                    msg.sender,
-                    _sharesReceived
-                );
-            } else {
-                uint256 _collateralTokens =
-                    IYield(_investedTo).getTokensForShares(
-                        _collateralLiquidityShare,
-                        _collateralAsset
-                    );
-                _savingAccount.withdraw(
-                    payable(address(this)),
-                    _collateralTokens,
-                    _collateralAsset,
-                    _investedTo,
-                    false
-                );
-                if (_collateralAsset == address(0)) {
-                    msg.sender.send(_collateralTokens);
-                } else {
-                    IERC20(_collateralAsset).transfer(
-                        msg.sender,
-                        _collateralTokens
-                    );
+        if(_transferToSavingsAccount){
+            uint256 _sharesReceived = _savingAccount.transfer(msg.sender, _collateralLiquidityShare, _collateralAsset, _investedTo);
+        }
+        else{
+            uint256 _collateralTokens = IYield(_investedTo).getTokensForShares(_collateralLiquidityShare, _collateralAsset);
+            uint256 _amountReceived = _savingAccount.withdraw(_collateralTokens, _collateralAsset, _investedTo, _recieveLiquidityShare);
+            if(_recieveLiquidityShare){
+                address _addressOfTheLiquidityToken = IYield(_investedTo).liquidityToken(_collateralAsset);
+                IERC20(_addressOfTheLiquidityToken).transfer(msg.sender, _amountReceived);
+            }
+            else{
+                if(_collateralAsset == address(0)){
+                    msg.sender.send(_amountReceived);
+                }
+                else{
+                    IERC20(_collateralAsset).transfer(msg.sender, _amountReceived);
                 }
             }
         }
