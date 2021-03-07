@@ -989,12 +989,6 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         return _currentPeriod;
     }
 
-
-    //TODO - need to check which interestPerPeriod has to be kept
-    function interestPerPeriod() public view returns (uint256) {
-        return (interestPerSecond(totalSupply()).mul(repaymentInterval));
-    }
-
     function calculateRepaymentWithdrawable(address _lender) internal view returns (uint256) {
         uint256 _totalRepaidAmount = IRepayment(Repayment).getTotalRepaidAmount(address(this));
 
@@ -1012,12 +1006,9 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
     function withdrawRepayment(bool _withdrawToSavingsAccount) external isLender(msg.sender) {
         LoanStatus _loanStatus = loanStatus;
 
-        require(_loanStatus != LoanStatus.CANCELLED,
-                "Pool::withdrawRepayment - Pool status is cancelled, cannot withdraw.");
-
         uint256 _amountToWithdraw = calculateRepaymentWithdrawable(msg.sender);
         uint256 _sharesReceived;
-        address _investedTo = defaultStrategy; //add defaultStrategy
+        address _investedTo = address(0); //add defaultStrategy
         if (_withdrawToSavingsAccount) {
             ISavingsAccount _savingsAccount = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
 

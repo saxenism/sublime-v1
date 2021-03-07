@@ -343,4 +343,15 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         //not sure
         return amount;
     }
+
+    function depositTo(
+        uint256 amount,
+        address asset,
+        address strategy,
+        address from,
+        address to
+    ) external payable override returns (uint256 sharesReceived) {
+
+    }
+
 }

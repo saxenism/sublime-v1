@@ -66,4 +66,5 @@ interface IRepayment {
         uint256 nextDuePeriod
     ) external  returns (uint256);
 
+    function getTotalRepaidAmount(address poolID) external view returns(uint256);
 }
