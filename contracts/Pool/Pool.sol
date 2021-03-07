@@ -581,7 +581,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
             (_collateralTokens.mul(IPriceOracle(IPoolFactory(PoolFactory).priceOracle()).getLatestPrice(
                 borrowAsset,
                 collateralAsset
-            )).div(10**8)).mul(liquidatorRewardFraction).div(10**8);
+            )).div(10**8)).mul((10**8).sub(liquidatorRewardFraction)).div(10**8);
     }
 
     function checkRepayment() public {
@@ -590,6 +590,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable,IPool {
 
     function _isRepaymentDone() internal returns(LoanStatus){
         // TODO
+
         return loanStatus;
     }
 
