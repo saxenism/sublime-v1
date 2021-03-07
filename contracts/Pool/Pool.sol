@@ -86,7 +86,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
     //     uint256 sharesReceived
     // );
     event CollateralWithdrawn(address user, uint256 amount);
-    event liquiditySupplied(uint256 amountSuppliised, address lenderAddress);
+    event liquiditySupplied(uint256 amountSupplied, address lenderAddress);
     event AmountBorrowed(address borrower, uint256 amount);
     event Liquiditywithdrawn(uint256 amount, address lenderAddress);
     event CollateralCalled(address lenderAddress);
@@ -435,7 +435,11 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
     ) internal {
         require(
             lenders[_from].marginCallEndTime != 0,
-            "Pool::_beforeTransfer - Cannot transfer as Margin call is made by the user"
+            "Pool::_beforeTransfer - Cannot transfer as Margin call is made by the sender"
+        );
+        require(
+            lenders[_to].marginCallEndTime != 0,
+            "Pool::_beforeTransfer - Cannot transfer as Margin call is made by the receiver"
         );
 
         //Withdraw repayments for user
@@ -443,12 +447,12 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         _withdrawRepayment(_to);
 
         //transfer extra liquidity shares
-        uint256 _liquidityshare = lenders[_from].extraLiquidityShares;
-        if (_liquidityshare == 0) return;
+        uint256 _liquidityShare = lenders[_from].extraLiquidityShares;
+        if (_liquidityShare == 0) return;
 
-        uint256 toTransfer = _liquidityshare;
+        uint256 toTransfer = _liquidityShare;
         if (_amount != balanceOf(_from)) {
-            toTransfer = (_amount.mul(_liquidityshare)).div(balanceOf(_from));
+            toTransfer = (_amount.mul(_liquidityShare)).div(balanceOf(_from));
         }
 
         lenders[_from].extraLiquidityShares = lenders[_from]
@@ -465,7 +469,6 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         override
         returns (bool)
     {
-        require(!paused(), "Pool::transfer - token transfer while paused");
         _beforeTransfer(_msgSender(), _recipient, _amount);
         _transfer(_msgSender(), _recipient, _amount);
         return true;
@@ -475,8 +478,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         address _sender,
         address _recipient,
         uint256 _amount
-    ) public virtual override returns (bool) {
-        require(!paused(), "Pool::transferFrom - token transfer while paused");
+    ) public override returns (bool) {
         _beforeTransfer(_sender, _recipient, _amount);
         _transfer(_sender, _recipient, _amount);
         _approve(
