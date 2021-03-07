@@ -17,37 +17,42 @@ contract CreditLineStorage is OwnableUpgradeable {
     using SafeMath for uint256;
 
     
-    enum creditLineStatus {REQUESTED, ACTIVE, CLOSED, INACTIVE}
+    enum creditLineStatus {REQUESTED, ACTIVE, CLOSED, CANCELLED}
 
     uint256 CreditLineCounter;
 
-    // assuming number of days in year is 356 more discussion is needed for this
+    // assuming number of days in year is 365 more discussion is needed for this
     uint256 public constant yearSeconds = 365 days;
 
-    struct repayments {
-        uint256 lastPaymentTime;
+    /*struct repayments {
+        uint256 lastRepaymentTime;
         uint256 currentDebt;
         uint256 netPrinciple;
         uint256 accrueInterest;
+    }*/
+
+    struct CreditLineUsageVars {
+        uint256 principal;
+        uint256 totalInterestRepaid;
+        uint256 lastPrincipalUpdateTime;
+        uint256 interestAccruedTillPrincipalUpdate;
+        uint256 collateralAmount;
     }
 
-    struct creditLine {
+    struct CreditLineVars {
         bool exists;
         address lender;
         address borrower;
-        uint256 borrowAmount;
-        uint256 collateralRatio;
+        uint256 borrowLimit;
+        uint256 idealCollateralRatio;
         uint256 liquidationThreshold;
         uint256 borrowRate;
-        uint256 totalnetPrincipal;
-        address borrowTokenType;
-        address collateralTokenType;
-        bool autoLiquidation;
+        address borrowAsset;
+        address collateralAsset;
         creditLineStatus currentStatus;
+        bool autoLiquidation;
     }
 
-    mapping(bytes32 => repayments) public repaymentsInfo;
-    mapping(bytes32 => creditLine) public creditLineInfo;
-
-    address public PriceOracle;
+    mapping(bytes32 => CreditLineUsageVars) public creditLineUsage;
+    mapping(bytes32 => CreditLineVars) public creditLineInfo;
 }

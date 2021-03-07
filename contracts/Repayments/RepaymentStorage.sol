@@ -20,6 +20,11 @@ contract RepaymentStorage is OwnableUpgradeable {
         uint256 totalRepaidAmount;
         uint256 loanDuration;
         uint256 extraGracePeriodsTaken;
+        uint256 votingRatio;
+
+        uint256 repaymentPeriodCovered;
+        uint256 repaymentOverdue;
+        bool extensionRequested;
     }
 
     mapping(address => RepaymentDetails) repaymentDetails;

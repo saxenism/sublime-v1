@@ -16,6 +16,8 @@ contract StrategyRegistry is
     address[] public strategies;
     uint256 public maxStrategies;
 
+    mapping(address => bool) public override registry;
+
     function initialize(address _owner, uint256 _maxStrategies)
         public
         initializer
@@ -38,16 +40,6 @@ contract StrategyRegistry is
         maxStrategies = _maxStrategies;
     }
 
-    function registry(address strategy) external view override returns (bool) {
-        uint256 length = strategies.length;
-        for (uint256 index = 0; index < length; index++) {
-            if (strategies[index] == strategy) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     function getStrategies() external view override returns (address[] memory) {
         return strategies;
     }
@@ -61,6 +53,7 @@ contract StrategyRegistry is
             strategies.length.add(1) <= maxStrategies,
             "StrategyRegistry::addStrategy - Can't add more strategies"
         );
+        registry[_strategy] = true;
         strategies.push(_strategy);
 
         emit StrategyAdded(_strategy);
@@ -75,7 +68,7 @@ contract StrategyRegistry is
         override
         onlyOwner
     {
-        address strategy = strategies[_strategyIndex];
+        address _strategy = strategies[_strategyIndex];
         strategies[_strategyIndex] = strategies[
             strategies.length.sub(
                 1,
@@ -83,8 +76,9 @@ contract StrategyRegistry is
             )
         ];
         strategies.pop();
+        registry[_strategy] = false;
 
-        emit StrategyRemoved(strategy);
+        emit StrategyRemoved(_strategy);
     }
 
     /**
@@ -103,5 +97,8 @@ contract StrategyRegistry is
             "StrategyRegistry::updateStrategy - index to update and strategy address don't match"
         );
         strategies[_strategyIndex] = _newStrategy;
+
+        registry[_oldStrategy] = false;
+        registry[_newStrategy] = true;
     }
 }
