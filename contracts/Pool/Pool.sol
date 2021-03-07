@@ -3,16 +3,18 @@ pragma solidity 0.7.0;
 
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts-upgradeable/presets/ERC20PresetMinterPauserUpgradeable.sol";
+// import "@openzeppelin/contracts-upgradeable/presets/ERC20PresetMinterPauserUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "../interfaces/IPoolFactory.sol";
 import "../interfaces/IPriceOracle.sol";
 import "../interfaces/IYield.sol";
 import "../interfaces/IRepayment.sol";
 import "../interfaces/ISavingsAccount.sol";
 import "../interfaces/IPool.sol";
+import "./PoolToken.sol";
 
 // TODO: set modifiers to disallow any transfers directly
-contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
+contract Pool is Initializable, IPool {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -26,6 +28,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
     }
 
     address PoolFactory;
+    PoolToken poolToken;
 
     struct LendingDetails {
         uint256 amountWithdrawn;
@@ -123,7 +126,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
 
     modifier isLender(address _lender) {
         require(
-            balanceOf(_lender) != 0,
+            poolToken.balanceOf(_lender) != 0,
             "Pool::isLender - Lender doesn't have any lTokens for the pool"
         );
         _;
@@ -145,7 +148,6 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         _;
     }
 
-    // TODO - decrease the number of arguments - stack too deep
     function initialize(
         uint256 _borrowAmountRequested,
         uint256 _minborrowAmountFraction, // denomination is 10^8
@@ -160,7 +162,6 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         uint256 _collateralAmount,
         bool _transferFromSavingsAccount
     ) external initializer {
-        super.initialize("Open Borrow Pool Tokens", "OBPT");
         {
             poolConstants.borrowAmountRequested = _borrowAmountRequested;
             poolConstants.minborrowAmountFraction = _minborrowAmountFraction;
@@ -182,6 +183,11 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         poolConstants.matchCollateralRatioEndTime = block.timestamp.add(_collectionPeriod).add(
             IPoolFactory(msg.sender).matchCollateralRatioInterval()
         );
+    }
+
+    function setPoolToken(address _poolToken) public {
+        require(msg.sender == PoolFactory);
+        poolToken = PoolToken(_poolToken);
     }
 
     function depositCollateral(
@@ -259,11 +265,14 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
 
         poolVars.extraLiquidityShares = poolVars.extraLiquidityShares.add(_sharesReceived);
 
-        // TODO: If collateral goes above the expected collateral, delete marginCallEndTime variable
-
         lenders[_lender].extraLiquidityShares = lenders[_lender]
             .extraLiquidityShares
             .add(_sharesReceived);
+
+        // TODO: If collateral goes above the expected collateral, delete marginCallEndTime variable
+        if(getCurrentCollateralRatio(_lender) >= poolConstants.collateralRatio) {
+            delete lenders[_lender].marginCallEndTime;
+        }
 
         emit MarginCallCollateralAdded(
             msg.sender,
@@ -280,7 +289,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
             poolConstants.loanStartTime < block.timestamp
         ) {
             if (
-                totalSupply() <
+                poolToken.totalSupply() <
                 poolConstants.borrowAmountRequested.mul(poolConstants.minborrowAmountFraction).div(100)
             ) {
                 poolVars.loanStatus = LoanStatus.CANCELLED;
@@ -303,7 +312,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
             "Pool::withdrawBorrowedAmount - The current collateral amount does not permit the loan."
         );
 
-        uint256 _tokensLent = totalSupply();
+        uint256 _tokensLent = poolToken.totalSupply();
         IERC20(poolConstants.borrowAsset).transfer(poolConstants.borrower, _tokensLent);
 
         delete poolConstants.matchCollateralRatioEndTime;
@@ -345,8 +354,8 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         );
         uint256 _amount = _amountLent;
         uint256 _borrowAmountNeeded = poolConstants.borrowAmountRequested;
-        if (_amountLent.add(totalSupply()) > _borrowAmountNeeded) {
-            _amount = _borrowAmountNeeded.sub(totalSupply());
+        if (_amountLent.add(poolToken.totalSupply()) > _borrowAmountNeeded) {
+            _amount = _borrowAmountNeeded.sub(poolToken.totalSupply());
         }
 
         address _borrowToken = poolConstants.borrowAsset;
@@ -356,7 +365,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
                 "Pool::lend - Ether value is not same as parameter passed"
             );
             if (_amount != _amountLent) {
-                msg.sender.send(_amountLent.sub(_amount));
+                msg.sender.transfer(_amountLent.sub(_amount));
             }
         } else {
             IERC20(_borrowToken).transferFrom(
@@ -365,15 +374,16 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
                 _amount
             );
         }
-        mint(_lender, _amount);
+        poolToken.mint(_lender, _amount);
         emit liquiditySupplied(_amount, _lender);
     }
 
-    function _beforeTransfer(
+    function beforeTransfer(
         address _from,
         address _to,
         uint256 _amount
-    ) internal {
+    ) public override {
+        require(msg.sender == address(poolToken));
         require(
             lenders[_from].marginCallEndTime != 0,
             "Pool::_beforeTransfer - Cannot transfer as Margin call is made by the sender"
@@ -384,16 +394,16 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         );
 
         //Withdraw repayments for user
-        _withdrawRepayment(_from);
-        _withdrawRepayment(_to);
+        _withdrawRepayment(_from, true);
+        _withdrawRepayment(_to, true);
 
         //transfer extra liquidity shares
         uint256 _liquidityShare = lenders[_from].extraLiquidityShares;
         if (_liquidityShare == 0) return;
 
         uint256 toTransfer = _liquidityShare;
-        if (_amount != balanceOf(_from)) {
-            toTransfer = (_amount.mul(_liquidityShare)).div(balanceOf(_from));
+        if (_amount != poolToken.balanceOf(_from)) {
+            toTransfer = (_amount.mul(_liquidityShare)).div(poolToken.balanceOf(_from));
         }
 
         lenders[_from].extraLiquidityShares = lenders[_from]
@@ -405,34 +415,6 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
             .add(toTransfer);
     }
 
-    function transfer(address _recipient, uint256 _amount)
-        public
-        override
-        returns (bool)
-    {
-        _beforeTransfer(_msgSender(), _recipient, _amount);
-        _transfer(_msgSender(), _recipient, _amount);
-        return true;
-    }
-
-    function transferFrom(
-        address _sender,
-        address _recipient,
-        uint256 _amount
-    ) public override returns (bool) {
-        _beforeTransfer(_sender, _recipient, _amount);
-        _transfer(_sender, _recipient, _amount);
-        _approve(
-            _sender,
-            _msgSender(),
-            allowance(_sender, _msgSender()).sub(
-                _amount,
-                "ERC20: transfer amount exceeds allowance"
-            )
-        );
-        return true;
-    }
-
     function cancelOpenBorrowPool() external OnlyBorrower {
         require(
             block.timestamp < poolConstants.matchCollateralRatioEndTime,
@@ -440,7 +422,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         );
         poolVars.loanStatus = LoanStatus.CANCELLED;
         withdrawAllCollateral();
-        _pause();
+        poolToken.pause();
         emit OpenBorrowPoolCancelled();
     }
 
@@ -459,7 +441,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
             poolConstants.investedTo,
             _collateralShares
         );
-        _pause();
+        poolToken.pause();
         poolVars.loanStatus = LoanStatus.TERMINATED;
         emit OpenBorrowPoolTerminated();
     }
@@ -475,11 +457,9 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         );
         poolVars.loanStatus = LoanStatus.CLOSED;
         withdrawAllCollateral();
-        _pause();
+        poolToken.pause();
         emit OpenBorrowPoolClosed();
     }
-
-    function calculateLendingRate(uint256 s) public pure returns (uint256) {}
 
     // Note - Only when closed, cancelled or terminated, lender can withdraw
     //burns all shares and returns total remaining repayments along with provided liquidity
@@ -493,11 +473,11 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         );
 
         //get total repayments collected as per loan status (for closed, it returns 0)
-        uint256 _due = calculateWithdrawRepayment(msg.sender);
+        uint256 _due = calculateRepaymentWithdrawable(msg.sender);
 
         //gets amount through liquidity shares
-        uint256 _balance = balanceOf(msg.sender);
-        burnFrom(msg.sender, _balance);
+        uint256 _balance = poolToken.balanceOf(msg.sender);
+        poolToken.burn(_balance);
 
         if (_loanStatus == LoanStatus.DEFAULTED) {
             uint256 _totalAsset;
@@ -508,7 +488,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
             }
 
             //assuming their will be no tokens in pool in any case except liquidation (to be checked) or we should store the amount in liquidate()
-            _balance = _balance.mul(_totalAsset).div(totalSupply());
+            _balance = _balance.mul(_totalAsset).div(poolToken.totalSupply());
         }
 
         _due = _balance.add(_due);
@@ -519,7 +499,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
 
         //transfer repayment
         //TODO: to decide which contract will contain this
-        _withdrawRepayment(msg.sender);
+        _withdrawRepayment(msg.sender, true);
         //to add transfer if not included in above (can be transferred with liquidity)
 
         //transfer liquidity provided
@@ -531,8 +511,6 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         // TODO: Something wrong in the below event. Please have a look
         emit Liquiditywithdrawn(_due, msg.sender);
     }
-
-    function resultOfVoting() external {}
 
     // function requestExtension() external OnlyBorrower isPoolActive {}
 
@@ -562,9 +540,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         emit CollateralCalled(msg.sender);
     }
 
-    function requestCollateralCall() public {}
-
-    function transferRepayImpl(address repayment) external onlyOwner {}
+    // function transferRepayImpl(address repayment) external onlyOwner {}
 
     // function transferLenderImpl(address lenderImpl) external onlyOwner {
     //     require(lenderImpl != address(0), "Borrower: Lender address");
@@ -575,7 +551,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
     //todo: add more details here
     event Liquidated(address liquidator, address lender);
 
-    function amountPerPeriod() public view returns (uint256) {}
+    // function amountPerPeriod() public view returns (uint256) {}
 
     function interestTillNow(uint256 _balance, uint256 _interestPerPeriod)
         public
@@ -584,7 +560,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
     {
         uint256 _repaymentLength = poolConstants.repaymentInterval;
         uint256 _loanStartedAt = poolConstants.loanStartTime;
-        uint256 _totalSupply = totalSupply();
+        uint256 _totalSupply = poolToken.totalSupply();
         IPoolFactory _poolFactory = IPoolFactory(PoolFactory);
         (uint256 _interest, uint256 _gracePeriodsTaken) =
             (
@@ -642,8 +618,8 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
             poolVars.baseLiquidityShares.add(poolVars.extraLiquidityShares);
         return (
             calculateCollateralRatio(
-                amountPerPeriod(),
-                totalSupply(),
+                interestPerPeriod(poolToken.totalSupply()),
+                poolToken.totalSupply(),
                 _liquidityShares
             )
         );
@@ -653,14 +629,14 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         public
         returns (uint256 _ratio)
     {
-        uint256 _balanceOfLender = balanceOf(_lender);
+        uint256 _balanceOfLender = poolToken.balanceOf(_lender);
         uint256 _liquidityShares =
-            (poolVars.baseLiquidityShares.mul(_balanceOfLender).div(totalSupply())).add(
+            (poolVars.baseLiquidityShares.mul(_balanceOfLender).div(poolToken.totalSupply())).add(
                 lenders[_lender].extraLiquidityShares
             );
         return (
             calculateCollateralRatio(
-                interestPerPeriod(balanceOf(_lender)),
+                interestPerPeriod(poolToken.balanceOf(_lender)),
                 _balanceOfLender,
                 _liquidityShares
             )
@@ -672,38 +648,39 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
         bool _transferToSavingsAccount,
         bool _recieveLiquidityShare
     ) public payable {
-        require(
-            (poolVars.loanStatus == LoanStatus.ACTIVE) &&
-                (block.timestamp > poolConstants.matchCollateralRatioEndTime),
-            "Pool::liquidateLender - Borrower Extra time to match collateral is running"
-        );
         //avoid stack too deep
         {
+            require(
+                (poolVars.loanStatus == LoanStatus.ACTIVE) &&
+                    (block.timestamp > poolConstants.matchCollateralRatioEndTime),
+                "Pool::liquidateLender - Borrower Extra time to match collateral is running"
+            );
             uint256 _marginCallEndTime = lenders[lender].marginCallEndTime;
             require(_marginCallEndTime != 0, "No margin call has been called.");
             require(
                 _marginCallEndTime < block.timestamp,
                 "Pool::liquidateLender - period for depositing extra collateral not ended"
             );
-        }
 
-        require(
-            poolConstants.collateralRatio.sub(
-                IPoolFactory(PoolFactory).collateralVolatilityThreshold()
-            ) > getCurrentCollateralRatio(lender),
-            "Pool::liquidateLender - collateral ratio has not reached threshold yet"
-        );
-        require(
-            balanceOf(lender) != 0,
-            "The user has already transferred all this tokens."
-        );
+            require(
+                poolConstants.collateralRatio.sub(
+                    IPoolFactory(PoolFactory).collateralVolatilityThreshold()
+                ) > getCurrentCollateralRatio(lender),
+                "Pool::liquidateLender - collateral ratio has not reached threshold yet"
+            );
+            require(
+                poolToken.balanceOf(lender) != 0,
+                "The user has already transferred all this tokens."
+            );
+        }
         ISavingsAccount _savingAccount =
             ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
 
         address _collateralAsset = poolConstants.collateralAsset;
         address _investedTo = poolConstants.investedTo;
+        uint256 _lenderBalance = poolToken.balanceOf(lender);
         uint256 _collateralLiquidityShare =
-            ((poolVars.baseLiquidityShares.mul(balanceOf(lender))).div(totalSupply()))
+            ((poolVars.baseLiquidityShares.mul(_lenderBalance)).div(poolToken.totalSupply()))
                 .add(lenders[lender].extraLiquidityShares);
         uint256 _collateralTokens =
             IYield(_investedTo).getTokensForShares(
@@ -711,41 +688,42 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
                 _collateralAsset
             );
 
-        uint256 _correspondingBorrowTokens =
-            correspondingBorrowTokens(_collateralLiquidityShare);
-        address _borrowAsset = poolConstants.borrowAsset;
-        uint256 _sharesReceived;
-        if (_borrowAsset == address(0)) {
-            if (msg.value < _correspondingBorrowTokens) {
-                revert("Pool::liquidateLender - Not enough tokens");
+        {
+            uint256 _correspondingBorrowTokens = correspondingBorrowTokens(_collateralLiquidityShare);
+            address _borrowAsset = poolConstants.borrowAsset;
+            uint256 _sharesReceived;
+            if (_borrowAsset == address(0)) {
+                if (msg.value < _correspondingBorrowTokens) {
+                    revert("Pool::liquidateLender - Not enough tokens");
+                }
+                _sharesReceived = _savingAccount.deposit{value: msg.value}(
+                    msg.value,
+                    _borrowAsset,
+                    _investedTo,
+                    address(this)
+                );
+            } else {
+                IERC20(_borrowAsset).transferFrom(
+                    msg.sender,
+                    address(this),
+                    _correspondingBorrowTokens
+                );
+                _sharesReceived = _savingAccount.deposit(
+                    _correspondingBorrowTokens,
+                    _borrowAsset,
+                    _investedTo,
+                    address(this)
+                );
             }
-            _sharesReceived = _savingAccount.deposit{value: msg.value}(
-                msg.value,
+
+            _withdrawRepayment(lender, true);
+            _savingAccount.transfer(
                 _borrowAsset,
-                _investedTo,
-                address(this)
-            );
-        } else {
-            IERC20(_borrowAsset).transferFrom(
-                msg.sender,
-                address(this),
-                _correspondingBorrowTokens
-            );
-            _sharesReceived = _savingAccount.deposit(
-                _correspondingBorrowTokens,
-                _borrowAsset,
-                _investedTo,
-                address(this)
+                lender,
+                poolConstants.investedTo,
+                _sharesReceived
             );
         }
-
-        _withdrawRepayment(lender);
-        _savingAccount.transfer(
-            _borrowAsset,
-            lender,
-            poolConstants.investedTo,
-            _sharesReceived
-        );
 
         uint256 _amountReceived;
         if (_transferToSavingsAccount) {
@@ -772,7 +750,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
                 );
             } else {
                 if (_collateralAsset == address(0)) {
-                    msg.sender.send(_amountReceived);
+                    msg.sender.transfer(_amountReceived);
                 } else {
                     IERC20(_collateralAsset).transfer(
                         msg.sender,
@@ -781,7 +759,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
                 }
             }
         }
-        burnFrom(lender, balanceOf(lender));
+        poolToken.burn(lender, _lenderBalance);
         delete lenders[lender];
         emit lenderLiquidated(msg.sender, lender, _amountReceived);
     }
@@ -796,8 +774,8 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
                 _liquidityShares,
                 poolConstants.collateralAsset
             );
-        uint256 _correspondingBorrowTokens =
-            (
+        
+        return (
                 _collateralTokens
                     .mul(
                     IPriceOracle(_poolFactory.priceOracle())
@@ -809,11 +787,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
                 .div(10**8);
     }
 
-    function checkRepayment() public {
-        _isRepaymentDone();
-    }
-
-    function _isRepaymentDone() internal returns (LoanStatus) {
+    function checkRepayment() public returns (LoanStatus) {
         uint256 _gracePeriodPenaltyFraction =
             IPoolFactory(PoolFactory).gracePeriodPenaltyFraction();
         if (
@@ -834,7 +808,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
     ) external payable {
         LoanStatus _currentPoolStatus;
         if (poolVars.loanStatus != LoanStatus.DEFAULTED) {
-            _currentPoolStatus = _isRepaymentDone();
+            _currentPoolStatus = checkRepayment();
         }
         require(
             _currentPoolStatus == LoanStatus.DEFAULTED,
@@ -894,7 +868,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
                 );
             } else {
                 if (_collateralAsset == address(0)) {
-                    msg.sender.send(_amountReceived);
+                    msg.sender.transfer(_amountReceived);
                 } else {
                     IERC20(_collateralAsset).transfer(
                         msg.sender,
@@ -934,8 +908,8 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
     function calculateRepaymentWithdrawable(address _lender) internal view returns (uint256) {
         uint256 _totalRepaidAmount = IRepayment(IPoolFactory(PoolFactory).repaymentImpl()).getTotalRepaidAmount(address(this));
 
-        uint256 _amountWithdrawable = (balanceOf(_lender).mul(_totalRepaidAmount)
-                                                        .div(totalSupply()))
+        uint256 _amountWithdrawable = (poolToken.balanceOf(_lender).mul(_totalRepaidAmount)
+                                                        .div(poolToken.totalSupply()))
                                                         .sub(lenders[_lender].repaymentWithdrawn);
 
         return _amountWithdrawable;
@@ -946,9 +920,12 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
     // Withdraw Repayment, Also all the extra state variables are added here only for the review
     
     function withdrawRepayment(bool _withdrawToSavingsAccount) external isLender(msg.sender) {
-        LoanStatus _loanStatus = poolVars.loanStatus;
+        _withdrawRepayment(msg.sender, _withdrawToSavingsAccount);
+    }
 
-        uint256 _amountToWithdraw = calculateRepaymentWithdrawable(msg.sender);
+    function _withdrawRepayment(address _lender, bool _withdrawToSavingsAccount) internal {
+
+        uint256 _amountToWithdraw = calculateRepaymentWithdrawable(_lender);
         uint256 _sharesReceived;
         address _investedTo = address(0); //add defaultStrategy
         if (_withdrawToSavingsAccount) {
@@ -960,54 +937,54 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
                                                                                       poolConstants.borrowAsset,
                                                                                       _investedTo,
                                                                                       address(this),
-                                                                                      msg.sender); // deposit from pool to lender
+                                                                                      _lender); // deposit from pool to lender
             }
             else {
                 _sharesReceived = _savingsAccount.depositTo(_amountToWithdraw,
                                                           poolConstants.borrowAsset,
                                                           _investedTo,
                                                           address(this),
-                                                          msg.sender);
+                                                          _lender);
             }
         }
         else{
             if (poolConstants.borrowAsset == address(0)) {
                 // should conisder transfer instead
-                msg.sender.send(_amountToWithdraw);
+                payable(_lender).transfer(_amountToWithdraw);
             }
             else {
                 IERC20(poolConstants.borrowAsset).transferFrom(address(this),
-                                                msg.sender,
+                                                _lender,
                                                 _amountToWithdraw);
             }
         }
-        lenders[msg.sender].repaymentWithdrawn = lenders[msg.sender].repaymentWithdrawn.add(_amountToWithdraw);
+        lenders[_lender].repaymentWithdrawn = lenders[_lender].repaymentWithdrawn.add(_amountToWithdraw);
     }
     // Withdraw Repayment, Also all the extra state variables are added here only for the review
 
-    function withdrawRepayment() external payable {}
+    // function withdrawRepayment() external payable {}
 
-    function transferTokensRepayments(
-        uint256 amount,
-        address from,
-        address to
-    ) internal {}
+    // function transferTokensRepayments(
+    //     uint256 amount,
+    //     address from,
+    //     address to
+    // ) internal {}
 
-    function calculateWithdrawRepayment(address lender)
-        public
-        view
-        returns (uint256)
-    {
-        if (poolVars.loanStatus == LoanStatus.CANCELLED) return 0;
-    }
+    // function calculateWithdrawRepayment(address lender)
+    //     public
+    //     view
+    //     returns (uint256)
+    // {
+    //     if (poolVars.loanStatus == LoanStatus.CANCELLED) return 0;
+    // }
 
-    function calculatewithdrawRepayment(address lender)
-        public
-        view
-        returns (uint256)
-    {}
+    // function calculatewithdrawRepayment(address lender)
+    //     public
+    //     view
+    //     returns (uint256)
+    // {}
 
-    function _withdrawRepayment(address lender) internal {}
+    // function _withdrawRepayment(address lender) internal {}
 
     function requestExtension() external isPoolActive OnlyBorrower {
         uint256 _extensionVoteEndTime = poolVars.extensionVoteEndTime;
@@ -1041,7 +1018,7 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
             "Pool::voteOnExtension - Voting is over"
         );
         require(
-            balanceOf(msg.sender) != 0,
+            poolToken.balanceOf(msg.sender) != 0,
             "Pool::voteOnExtension - Not a valid lender for pool"
         );
 
@@ -1053,29 +1030,35 @@ contract Pool is ERC20PresetMinterPauserUpgradeable, IPool {
             _lastVoteTime < _extensionVoteEndTime.sub(_votingExtensionlength),
             "Pool::voteOnExtension - you have already voted"
         );
+        
+        uint256 _extensionSupport = poolVars.totalExtensionSupport;
         _lastVoteTime = block.timestamp;
-        poolVars.totalExtensionSupport = poolVars.totalExtensionSupport.add(
-            balanceOf(msg.sender)
+        _extensionSupport = _extensionSupport.add(
+            poolToken.balanceOf(msg.sender)
         );
         uint256 _votingPassRatio = IPoolFactory(PoolFactory).votingPassRatio();
         lenders[msg.sender].lastVoteTime = _lastVoteTime;
-        emit lenderVoted(msg.sender, poolVars.totalExtensionSupport, _lastVoteTime);
+        emit lenderVoted(msg.sender, _extensionSupport, _lastVoteTime);
+        poolVars.totalExtensionSupport = _extensionSupport;
 
         if (
-            ((poolVars.totalExtensionSupport)) >=
-            (totalSupply().mul(_votingPassRatio)).div(100000000)
+            ((_extensionSupport)) >=
+            (poolToken.totalSupply().mul(_votingPassRatio)).div(100000000)
         ) {
             uint256 _currentPeriod = calculateCurrentPeriod();
+            uint256 _nextDuePeriod = poolVars.nextDuePeriod;
             uint256 _nextDueTime =
-                (poolVars.nextDuePeriod.mul(poolConstants.repaymentInterval)).add(poolConstants.loanStartTime);
+                (_nextDuePeriod.mul(poolConstants.repaymentInterval)).add(poolConstants.loanStartTime);
+            uint256 _periodWhenExtensionIsPassed;
             if (block.timestamp > _nextDueTime) {
-                poolVars.periodWhenExtensionIsPassed = _currentPeriod.sub(1);
+                _periodWhenExtensionIsPassed = _currentPeriod.sub(1);
             } else {
-                poolVars.periodWhenExtensionIsPassed = _currentPeriod;
+                _periodWhenExtensionIsPassed = _currentPeriod;
             }
+            poolVars.periodWhenExtensionIsPassed = _periodWhenExtensionIsPassed;
             poolVars.extensionVoteEndTime = block.timestamp; // voting is over
-            poolVars.nextDuePeriod = poolVars.nextDuePeriod.add(1);
-            emit votingPassed(poolVars.nextDuePeriod, poolVars.periodWhenExtensionIsPassed);
+            poolVars.nextDuePeriod = _nextDuePeriod.add(1);
+            emit votingPassed(_nextDuePeriod.add(1), _periodWhenExtensionIsPassed);
         }
     }
 

@@ -13,4 +13,10 @@ interface IPool {
     ) external payable;
 
     function withdrawBorrowedAmount() external;
+
+    function beforeTransfer(
+        address _from,
+        address _to,
+        uint256 _amount
+    ) external ;
 }
