@@ -90,7 +90,6 @@ contract Pool is Initializable, IPool {
     event AmountBorrowed(address borrower, uint256 amount);
     event Liquiditywithdrawn(uint256 amount, address lenderAddress);
     event CollateralCalled(address lenderAddress);
-    event lenderVoted(address Lender);
     event LoanDefaulted();
     event lenderLiquidated(
         address liquidator,
@@ -98,16 +97,13 @@ contract Pool is Initializable, IPool {
         uint256 _tokenReceived
     );
     event PoolLiquidated(address liquidator);
-    event votingPassed(
-        uint256 nextDuePeriod,
-        uint256 periodWhenExtensionIsPassed
-    );
+    
     event lenderVoted(
         address lender,
         uint256 totalExtensionSupport,
         uint256 lastVoteTime
     );
-    event extensionRequested(uint256 extensionVoteEndTime);
+    
 
     modifier OnlyBorrower {
         require(
@@ -786,6 +782,11 @@ contract Pool is Initializable, IPool {
         }
         lenders[_lender].repaymentWithdrawn = lenders[_lender].repaymentWithdrawn.add(_amountToWithdraw);
     }
+
+    function getNextDuePeriod() external returns(uint256) {
+        return poolVars.nextDuePeriod;
+    }
+
     // Withdraw Repayment, Also all the extra state variables are added here only for the review
 
     // function withdrawRepayment() external payable {}
@@ -811,7 +812,6 @@ contract Pool is Initializable, IPool {
     // {}
 
     // function _withdrawRepayment(address lender) internal {}
-
 
     receive() external payable {
         require(

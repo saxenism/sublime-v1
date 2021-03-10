@@ -9,6 +9,10 @@ contract Extension is Initializable {
 
     uint256 constant MAX_INT = "";
 
+    event lenderVoted(address lender, uint256 extensionSupport, uint256 lastVoteTime);
+    event extensionRequested(uint256 extensionVoteEndTime);
+    event votingPassed(uint256 nextDuePeriod);//, uint256 periodWhenExtensionIsPassed); Confirm: do we need to pass the second var?
+
     struct PoolInfo {
         uint256 periodWhenExtensionIsPassed;
         uint256 totalExtensionSupport;
@@ -19,6 +23,7 @@ contract Extension is Initializable {
 
     mapping(address => PoolInfo) poolInfo;
     IPoolFactory poolFactory;
+
 
     function initialize(address _poolFactory) external initializer {
         poolFactory = IPoolFactory(_poolFactory);
@@ -65,7 +70,9 @@ contract Extension is Initializable {
         emit extensionRequested(_extensionVoteEndTime);
     }
 
-    function voteOnExtension(address _pool) external isPoolActive {
+    function voteOnExtension(address _pool) external {
+        //require(poolInfo[_pool].loanStatus == LoanStatus.ACTIVE, "Pool::isPoolActive - Pool is  not active");
+
         uint256 _extensionVoteEndTime = poolInfo[_pool].extensionVoteEndTime;
         require(
             block.timestamp < _extensionVoteEndTime,
@@ -79,7 +86,7 @@ contract Extension is Initializable {
         );
         // TODO: Merge this with  another call to poolfactory below
         uint256 _votingExtensionlength =
-            IPoolFactory(PoolFactory).votingExtensionlength();
+            IPoolFactory(poolFactory).votingExtensionlength();
         uint256 _lastVoteTime = poolInfo[_pool].lastVoteTime[msg.sender]; //Lender last vote time need to store it as it checks that a lender only votes once
 
         require(
@@ -92,7 +99,7 @@ contract Extension is Initializable {
         _extensionSupport = _extensionSupport.add(
             _balance
         );
-        uint256 _votingPassRatio = IPoolFactory(PoolFactory).votingPassRatio();
+        uint256 _votingPassRatio = IPoolFactory(poolFactory).votingPassRatio();
         poolInfo[_pool].lastVoteTime[msg.sender] = _lastVoteTime;
         emit lenderVoted(msg.sender, _extensionSupport, _lastVoteTime);
         poolInfo[_pool].totalExtensionSupport = _extensionSupport;
@@ -106,14 +113,16 @@ contract Extension is Initializable {
     }
 
     function grantExtension(address _pool) internal {
+        IPool pool = IPool(_pool);
         // uint256 _currentPeriod = calculateCurrentPeriod();
         // TODO: This probably belongs in repayments, update the nextDuePeriod
         IPool(_pool).grantExtension();
 
-        poolVars.periodWhenExtensionIsPassed = MAX_INT;
-        poolVars.extensionVoteEndTime = block.timestamp; // voting is over
+        poolInfo.periodWhenExtensionIsPassed = MAX_INT;
+        poolInfo.extensionVoteEndTime = block.timestamp; // voting is over
         // TODO: This belongs in pool
         // poolVars.nextDuePeriod = _nextDuePeriod.add(1);
-        emit votingPassed(_nextDuePeriod.add(1));
+        uint256 _nextDueTime = pool.getNextDuePeriod();
+        emit votingPassed(_nextDueTime.add(1));
     }
 }
