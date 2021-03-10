@@ -96,7 +96,6 @@ contract Pool is Initializable, IPool {
     event AmountBorrowed(address borrower, uint256 amount);
     event Liquiditywithdrawn(uint256 amount, address lenderAddress);
     event CollateralCalled(address lenderAddress);
-    event lenderVoted(address Lender);
     event LoanDefaulted();
     event lenderLiquidated(
         address liquidator,
@@ -104,16 +103,13 @@ contract Pool is Initializable, IPool {
         uint256 _tokenReceived
     );
     event PoolLiquidated(address liquidator);
-    event votingPassed(
-        uint256 nextDuePeriod,
-        uint256 periodWhenExtensionIsPassed
-    );
+    
     event lenderVoted(
         address lender,
         uint256 totalExtensionSupport,
         uint256 lastVoteTime
     );
-    event extensionRequested(uint256 extensionVoteEndTime);
+    
 
     modifier OnlyBorrower {
         require(
@@ -965,6 +961,11 @@ contract Pool is Initializable, IPool {
         }
         lenders[_lender].repaymentWithdrawn = lenders[_lender].repaymentWithdrawn.add(_amountToWithdraw);
     }
+
+    function getNetDuePeriod() public returns(uint256) {
+        return poolVars.nextDuePeriod;
+    }
+
     // Withdraw Repayment, Also all the extra state variables are added here only for the review
 
     // function withdrawRepayment() external payable {}
@@ -990,83 +991,6 @@ contract Pool is Initializable, IPool {
     // {}
 
     // function _withdrawRepayment(address lender) internal {}
-
-    function requestExtension() external isPoolActive OnlyBorrower {
-        uint256 _extensionVoteEndTime = poolVars.extensionVoteEndTime;
-        require(
-            block.timestamp > _extensionVoteEndTime,
-            "Pool::requestExtension - Extension requested already"
-        );
-
-        // This check is required so that borrower doesn't ask for more extension if previously an extension is already granted
-        require(
-            poolVars.periodWhenExtensionIsPassed > poolConstants.noOfRepaymentIntervals,
-            "Pool::requestExtension: you have already been given an extension,No more extension"
-        );
-
-        poolVars.totalExtensionSupport = 0; // As we can multiple voting every time new voting start we have to make previous votes 0
-        uint256 _gracePeriodFraction =
-            IPoolFactory(PoolFactory).gracePeriodFraction();
-        uint256 _gracePeriod =
-            (poolConstants.repaymentInterval * _gracePeriodFraction).div(100000000);
-        uint256 _nextDueTime =
-            (poolVars.nextDuePeriod.mul(poolConstants.repaymentInterval)).add(poolConstants.loanStartTime);
-        _extensionVoteEndTime = (_nextDueTime).add(_gracePeriod);
-        poolVars.extensionVoteEndTime = _extensionVoteEndTime;
-        emit extensionRequested(_extensionVoteEndTime);
-    }
-
-    function voteOnExtension() external isPoolActive {
-        uint256 _extensionVoteEndTime = poolVars.extensionVoteEndTime;
-        require(
-            block.timestamp < _extensionVoteEndTime,
-            "Pool::voteOnExtension - Voting is over"
-        );
-        require(
-            poolToken.balanceOf(msg.sender) != 0,
-            "Pool::voteOnExtension - Not a valid lender for pool"
-        );
-
-        uint256 _votingExtensionlength =
-            IPoolFactory(PoolFactory).votingExtensionlength();
-        uint256 _lastVoteTime = lenders[msg.sender].lastVoteTime; //Lender last vote time need to store it as it checks that a lender only votes once
-
-        require(
-            _lastVoteTime < _extensionVoteEndTime.sub(_votingExtensionlength),
-            "Pool::voteOnExtension - you have already voted"
-        );
-        
-        uint256 _extensionSupport = poolVars.totalExtensionSupport;
-        _lastVoteTime = block.timestamp;
-        _extensionSupport = _extensionSupport.add(
-            poolToken.balanceOf(msg.sender)
-        );
-        uint256 _votingPassRatio = IPoolFactory(PoolFactory).votingPassRatio();
-        lenders[msg.sender].lastVoteTime = _lastVoteTime;
-        emit lenderVoted(msg.sender, _extensionSupport, _lastVoteTime);
-        poolVars.totalExtensionSupport = _extensionSupport;
-
-        if (
-            ((_extensionSupport)) >=
-            (poolToken.totalSupply().mul(_votingPassRatio)).div(100000000)
-        ) {
-            uint256 _currentPeriod = calculateCurrentPeriod();
-            uint256 _nextDuePeriod = poolVars.nextDuePeriod;
-            uint256 _nextDueTime =
-                (_nextDuePeriod.mul(poolConstants.repaymentInterval)).add(poolConstants.loanStartTime);
-            uint256 _periodWhenExtensionIsPassed;
-            if (block.timestamp > _nextDueTime) {
-                _periodWhenExtensionIsPassed = _currentPeriod.sub(1);
-            } else {
-                _periodWhenExtensionIsPassed = _currentPeriod;
-            }
-            poolVars.periodWhenExtensionIsPassed = _periodWhenExtensionIsPassed;
-            poolVars.extensionVoteEndTime = block.timestamp; // voting is over
-            poolVars.nextDuePeriod = _nextDuePeriod.add(1);
-            emit votingPassed(_nextDuePeriod.add(1), _periodWhenExtensionIsPassed);
-        }
-    }
-
 
     receive() external payable {
         require(
