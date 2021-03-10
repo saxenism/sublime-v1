@@ -962,7 +962,7 @@ contract Pool is Initializable, IPool {
         lenders[_lender].repaymentWithdrawn = lenders[_lender].repaymentWithdrawn.add(_amountToWithdraw);
     }
 
-    function getNetDuePeriod() public returns(uint256) {
+    function getNextDuePeriod() external returns(uint256) {
         return poolVars.nextDuePeriod;
     }
 
