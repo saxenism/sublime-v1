@@ -55,12 +55,12 @@ contract Pool is Initializable, IPool {
     }
 
     struct PoolVars {
-        uint256 periodWhenExtensionIsPassed;
+        // uint256 periodWhenExtensionIsPassed;
         uint256 baseLiquidityShares;
         uint256 extraLiquidityShares;
         LoanStatus loanStatus;
-        uint256 totalExtensionSupport; // sum of weighted votes for extension
-        uint256 extensionVoteEndTime;
+        // uint256 totalExtensionSupport; // sum of weighted votes for extension
+        // uint256 extensionVoteEndTime;
         uint256 noOfGracePeriodsTaken;
         uint256 nextDuePeriod;
     }
@@ -185,6 +185,10 @@ contract Pool is Initializable, IPool {
     function setPoolToken(address _poolToken) external override {
         require(msg.sender == PoolFactory);
         poolToken = PoolToken(_poolToken);
+    }
+
+    function borrower() external override returns(address) {
+        return poolConstants.borrower;
     }
 
     function depositCollateral(
