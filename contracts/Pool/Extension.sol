@@ -11,7 +11,7 @@ contract Extension is Initializable {
 
     event lenderVoted(address lender, uint256 extensionSupport, uint256 lastVoteTime);
     event extensionRequested(uint256 extensionVoteEndTime);
-    event votingPassed(uint256 nextDuePeriod);//, uint256 periodWhenExtensionIsPassed);
+    event votingPassed(uint256 nextDuePeriod);//, uint256 periodWhenExtensionIsPassed); Confirm: do we need to pass the second var?
 
     struct PoolInfo {
         uint256 periodWhenExtensionIsPassed;
