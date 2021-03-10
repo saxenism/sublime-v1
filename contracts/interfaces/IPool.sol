@@ -21,5 +21,5 @@ interface IPool {
     ) external ;
 
     function setPoolToken(address _poolToken) external;
-    function borrower() external returns(address)
+    function borrower() external returns(address);
 }
