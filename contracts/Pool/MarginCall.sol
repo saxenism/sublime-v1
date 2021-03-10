@@ -16,10 +16,13 @@ contract MarginCall is Initializable {
         TERMINATED // Pool terminated by admin
     }
 
-    struct 
+    struct MarginCallVars {
+        uint256 marginCallEndTime;
+        uint256 
+    }
 
 	poolVars.loanStatus
-	lenders[_lender].marginCallEndTime
+	//lenders[_lender].marginCallEndTime
 	poolID
 	poolVars.extraLiquidityShares
 	lenders[_lender].extraLiquidityShares
