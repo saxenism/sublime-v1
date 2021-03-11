@@ -5,6 +5,8 @@ import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "../interfaces/IPool.sol";
 import "../interfaces/IPoolFactory.sol";
+import "../interfaces/IRepayment.sol";
+
 
 contract Extension is Initializable {
     using SafeMath for uint256;
@@ -43,8 +45,6 @@ contract Extension is Initializable {
         IPoolFactory _poolFactory = poolFactory;
         require(poolInfo[msg.sender].repaymentInterval == 0);
         require(_poolFactory.openBorrowPoolRegistry(msg.sender), "Repayments::onlyValidPool - Invalid Pool");
-        // TODO: Initialize this when borrower accepts loan
-        // TODO: Delete this  when loan ends for whatever reason
         poolInfo[msg.sender].repaymentInterval = _repaymentInterval;
     }
 
@@ -116,10 +116,15 @@ contract Extension is Initializable {
     }
 
     function grantExtension(address _pool) internal {
+        IPoolFactory _poolFactory = poolFactory;
+
         uint256 _nextDuePeriod = IPool(_pool).grantExtension();
 
         poolInfo[_pool].periodWhenExtensionIsPassed = MAX_INT;
         poolInfo[_pool].extensionVoteEndTime = block.timestamp; // voting is over
+
+        IRepayment(_poolFactory.repaymentImpl()).repaymentExtended();
+        
         emit ExtensionPassed(_nextDuePeriod);
     }
 

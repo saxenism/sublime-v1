@@ -32,4 +32,5 @@ interface IPool {
     function getNextDueTimeIfBorrower(address _borrower) view external returns(uint256);
     function grantExtension() external returns(uint256);
     function getBalanceDetails(address _lender) external view returns(uint256, uint256);
+    function getTotalSupply() external view returns (uint256);
 }

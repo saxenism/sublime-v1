@@ -21,6 +21,7 @@ contract RepaymentStorage is OwnableUpgradeable {
     uint256 gracePenaltyRate;
     uint256 gracePeriodFraction; // fraction of the repayment interval
     uint256 public constant yearInSeconds = 365 days;
+
     struct RepaymentDetails {
         uint256 numberOfTotalRepayments; // using it to check if RepaymentDetails Exists as repayment Interval!=0 in any case
         uint256 gracePenaltyRate;
@@ -28,12 +29,9 @@ contract RepaymentStorage is OwnableUpgradeable {
         uint256 totalRepaidAmount;
         uint256 loanDuration;
         uint256 repaymentInterval;
-
-        uint256 activePrincipal;
-
         uint256 repaymentPeriodCovered;
         uint256 repaymentOverdue;
-        bool extensionRequested;
+        bool isLoanExtensionActive;
     }
 
     mapping(address => RepaymentDetails) repaymentDetails;
