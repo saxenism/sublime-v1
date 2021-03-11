@@ -40,8 +40,6 @@ contract Extension is Initializable {
         IPoolFactory _poolFactory = poolFactory;
         require(poolInfo[msg.sender].repaymentInterval == 0);
         require(_poolFactory.openBorrowPoolRegistry(msg.sender), "Repayments::onlyValidPool - Invalid Pool");
-        // TODO: Initialize this when borrower accepts loan
-        // TODO: Delete this  when loan ends for whatever reason
         poolInfo[msg.sender].repaymentInterval = _repaymentInterval;
     }
 

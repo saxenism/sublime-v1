@@ -10,6 +10,7 @@ import "../interfaces/IYield.sol";
 import "../interfaces/IRepayment.sol";
 import "../interfaces/ISavingsAccount.sol";
 import "../interfaces/IPool.sol";
+import "../interfaces/IExtension.sol";
 import "./PoolToken.sol";
 
 // TODO: set modifiers to disallow any transfers directly
@@ -55,12 +56,9 @@ contract Pool is Initializable, IPool {
     }
 
     struct PoolVars {
-        // uint256 periodWhenExtensionIsPassed;
         uint256 baseLiquidityShares;
         uint256 extraLiquidityShares;
         LoanStatus loanStatus;
-        // uint256 totalExtensionSupport; // sum of weighted votes for extension
-        // uint256 extensionVoteEndTime;
         uint256 noOfGracePeriodsTaken;
         uint256 nextDuePeriod;
     }
@@ -312,8 +310,10 @@ contract Pool is Initializable, IPool {
             "Pool::withdrawBorrowedAmount - The current collateral amount does not permit the loan."
         );
         uint256 _noOfRepaymentIntervals = poolConstants.noOfRepaymentIntervals;
-        IRepayment(IPoolFactory(PoolFactory).repaymentImpl()).initializeRepayment(_noOfRepaymentIntervals, _noOfRepaymentIntervals.mul(poolConstants.repaymentInterval));
-
+        uint256 _repaymentInterval = poolConstants.repaymentInterval;
+        IPoolFactory _poolFactory = IPoolFactory(PoolFactory);
+        IRepayment(_poolFactory.repaymentImpl()).initializeRepayment(_noOfRepaymentIntervals, _noOfRepaymentIntervals.mul(_repaymentInterval));
+        IExtension(_poolFactory.extension()).initializePoolExtension(_repaymentInterval);
         uint256 _tokensLent = poolToken.totalSupply();
         IERC20(poolConstants.borrowAsset).transfer(poolConstants.borrower, _tokensLent);
 
@@ -423,6 +423,7 @@ contract Pool is Initializable, IPool {
             "Pool::cancelOpenBorrowPool - The pool cannot be cancelled when the status is active."
         );
         poolVars.loanStatus = LoanStatus.CANCELLED;
+        IExtension(IPoolFactory(PoolFactory).extension()).closePoolExtension();
         withdrawAllCollateral();
         poolToken.pause();
         emit OpenBorrowPoolCancelled();
@@ -445,6 +446,7 @@ contract Pool is Initializable, IPool {
         );
         poolToken.pause();
         poolVars.loanStatus = LoanStatus.TERMINATED;
+        IExtension(IPoolFactory(PoolFactory).extension()).closePoolExtension();
         emit OpenBorrowPoolTerminated();
     }
 
@@ -458,6 +460,7 @@ contract Pool is Initializable, IPool {
             "Pool::closeLoan - The loan has not been fully repayed."
         );
         poolVars.loanStatus = LoanStatus.CLOSED;
+        IExtension(IPoolFactory(PoolFactory).extension()).closePoolExtension();
         withdrawAllCollateral();
         poolToken.pause();
         emit OpenBorrowPoolClosed();
@@ -798,6 +801,7 @@ contract Pool is Initializable, IPool {
             )
         ) {
             poolVars.loanStatus = LoanStatus.DEFAULTED;
+            IExtension(IPoolFactory(PoolFactory).extension()).closePoolExtension();
             return (LoanStatus.DEFAULTED);
         }
         return (poolVars.loanStatus);
