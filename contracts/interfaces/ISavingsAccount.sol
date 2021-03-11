@@ -11,6 +11,7 @@ interface ISavingsAccount {
     );
     event StrategySwitched(
         address user,
+        address asset,
         address currentStrategy,
         address newStrategy
     );

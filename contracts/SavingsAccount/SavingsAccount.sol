@@ -212,7 +212,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         ][asset][newStrategy]
             .add(sharesReceived);
 
-        emit StrategySwitched(msg.sender, currentStrategy, newStrategy);
+        emit StrategySwitched(msg.sender, asset, currentStrategy, newStrategy);
     }
 
     /**
