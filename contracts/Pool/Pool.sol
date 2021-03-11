@@ -11,7 +11,7 @@ import "../interfaces/IRepayment.sol";
 import "../interfaces/ISavingsAccount.sol";
 import "../interfaces/IPool.sol";
 import "../interfaces/IExtension.sol";
-import "./PoolToken.sol";
+import "../interfaces/IPoolToken.sol";
 
 // TODO: set modifiers to disallow any transfers directly
 contract Pool is Initializable, IPool {
@@ -28,7 +28,7 @@ contract Pool is Initializable, IPool {
     }
 
     address PoolFactory;
-    PoolToken poolToken;
+    IPoolToken poolToken;
 
     struct LendingDetails {
         uint256 amountWithdrawn;
@@ -178,7 +178,7 @@ contract Pool is Initializable, IPool {
 
     function setPoolToken(address _poolToken) external override {
         require(msg.sender == PoolFactory);
-        poolToken = PoolToken(_poolToken);
+        poolToken = IPoolToken(_poolToken);
     }
 
     function depositCollateral(
@@ -476,7 +476,7 @@ contract Pool is Initializable, IPool {
 
         //gets amount through liquidity shares
         uint256 _balance = poolToken.balanceOf(msg.sender);
-        poolToken.burn(_balance);
+        poolToken.burn(msg.sender, _balance);
 
         if (_loanStatus == LoanStatus.DEFAULTED) {
             uint256 _totalAsset;
@@ -578,7 +578,7 @@ contract Pool is Initializable, IPool {
             );
         _interest = _interest.sub(
             _poolFactory.gracePeriodPenaltyFraction().mul(_interestPerPeriod).div(100).mul(
-                _gracePeriodsTaken
+                0// _gracePeriodsTaken
             )
         );
         if (_interest < _extraInterest) {
@@ -988,7 +988,7 @@ contract Pool is Initializable, IPool {
     }
 
     function getBalanceDetails(address _lender) override public view returns(uint256, uint256) {
-        PoolToken _poolToken = PoolToken(poolToken);
+        IPoolToken _poolToken = poolToken;
         return (_poolToken.balanceOf(_lender), _poolToken.totalSupply());
     }
 
