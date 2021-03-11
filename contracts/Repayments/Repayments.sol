@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "./RepaymentStorage.sol";
+import "../interfaces/IPool.sol";
 
 contract Repayments is RepaymentStorage {
     using SafeERC20 for IERC20;
@@ -38,35 +39,32 @@ contract Repayments is RepaymentStorage {
 
     function initializeRepayment(
         uint256 numberOfTotalRepayments,
-        uint256 repaymentInterval
+        uint256 repaymentInterval,
+        uint256 activePrincipal
     ) external onlyValidPool {
         repaymentDetails[msg.sender].gracePenaltyRate = gracePenaltyRate;
         repaymentDetails[msg.sender].gracePeriodFraction = gracePeriodFraction;
         repaymentDetails[msg.sender].numberOfTotalRepayments = numberOfTotalRepayments;
         repaymentDetails[msg.sender].loanDuration = repaymentInterval.mul(numberOfTotalRepayments);
+        repaymentDetails[msg.sender].activePrincipal = activePrincipal;
+        repaymentDetails[msg.sender].repaymentInterval = repaymentInterval;
     }
 
 
     function calculateRepayAmount(
         address poolID,
         uint256 borrowRate,
-        uint256 activePrincipal,
-        uint256 loanStartTime,
-        uint256 repaymentInterval
+        uint256 loanStartTime
         ) public view returns(uint256) {
-
-        uint256 yearInSeconds = 365 days;
         // assuming repaymentInterval is in seconds
-        uint256 currentPeriod = (block.timestamp.sub(loanStartTime)).div(repaymentInterval);
+        uint256 currentPeriod = (block.timestamp.sub(loanStartTime)).div(repaymentDetails[poolID].repaymentInterval);
 
-        uint256 interestPerSecond = activePrincipal
-                                           .mul(borrowRate)
-                                           .div(yearInSeconds);
+        uint256 interestPerSecond = repaymentDetails[poolID].activePrincipal.mul(borrowRate).div(yearInSeconds);
 
         // uint256 periodEndTime = (currentPeriod.add(1)).mul(repaymentInterval);
 
         uint256 interestDueTillPeriodEnd = interestPerSecond
-                                                  .mul((repaymentInterval)
+                                                  .mul((repaymentDetails[poolID].repaymentInterval)
                                                     .sub(repaymentDetails[poolID].repaymentPeriodCovered));
         return interestDueTillPeriodEnd;
     }
@@ -78,8 +76,6 @@ contract Repayments is RepaymentStorage {
     function repayAmount(
         address poolID,
         uint256 amount,
-        uint256 activePrincipal,
-        uint256 repaymentInterval,
         uint256 borrowRate,
         uint256 loanStartTime,
         bool isLoanExtensionActive,
@@ -87,27 +83,25 @@ contract Repayments is RepaymentStorage {
     ) public isPoolInitialized payable returns (bool) {
         //repayAmount() in Pool.sol is already performing pool status check - confirm this
 
+        uint256 _loanStatus = IPool(poolID).getLoanStatus();
+        require(_loanStatus == 1, "Repayments:repayAmount Pool should be active.");
         // assuming repaymentInterval is in seconds
 
         uint256 interestPerSecond;
         uint256 interestDueTillPeriodEnd;
 
         {
-            uint256 yearInSeconds = 365 days;
-            interestPerSecond = activePrincipal
-                                            .mul(borrowRate)
-                                            .div(yearInSeconds);
+            
+            interestPerSecond = repaymentDetails[poolID].activePrincipal.mul(borrowRate).div(yearInSeconds);
 
             interestDueTillPeriodEnd = calculateRepayAmount(poolID,
                                                                 borrowRate, 
-                                                                activePrincipal, 
-                                                                loanStartTime, 
-                                                                repaymentInterval);
+                                                                loanStartTime);
         }
 
         if (isLoanExtensionActive == false) {
             // might consider transferring interestDueTillPeriodEnd and refunding the rest
-            require(amount < interestDueTillPeriodEnd,
+            require(amount <= interestDueTillPeriodEnd,
                     "Repayments - amount is greater than interest due this period.");
 
             //if asset == address(0), payable function receives tokens in contract
@@ -122,9 +116,16 @@ contract Repayments is RepaymentStorage {
 
             uint256 periodCovered = amount.div(interestPerSecond);
 
-            repaymentDetails[poolID].repaymentPeriodCovered = repaymentDetails[poolID].repaymentPeriodCovered
-                                                              .add(periodCovered);
-            repaymentDetails[poolID].totalRepaidAmount = repaymentDetails[poolID].totalRepaidAmount.add(amount);
+            //repaymentDetails[poolID].repaymentPeriodCovered = repaymentDetails[poolID].repaymentPeriodCovered
+            //                                                 .add(periodCovered);
+            if(repaymentDetails[poolID].repaymentPeriodCovered.add(periodCovered) == repaymentDetails[poolID].repaymentInterval) {
+                repaymentDetails[poolID].repaymentPeriodCovered = 0;
+            }
+            else{
+                repaymentDetails[poolID].repaymentPeriodCovered = repaymentDetails[poolID].repaymentPeriodCovered
+                                                                  .add(periodCovered);
+            }
+
             emit InterestRepaid(poolID, amount);
 
         }
@@ -150,8 +151,13 @@ contract Repayments is RepaymentStorage {
 
                 uint256 periodCovered = amount.div(interestPerSecond);
 
-                repaymentDetails[poolID].repaymentPeriodCovered = repaymentDetails[poolID].repaymentPeriodCovered
-                                                                  .add(periodCovered);
+                if(repaymentDetails[poolID].repaymentPeriodCovered.add(periodCovered) == repaymentDetails[poolID].repaymentInterval) {
+                    repaymentDetails[poolID].repaymentPeriodCovered = 0;
+                }
+                else{
+                    repaymentDetails[poolID].repaymentPeriodCovered = repaymentDetails[poolID].repaymentPeriodCovered
+                                                                      .add(periodCovered);
+                }
                 repaymentDetails[poolID].totalRepaidAmount = repaymentDetails[poolID].totalRepaidAmount.add(amount);
                 emit InterestRepaid(poolID, amount);
             }

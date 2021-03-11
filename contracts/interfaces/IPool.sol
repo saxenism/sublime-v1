@@ -3,6 +3,8 @@ pragma solidity 0.7.0;
 
 interface IPool {
 
+    
+    function getLoanStatus() external view returns (uint256);
 
     function depositCollateral(uint256 _amount, bool _transferFromSavingsAccount) external payable;
 
@@ -27,4 +29,7 @@ interface IPool {
     
     function updateMarginCallEndTime(address _lender) external returns(uint256);
     function getMarginCallEndTime(address _lender) external returns(uint256);
+    function getNextDueTimeIfBorrower(address _borrower) view external returns(uint256);
+    function grantExtension() external returns(uint256);
+    function getBalanceDetails(address _lender) external view returns(uint256, uint256);
 }
