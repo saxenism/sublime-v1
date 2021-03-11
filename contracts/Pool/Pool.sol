@@ -562,17 +562,12 @@ contract Pool is Initializable, IPool {
         uint256 _totalSupply = poolToken.totalSupply();
         IPoolFactory _poolFactory = IPoolFactory(PoolFactory);
 
-        (uint256 _interest, uint256 _gracePeriodsTaken) =
+        uint256 _interest =
             (
                 IRepayment(_poolFactory.repaymentImpl()).calculateRepayAmount(
-                    _totalSupply,
-                    _repaymentLength,
+                    address(this),
                     poolConstants.borrowRate,
-                    _loanStartedAt,
-                    poolVars.nextDuePeriod,
-                    // TODO: periodWhenExtensionIsPassed is in  extension now
-                    0
-                    // poolVars.periodWhenExtensionIsPassed
+                    _loanStartedAt
                 )
             );
         uint256 _extraInterest =
