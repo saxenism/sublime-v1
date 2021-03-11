@@ -8,7 +8,6 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../interfaces/ISavingsAccount.sol";
 import "../interfaces/IStrategyRegistry.sol";
 import "../interfaces/IYield.sol";
-import "../interfaces/IPool.sol";
 
 /**
  * @title Savings account contract with Methods related to savings account

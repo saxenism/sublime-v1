@@ -20,10 +20,16 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         uint256 max;
     }
 
+    struct ExtensionData {
+        uint256 votingPassRatio;
+        uint256 votingExtensionlength;
+    }
+
     bytes4 public initializeFunctionId; //  bytes4(keccak256("initialize(uint256,address,address,address,uint256,uint256,uint256,uint256,bool)"))
     address public poolImpl;
     address public userRegistry;
     address public strategyRegistry;
+    address public override extension;
     address public override repaymentImpl;
     address public override priceOracle;
     address public override savingsAccount;
@@ -34,8 +40,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     uint256 public override collateralVolatilityThreshold;
     uint256 public override gracePeriodPenaltyFraction;
     uint256 public override liquidatorRewardFraction;
-    uint256 public override votingPassRatio;
-    uint256 public override votingExtensionlength;
+    ExtensionData public override extensionData;
     uint256 public override gracePeriodFraction;
 
     mapping(address => bool) isBorrowToken;
@@ -93,7 +98,8 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         uint256 _liquidatorRewardFraction,
         address _repaymentImpl,
         address _priceOracle,
-        address _savingsAccount
+        address _savingsAccount,
+        address _extension
     ) external initializer {
         OwnableUpgradeable.__Ownable_init();
         OwnableUpgradeable.transferOwnership(_admin);
@@ -111,6 +117,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         repaymentImpl = _repaymentImpl;
         priceOracle = _priceOracle;
         savingsAccount = _savingsAccount;
+        extension = _extension;
     }
 
     function createPool(

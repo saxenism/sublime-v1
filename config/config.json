@@ -1,0 +1,44 @@
+{
+    "mainnet": {
+        "blockchain": {
+            "url": ""
+        },
+        "actors": {
+            "admin": "",
+            "proxyAdmin": "",
+            "deployer": "",
+            "verifier": ""
+        },
+        "tx": {
+            "gas": "",
+            "gasPrice": ""
+        },
+        "strategies": {
+            "max": 5,
+            "aave": {
+                "wethGateway": "",
+                "protocolDataProvider": "",
+                "lendingPoolAddressesProvider": ""
+            }
+        },
+        "repayments": {
+            "votingExtensionlength": "",
+            "votingPassRatio": ""
+        },
+        "pool": {
+            "collectionPeriod": "",
+            "matchCollateralRatioInterval": "",
+            "marginCallDuration": "",
+            "collateralVolatilityThreshold": "",
+            "gracePeriodPenaltyFraction": "",
+            "liquidatorRewardFraction": ""
+        }
+    },
+    "kovan": {
+
+    },
+    "ganache": {
+
+    },
+    "network": "kovan"
+}
