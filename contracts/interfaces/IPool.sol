@@ -3,6 +3,8 @@ pragma solidity 0.7.0;
 
 interface IPool {
 
+    
+    function getLoanStatus() external view returns (uint256);
 
     function depositCollateral(uint256 _amount, bool _transferFromSavingsAccount) external payable;
 

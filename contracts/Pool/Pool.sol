@@ -248,18 +248,15 @@ contract Pool is Initializable, IPool {
         uint256 _amount,
         bool _transferFromSavingsAccount
     ) external payable override {
-        require(
-            poolVars.loanStatus == LoanStatus.ACTIVE,
-            "Pool::addCollateralMarginCall - Loan needs to be in Active stage to deposit"
-        );
-        require(
-            lenders[_lender].marginCallEndTime >= block.timestamp,
-            "Pool::addCollateralMarginCall - Can't Add after time is completed"
-        );
-        require(
-            _amount != 0,
-            "Pool::addCollateralMarginCall - collateral amount"
-        );
+
+        require(poolVars.loanStatus == LoanStatus.ACTIVE,
+                "Pool::addCollateralMarginCall - Loan needs to be in Active stage to deposit");
+
+        require(lenders[_lender].marginCallEndTime >= block.timestamp,
+                "Pool::addCollateralMarginCall - Can't Add after time is completed");
+
+        require(_amount != 0,
+                "Pool::addCollateralMarginCall - collateral amount");
 
         uint256 _sharesReceived = _depositToSavingsAccount(_transferFromSavingsAccount, poolConstants.collateralAsset, _amount, poolConstants.investedTo, address(this), msg.sender);
 
@@ -284,18 +281,16 @@ contract Pool is Initializable, IPool {
 
     function withdrawBorrowedAmount() external override OnlyBorrower(msg.sender) {
         LoanStatus _poolStatus = poolVars.loanStatus;
-        if (
-            _poolStatus == LoanStatus.COLLECTION &&
-            poolConstants.loanStartTime < block.timestamp
-        ) {
-            if (
-                poolToken.totalSupply() <
-                poolConstants.borrowAmountRequested.mul(poolConstants.minborrowAmountFraction).div(100)
-            ) {
+        if (_poolStatus == LoanStatus.COLLECTION && poolConstants.loanStartTime < block.timestamp) {
+            
+            if (poolToken.totalSupply() <
+                poolConstants.borrowAmountRequested.mul(poolConstants.minborrowAmountFraction).div(100)) {
+
                 poolVars.loanStatus = LoanStatus.CANCELLED;
                 withdrawAllCollateral();
                 return;
             }
+
             poolVars.loanStatus = LoanStatus.ACTIVE;
         }
         require(
@@ -321,7 +316,6 @@ contract Pool is Initializable, IPool {
         emit AmountBorrowed(msg.sender, _tokensLent);
     }
 
-    function repayAmount(uint256 amount) external OnlyBorrower(msg.sender) isPoolActive {}
 
     function withdrawAllCollateral() internal OnlyBorrower(msg.sender) {
         LoanStatus _status = poolVars.loanStatus;
@@ -330,8 +324,8 @@ contract Pool is Initializable, IPool {
             "Pool::withdrawAllCollateral: Loan is not CLOSED or CANCELLED"
         );
 
-        uint256 _collateralShares =
-            poolVars.baseLiquidityShares.add(poolVars.extraLiquidityShares);
+        uint256 _collateralShares = poolVars.baseLiquidityShares.add(poolVars.extraLiquidityShares);
+
         uint256 _sharesReceived =
             ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount())
                 .transfer(
@@ -388,11 +382,11 @@ contract Pool is Initializable, IPool {
         require(msg.sender == address(poolToken));
         require(
             lenders[_from].marginCallEndTime != 0,
-            "Pool::_beforeTransfer - Cannot transfer as Margin call is made by the sender"
+            "Pool::beforeTransfer - Cannot transfer as Margin call is made by the sender"
         );
         require(
             lenders[_to].marginCallEndTime != 0,
-            "Pool::_beforeTransfer - Cannot transfer as Margin call is made by the receiver"
+            "Pool::beforeTransfer - Cannot transfer as Margin call is made by the receiver"
         );
 
         //Withdraw repayments for user
@@ -564,6 +558,7 @@ contract Pool is Initializable, IPool {
         uint256 _loanStartedAt = poolConstants.loanStartTime;
         uint256 _totalSupply = poolToken.totalSupply();
         IPoolFactory _poolFactory = IPoolFactory(PoolFactory);
+
         (uint256 _interest, uint256 _gracePeriodsTaken) =
             (
                 IRepayment(_poolFactory.repaymentImpl()).calculateRepayAmount(
@@ -593,6 +588,7 @@ contract Pool is Initializable, IPool {
         } else {
             _interest = _interest.sub(_extraInterest);
         }
+
     }
 
     function calculateCollateralRatio(
@@ -1003,6 +999,10 @@ contract Pool is Initializable, IPool {
         return _nextDuePeriod;
     }
 
+
+    function getLoanStatus() public view override returns (uint256) {
+        return uint256(poolVars.loanStatus);
+    }
 
     receive() external payable {
         require(
