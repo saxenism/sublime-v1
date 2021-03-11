@@ -138,9 +138,10 @@ contract Repayments is RepaymentStorage {
                     //add check to see if user has sufficient asset balance?
                     IERC20(asset).transferFrom(msg.sender, address(this), amount);
                 }
+                
+                amount = amount.sub(repaymentDetails[poolID].repaymentOverdue);
                 repaymentDetails[poolID].repaymentOverdue = 0;
                 isLoanExtensionActive = false;
-                amount = amount.sub(repaymentDetails[poolID].repaymentOverdue);
                 emit MissedRepaymentRepaid(poolID);
 
                 // might consider transferring interestDueTillPeriodEnd and refunding the rest
