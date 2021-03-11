@@ -562,9 +562,9 @@ contract Pool is Initializable, IPool {
 
         IPoolFactory _poolFactory = IPoolFactory(PoolFactory);
 
-        uint256 _repaymentPeriodCovered = IRepayment(_poolFactory.repaymentImpl()).getRepaymentPeriodCovered(address(this));
+        (uint256 _repaymentPeriodCovered, uint256 _repaymentOverdue) = IRepayment(_poolFactory.repaymentImpl()).getInterestCalculationVars(address(this));
+
         uint256 _interestAccruedThisPeriod = ((block.timestamp).sub(_repaymentPeriodCovered)).mul(_interestPerPeriod);
-        uint256 _repaymentOverdue = IRepayment(_poolFactory.repaymentImpl()).getRepaymentOverdue(address(this));
 
         uint256 _totalInterest = (_interestAccruedThisPeriod.add(_repaymentOverdue)).mul(_balance).div(_totalSupply);
         return _totalInterest;

@@ -182,18 +182,20 @@ contract Repayments is RepaymentStorage, IRepayment {
 
     }
 
+    /*
     function getRepaymentPeriodCovered(address poolID) external view override returns(uint256) {
         return repaymentDetails[poolID].repaymentPeriodCovered;
     }
-
+    */
     function getTotalRepaidAmount(address poolID) external view override returns(uint256) {
         return repaymentDetails[poolID].totalRepaidAmount;
     }
 
+    /*
     function getRepaymentOverdue(address poolID) external view override returns(uint256) {
         return repaymentDetails[poolID].repaymentOverdue;
     }
-
+    */
     function repaymentExtended(address poolID) external override {
 
         require(msg.sender == IPoolFactory(PoolFactory).owner(),
@@ -208,6 +210,10 @@ contract Repayments is RepaymentStorage, IRepayment {
         uint256 _repaymentOverdue = ((repaymentDetails[poolID].repaymentInterval)
                                       .sub(repaymentDetails[poolID].repaymentPeriodCovered)).mul(interestPerSecond);
         repaymentDetails[poolID].repaymentOverdue = _repaymentOverdue;
+    }
+
+    function getInterestCalculationVars(address poolID) external view override returns(uint256, uint256) {
+        return (repaymentDetails[poolID].repaymentPeriodCovered, repaymentDetails[poolID].repaymentOverdue);
     }
 
     // function TotalDueamountLeft() public view{
