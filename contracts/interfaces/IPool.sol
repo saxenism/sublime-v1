@@ -23,4 +23,13 @@ interface IPool {
     ) external ;
 
     function setPoolToken(address _poolToken) external;
+    //function borrower() external returns(address);
+
+    function getNextDuePeriod() external returns(uint256);
+    
+    function getMarginCallEndTime(address _lender) external returns(uint256);
+    function getNextDueTimeIfBorrower(address _borrower) view external returns(uint256);
+    function grantExtension() external returns(uint256);
+    function getBalanceDetails(address _lender) external view returns(uint256, uint256);
+    function getTotalSupply() external view returns (uint256);
 }
