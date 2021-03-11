@@ -240,7 +240,6 @@ contract Pool is Initializable, IPool {
         return _sharesReceived;
     }
 
-
     function addCollateralInMarginCall (
         address _lender,
         uint256 _amount,
