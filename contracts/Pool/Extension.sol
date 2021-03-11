@@ -6,11 +6,15 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "../interfaces/IPool.sol";
 import "../interfaces/IPoolFactory.sol";
 import "../interfaces/IExtension.sol";
+import "../interfaces/IRepayment.sol";
+
 
 contract Extension is Initializable, IExtension {
     using SafeMath for uint256;
 
     uint256 constant MAX_INT = uint256(-1);
+
+    event VotingPassed(uint256 nextDuePeriod);//, uint256 periodWhenExtensionIsPassed); Confirm: do we need to pass the second var?
 
     struct PoolInfo {
         uint256 periodWhenExtensionIsPassed;
@@ -22,6 +26,7 @@ contract Extension is Initializable, IExtension {
 
     mapping(address => PoolInfo) poolInfo;
     IPoolFactory poolFactory;
+
 
     event ExtensionRequested(uint256 extensionVoteEndTime);
     event ExtensionPassed(
@@ -81,8 +86,10 @@ contract Extension is Initializable, IExtension {
             _balance != 0,
             "Pool::voteOnExtension - Not a valid lender for pool"
         );
+
         (uint256 _votingExtensionlength, uint256 _votingPassRatio) =
             IPoolFactory(poolFactory).extensionData();
+
         uint256 _lastVoteTime = poolInfo[_pool].lastVoteTime[msg.sender]; //Lender last vote time need to store it as it checks that a lender only votes once
 
         require(
@@ -95,6 +102,7 @@ contract Extension is Initializable, IExtension {
         _extensionSupport = _extensionSupport.add(
             _balance
         );
+
         poolInfo[_pool].lastVoteTime[msg.sender] = _lastVoteTime;
         emit LenderVoted(msg.sender, _extensionSupport, _lastVoteTime);
         poolInfo[_pool].totalExtensionSupport = _extensionSupport;
@@ -109,10 +117,15 @@ contract Extension is Initializable, IExtension {
     }
 
     function grantExtension(address _pool) internal {
+        IPoolFactory _poolFactory = poolFactory;
+
         uint256 _nextDuePeriod = IPool(_pool).grantExtension();
 
         poolInfo[_pool].periodWhenExtensionIsPassed = MAX_INT;
         poolInfo[_pool].extensionVoteEndTime = block.timestamp; // voting is over
+
+        IRepayment(_poolFactory.repaymentImpl()).repaymentExtended(_pool);
+        
         emit ExtensionPassed(_nextDuePeriod);
     }
 
