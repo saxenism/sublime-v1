@@ -79,7 +79,7 @@ contract CreditLine is CreditLineStorage {
     */
     function calculateInterestPerSecond(uint256 principal, uint256 borrowRate)
         public
-        view
+        pure
         returns (uint256)
     {
         uint256 _interest = (principal.mul(borrowRate)).div(yearSeconds);
