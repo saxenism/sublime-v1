@@ -35,10 +35,73 @@
         }
     },
     "kovan": {
-
+        "blockchain": {
+            "url": "https://kovan.infura.io/v3/9dc997986f8840daa0e6ccb1d8d0d757"
+        },
+        "actors": {
+            "admin": "0xa9c24587019c197ccbc5c8998aae197fc1c5ab45",
+            "proxyAdmin": "0x5649e99ff6358dd3e290b439e1f4b5513bb41bd4",
+            "deployer": "0x5a9bac41426ad1637e9b4fa7d4aa9c69a0315802",
+            "verifier": "0x85aa82e9c7dd8c5c4878e1fdb80d72689ab61922"
+        },
+        "tx": {
+            "gas": "8000000",
+            "gasPrice": "1000000000"
+        },
+        "strategies": {
+            "max": 5,
+            "aave": {
+                "wethGateway": "0xf8aC10E65F2073460aAD5f28E1EABE807DC287CF",
+                "protocolDataProvider": "0x3c73A5E5785cAC854D468F727c606C07488a29D6",
+                "lendingPoolAddressesProvider": "0x88757f2f99175387aB4C6a4b3067c77A695b0349"
+            }
+        },
+        "repayments": {
+            "votingPassRatio": 50000000
+        },
+        "pool": {
+            "collectionPeriod": 900,
+            "matchCollateralRatioInterval": 120,
+            "marginCallDuration": 120,
+            "collateralVolatilityThreshold": 10000000,
+            "gracePeriodPenaltyFraction": 5000000,
+            "liquidatorRewardFraction": 5000000
+        }
     },
     "ganache": {
-
+        "blockchain": {
+            "url": ""
+        },
+        "actors": {
+            "admin": "",
+            "proxyAdmin": "",
+            "deployer": "",
+            "verifier": ""
+        },
+        "tx": {
+            "gas": "",
+            "gasPrice": ""
+        },
+        "strategies": {
+            "max": 5,
+            "aave": {
+                "wethGateway": "",
+                "protocolDataProvider": "",
+                "lendingPoolAddressesProvider": ""
+            }
+        },
+        "repayments": {
+            "votingExtensionlength": "",
+            "votingPassRatio": ""
+        },
+        "pool": {
+            "collectionPeriod": "",
+            "matchCollateralRatioInterval": "",
+            "marginCallDuration": "",
+            "collateralVolatilityThreshold": "",
+            "gracePeriodPenaltyFraction": "",
+            "liquidatorRewardFraction": ""
+        }
     },
     "network": "kovan"
 }

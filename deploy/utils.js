@@ -1,9 +1,10 @@
 async function deployWithProxy(web3, contractABI, contractBytecode, proxyABI, proxyBytecode, initParams, proxyAdmin, deploymentConfig) {
     let data;
     if(initParams) {
-        data = web3.eth.abi.encodeFunctionCall(contractABI.initialize, initParams);
+        const initializeABI = getInitializeABI(contractABI);
+        data = web3.eth.abi.encodeFunctionCall(initializeABI, initParams);
     } else {
-        data = ""
+        data = Buffer.from("");
     }
     const contractAddress = await deployContract(
         web3,
@@ -22,6 +23,17 @@ async function deployWithProxy(web3, contractABI, contractBytecode, proxyABI, pr
     console.log(`Contract: ${contractAddress} , Proxy: ${proxyAddress}`);
     
     return (await new web3.eth.Contract(contractABI, proxyAddress));
+}
+
+function getInitializeABI(abi) {
+    let initializeABI;
+    for(let i=0; i < abi.length; i++) {
+        if(abi[i].name == "initialize") {
+            initializeABI = abi[i];
+            break;
+        }
+    }
+    return initializeABI;
 }
 
 async function deployContract(web3, abi, bytecode, arguments, config) {
@@ -45,5 +57,6 @@ async function deployContract(web3, abi, bytecode, arguments, config) {
 
 module.exports = {
     deployWithProxy,
-    deployContract
+    deployContract,
+    getInitializeABI
 }

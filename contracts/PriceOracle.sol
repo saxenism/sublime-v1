@@ -6,11 +6,11 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "./interfaces/IPriceOracle.sol";
 
-contract PriceOracle is OwnableUpgradeable, IPriceOracle {
+contract PriceOracle is Initializable, OwnableUpgradeable, IPriceOracle {
     AggregatorV3Interface internal priceFeed;
     mapping(bytes32 => address) feedAddresses;
 
-    constructor(address _admin) {
+    function initialize(address _admin) public initializer {
         OwnableUpgradeable.__Ownable_init();
         OwnableUpgradeable.transferOwnership(_admin);
     }

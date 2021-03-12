@@ -16,7 +16,6 @@ contract RepaymentStorage is OwnableUpgradeable {
         TERMINATED // Pool terminated by admin
     }
 
-    uint256 votingExtensionlength;
     uint256 votingPassRatio;
     uint256 gracePenaltyRate;
     uint256 gracePeriodFraction; // fraction of the repayment interval

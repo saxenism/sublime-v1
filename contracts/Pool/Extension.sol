@@ -87,13 +87,15 @@ contract Extension is Initializable, IExtension {
             "Pool::voteOnExtension - Not a valid lender for pool"
         );
 
-        (uint256 _votingExtensionlength, uint256 _votingPassRatio) =
-            IPoolFactory(poolFactory).extensionData();
+        uint256 _votingPassRatio = IPoolFactory(poolFactory).votingPassRatio();
 
         uint256 _lastVoteTime = poolInfo[_pool].lastVoteTime[msg.sender]; //Lender last vote time need to store it as it checks that a lender only votes once
-
+        uint256 _gracePeriodFraction = poolFactory.gracePeriodFraction();
+        uint256 _repaymentInterval = poolInfo[_pool].repaymentInterval;
+        uint256 _gracePeriod =
+            (_repaymentInterval * _gracePeriodFraction).div(100000000);
         require(
-            _lastVoteTime < _extensionVoteEndTime.sub(_votingExtensionlength),
+            _lastVoteTime < _extensionVoteEndTime.sub(_gracePeriod).sub(_repaymentInterval),
             "Pool::voteOnExtension - you have already voted"
         );
         
