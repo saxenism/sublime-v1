@@ -463,6 +463,7 @@ contract Pool is Initializable, IPool {
                 _poolStatus == LoanStatus.COLLECTION,
             "21"
         );
+
         uint256 _collateralShares =
             poolVars.baseLiquidityShares.add(poolVars.extraLiquidityShares);
         ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()).transfer(
@@ -546,7 +547,6 @@ contract Pool is Initializable, IPool {
         emit LiquidityWithdrawn(_due, msg.sender);
     }
 
-    // function requestExtension() external OnlyBorrower isPoolActive {}
 
     /**
      * @dev This function is executed by lender to exercise margin call
