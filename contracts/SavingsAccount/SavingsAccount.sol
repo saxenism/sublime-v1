@@ -23,15 +23,15 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
 
     //user -> strategy -> token (underlying address) -> amount (shares)
     mapping(address => mapping(address => mapping(address => uint256)))
-        public override userLockedBalance;
+        public
+        override userLockedBalance;
 
     //user => asset => to => amount
     mapping(address => mapping(address => mapping(address => uint256)))
         public allowance;
 
     modifier onlyCreditLine(address _caller) {
-        require(_caller == CreditLine,
-                "Invalid caller");
+        require(_caller == CreditLine, "Invalid caller");
         _;
     }
 
@@ -42,10 +42,11 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
      * @param _owner address of the owner of the savings account contract
      * @param _strategyRegistry address of the strategy registry
      **/
-    function initialize(address _owner, address _strategyRegistry, address _creditLine)
-        public
-        initializer
-    {
+    function initialize(
+        address _owner,
+        address _strategyRegistry,
+        address _creditLine
+    ) public initializer {
         require(
             _strategyRegistry != address(0),
             "SavingsAccount::initialize zero address"
@@ -237,33 +238,28 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         address asset,
         address strategy,
         bool withdrawShares
-    ) external override returns (uint256) {
+    ) external override returns (uint256 amountReceived) {
         require(
             amount != 0,
             "SavingsAccount::withdraw Amount must be greater than zero"
         );
 
+        // TODO not considering yield generated, needs to be updated later
         userLockedBalance[msg.sender][asset][strategy] = userLockedBalance[
             msg.sender
         ][asset][strategy]
-            .sub(amount, "SavingsAccount::withdraw Insufficient amount"); // TODO not considering yield generated, needs to be updated later
+            .sub(amount, "SavingsAccount::withdraw Insufficient amount");
 
-        uint256 amountReceived = amount;
+        address token;
+        (token, amountReceived) = _withdraw(
+            withdrawTo,
+            amount,
+            asset,
+            strategy,
+            withdrawShares
+        );
 
-        if (!withdrawShares || strategy != address(0)) {
-            amountReceived = IYield(strategy).unlockTokens(asset, amount);
-        }
-
-        address token = asset;
-        if (withdrawShares) token = IYield(strategy).liquidityToken(asset);
-
-        if (token == address(0)) {
-            withdrawTo.transfer(amountReceived);
-        } else {
-            IERC20(token).safeTransfer(withdrawTo, amountReceived);
-        }
-
-        emit Withdrawn(msg.sender, amountReceived, token, strategy);
+        emit Withdrawn(msg.sender, withdrawTo, amountReceived, token, strategy);
     }
 
     function withdrawFrom(
@@ -299,7 +295,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
             withdrawShares
         );
 
-        emit WithdrawnFrom(from, msg.sender, amountReceived, token, strategy);
+        emit Withdrawn(from, msg.sender, amountReceived, token, strategy);
     }
 
     function _withdraw(
@@ -323,7 +319,6 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
             IERC20(token).safeTransfer(withdrawTo, amountReceived);
         }
     }
-
 
     function withdrawAll(address _asset)
         external
@@ -375,13 +370,17 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         emit Approved(token, msg.sender, to, amount);
     }
 
-    function approveFromToCreditLine(address token, address from, uint256 amount) 
-        external override onlyCreditLine(msg.sender) {
-            require(amount != 0, "SavingsAccount::approveFromTo Invalid amount");
+    function approveFromToCreditLine(
+        address token,
+        address from,
+        uint256 amount
+    ) external override onlyCreditLine(msg.sender) {
+        require(amount != 0, "SavingsAccount::approveFromTo Invalid amount");
 
-            allowance[from][token][msg.sender] = allowance[from][token][msg.sender].add(amount);
+        allowance[from][token][msg.sender] = allowance[from][token][msg.sender]
+            .add(amount);
 
-            emit CreditLineAllowanceRefreshed(token, from, amount);
+        emit CreditLineAllowanceRefreshed(token, from, amount);
     }
 
     function transfer(
