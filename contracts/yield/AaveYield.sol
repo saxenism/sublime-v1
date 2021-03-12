@@ -205,7 +205,6 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
      **/
     function getTokensForShares(uint256 shares, address asset)
         external
-
         override
         returns (uint256 amount)
     {
@@ -304,4 +303,7 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
             tokensBefore
         );
     }
+
+    //to apply check
+    receive() external payable {}
 }

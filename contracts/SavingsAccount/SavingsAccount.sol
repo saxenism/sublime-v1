@@ -8,7 +8,6 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../interfaces/ISavingsAccount.sol";
 import "../interfaces/IStrategyRegistry.sol";
 import "../interfaces/IYield.sol";
-import "../interfaces/IPool.sol";
 
 /**
  * @title Savings account contract with Methods related to savings account
@@ -20,6 +19,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
     using SafeMath for uint256;
 
     address public strategyRegistry;
+    address public CreditLine;
 
     //user -> strategy -> token (underlying address) -> amount (shares)
     mapping(address => mapping(address => mapping(address => uint256)))
@@ -29,6 +29,12 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
     mapping(address => mapping(address => mapping(address => uint256)))
         public allowance;
 
+    modifier onlyCreditLine(address _caller) {
+        require(_caller == CreditLine,
+                "Invalid caller");
+        _;
+    }
+
     // TODO : Track strategies per user and limit no of strategies to 5
 
     /**
@@ -36,7 +42,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
      * @param _owner address of the owner of the savings account contract
      * @param _strategyRegistry address of the strategy registry
      **/
-    function initialize(address _owner, address _strategyRegistry)
+    function initialize(address _owner, address _strategyRegistry, address _creditLine)
         public
         initializer
     {
@@ -48,6 +54,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         super.transferOwnership(_owner);
 
         strategyRegistry = _strategyRegistry;
+        CreditLine = _creditLine;
     }
 
     // TODO - Number of strategies user can invest in is limited. Make this set specific to user rather than global.
@@ -64,6 +71,27 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         strategyRegistry = _strategyRegistry;
     }
 
+    function depositTo(
+        uint256 amount,
+        address asset,
+        address strategy,
+        address to
+    ) external payable override returns (uint256 sharesReceived) {
+        require(
+            to != address(0),
+            "SavingsAccount::depositTo receiver address should not be zero address"
+        );
+
+        sharesReceived = _deposit(amount, asset, strategy);
+
+        userLockedBalance[to][asset][strategy] = userLockedBalance[to][asset][
+            strategy
+        ]
+            .add(sharesReceived);
+
+        emit Deposited(to, amount, asset, strategy);
+    }
+
     /**
      * @dev This function is used to deposit asset into savings account.
      * @dev It also helps in investing the asset.
@@ -71,25 +99,38 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
      * @param amount amount of asset deposited
      * @param asset address of asset deposited
      * @param strategy address of strategy to invest in
-     * @param user address of user depositing into savings account
      */
     function deposit(
         uint256 amount,
         address asset,
-        address strategy,
-        address user
+        address strategy
     ) external payable override returns (uint256 sharesReceived) {
+        sharesReceived = _deposit(amount, asset, strategy);
+
+        userLockedBalance[msg.sender][asset][strategy] = userLockedBalance[
+            msg.sender
+        ][asset][strategy]
+            .add(sharesReceived);
+
+        emit Deposited(msg.sender, amount, asset, strategy);
+    }
+
+    function _deposit(
+        uint256 amount,
+        address asset,
+        address strategy
+    ) internal returns (uint256 sharesReceived) {
         require(
             amount != 0,
-            "SavingsAccount::deposit Amount must be greater than zero"
+            "SavingsAccount::_deposit Amount must be greater than zero"
         );
 
         if (strategy != address(0)) {
-            sharesReceived = _depositToYield(amount, asset, strategy, user);
+            sharesReceived = _depositToYield(amount, asset, strategy);
         } else {
             sharesReceived = amount;
             if (asset != address(0)) {
-                IERC20(asset).transferFrom(user, address(this), amount);
+                IERC20(asset).transferFrom(msg.sender, address(this), amount);
             } else {
                 require(
                     msg.value == amount,
@@ -97,20 +138,12 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
                 );
             }
         }
-
-        userLockedBalance[user][asset][strategy] = userLockedBalance[user][
-            asset
-        ][strategy]
-            .add(sharesReceived);
-
-        emit Deposited(user, amount, asset, strategy);
     }
 
     function _depositToYield(
         uint256 amount,
         address asset,
-        address strategy,
-        address user
+        address strategy
     ) internal returns (uint256 sharesReceived) {
         require(
             IStrategyRegistry(strategyRegistry).registry(strategy),
@@ -119,12 +152,16 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
 
         if (asset == address(0)) {
             sharesReceived = IYield(strategy).lockTokens{value: amount}(
-                user,
+                msg.sender,
                 asset,
                 amount
             );
         } else {
-            sharesReceived = IYield(strategy).lockTokens(user, asset, amount);
+            sharesReceived = IYield(strategy).lockTokens(
+                msg.sender,
+                asset,
+                amount
+            );
         }
     }
 
@@ -174,8 +211,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
             sharesReceived = _depositToYield(
                 tokensReceived,
                 asset,
-                newStrategy,
-                address(this)
+                newStrategy
             );
         }
 
@@ -184,7 +220,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         ][asset][newStrategy]
             .add(sharesReceived);
 
-        emit StrategySwitched(msg.sender, currentStrategy, newStrategy);
+        emit StrategySwitched(msg.sender, asset, currentStrategy, newStrategy);
     }
 
     /**
@@ -207,15 +243,10 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
             "SavingsAccount::withdraw Amount must be greater than zero"
         );
 
-        require(
-            amount != 0,
-            "SavingsAccount::withdraw Amount must be greater than zero"
-        );
-
         userLockedBalance[msg.sender][asset][strategy] = userLockedBalance[
             msg.sender
         ][asset][strategy]
-            .sub(amount, "SavingsAccount::withdraw Insufficient amount");
+            .sub(amount, "SavingsAccount::withdraw Insufficient amount"); // TODO not considering yield generated, needs to be updated later
 
         uint256 amountReceived = amount;
 
@@ -234,6 +265,65 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
 
         emit Withdrawn(msg.sender, amountReceived, token, strategy);
     }
+
+    function withdrawFrom(
+        address from,
+        uint256 amount,
+        address asset,
+        address strategy,
+        bool withdrawShares
+    ) external override returns (uint256 amountReceived) {
+        require(
+            amount != 0,
+            "SavingsAccount::withdrawFrom Amount must be greater than zero"
+        );
+
+        allowance[from][asset][msg.sender] = allowance[from][asset][msg.sender]
+            .sub(
+            amount,
+            "SavingsAccount::withdrawFrom allowance limit exceeding"
+        );
+
+        //reduce sender's balance
+        userLockedBalance[from][asset][strategy] = userLockedBalance[from][
+            asset
+        ][strategy]
+            .sub(amount, "SavingsAccount::withdrawFrom insufficient balance");
+
+        address token;
+        (token, amountReceived) = _withdraw(
+            msg.sender,
+            amount,
+            asset,
+            strategy,
+            withdrawShares
+        );
+
+        emit WithdrawnFrom(from, msg.sender, amountReceived, token, strategy);
+    }
+
+    function _withdraw(
+        address payable withdrawTo,
+        uint256 amount,
+        address asset,
+        address strategy,
+        bool withdrawShares
+    ) internal returns (address token, uint256 amountReceived) {
+        amountReceived = amount;
+        if (!withdrawShares || strategy != address(0)) {
+            amountReceived = IYield(strategy).unlockTokens(asset, amount);
+        }
+
+        token = asset;
+        if (withdrawShares) token = IYield(strategy).liquidityToken(asset);
+
+        if (token == address(0)) {
+            withdrawTo.transfer(amountReceived);
+        } else {
+            IERC20(token).safeTransfer(withdrawTo, amountReceived);
+        }
+    }
+
 
     function withdrawAll(address _asset)
         external
@@ -283,6 +373,15 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         );
 
         emit Approved(token, msg.sender, to, amount);
+    }
+
+    function approveFromToCreditLine(address token, address from, uint256 amount) 
+        external override onlyCreditLine(msg.sender) {
+            require(amount != 0, "SavingsAccount::approveFromTo Invalid amount");
+
+            allowance[from][token][msg.sender] = allowance[from][token][msg.sender].add(amount);
+
+            emit CreditLineAllowanceRefreshed(token, from, amount);
     }
 
     function transfer(
@@ -342,5 +441,12 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
 
         //not sure
         return amount;
+    }
+
+    receive() external payable {
+        require(
+            IStrategyRegistry(strategyRegistry).registry(msg.sender),
+            "SavingsAccount::receive invalid transaction"
+        );
     }
 }

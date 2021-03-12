@@ -22,7 +22,7 @@ contract CreditLineStorage is OwnableUpgradeable {
     uint256 CreditLineCounter;
 
     // assuming number of days in year is 365 more discussion is needed for this
-    uint256 public constant yearSeconds = 365 days;
+    uint256 public constant yearInSeconds = 365 days;
 
     /*struct repayments {
         uint256 lastRepaymentTime;
@@ -53,6 +53,7 @@ contract CreditLineStorage is OwnableUpgradeable {
         address collateralAsset;
         creditLineStatus currentStatus;
         bool autoLiquidation;
+        bool requestByLender;
     }
     mapping(bytes32 => mapping(address => uint256)) collateralShareInStrategy;
     mapping(bytes32 => CreditLineUsageVars) public creditLineUsage;

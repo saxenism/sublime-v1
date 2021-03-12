@@ -7,8 +7,12 @@ import "../interfaces/IVerification.sol";
 import "../interfaces/IStrategyRegistry.sol";
 import "../interfaces/IRepayment.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "./PoolToken.sol";
 
 contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
+
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
     struct Limits {
         // TODO: Optimize to uint128 or even less
@@ -16,10 +20,16 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         uint256 max;
     }
 
+    struct ExtensionData {
+        uint256 votingPassRatio;
+        uint256 votingExtensionlength;
+    }
+
     bytes4 public initializeFunctionId; //  bytes4(keccak256("initialize(uint256,address,address,address,uint256,uint256,uint256,uint256,bool)"))
     address public poolImpl;
     address public userRegistry;
     address public strategyRegistry;
+    address public override extension;
     address public override repaymentImpl;
     address public override priceOracle;
     address public override savingsAccount;
@@ -30,8 +40,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     uint256 public override collateralVolatilityThreshold;
     uint256 public override gracePeriodPenaltyFraction;
     uint256 public override liquidatorRewardFraction;
-    uint256 public override votingPassRatio;
-    uint256 public override votingExtensionlength;
+    ExtensionData public override extensionData;
     uint256 public override gracePeriodFraction;
 
     mapping(address => bool) isBorrowToken;
@@ -89,7 +98,8 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         uint256 _liquidatorRewardFraction,
         address _repaymentImpl,
         address _priceOracle,
-        address _savingsAccount
+        address _savingsAccount,
+        address _extension
     ) external initializer {
         OwnableUpgradeable.__Ownable_init();
         OwnableUpgradeable.transferOwnership(_admin);
@@ -107,6 +117,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         repaymentImpl = _repaymentImpl;
         priceOracle = _priceOracle;
         savingsAccount = _savingsAccount;
+        extension = _extension;
     }
 
     function createPool(
@@ -131,11 +142,12 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         require(isWithinLimits(_borrowRate, borrowRateLimit.min, borrowRateLimit.max), "PoolFactory::createPool - Borrow rate not within limits");
         require(isWithinLimits(_noOfRepaymentIntervals, noOfRepaymentIntervalsLimit.min, noOfRepaymentIntervalsLimit.max), "PoolFactory::createPool - Loan duration not within limits");
         require(isWithinLimits(_repaymentInterval, repaymentIntervalLimit.min, repaymentIntervalLimit.max), "PoolFactory::createPool - Repayment interval not within limits");
-        bytes memory data = abi.encodeWithSelector(initializeFunctionId, _poolSize, _minBorrowAmountFraction, msg.sender, _borrowTokenType, _collateralTokenType, _collateralRatio, _borrowRate, _repaymentInterval, _noOfRepaymentIntervals, _investedTo, _collateralAmount, _transferFromSavingsAccount, gracePeriodPenaltyFraction);
+        bytes memory data = abi.encodeWithSelector(initializeFunctionId, _poolSize, _minBorrowAmountFraction, msg.sender, _borrowTokenType, _collateralTokenType, _collateralRatio, _borrowRate, _repaymentInterval, _noOfRepaymentIntervals, _investedTo, _collateralAmount, _transferFromSavingsAccount);
         // TODO: Setting 0x00 as admin, so that it is not upgradable. Remove the upgradable functionality to optimize
         address pool = address((new SublimeProxy){value: msg.value}(poolImpl, address(0), data));
+        address poolToken = address(new PoolToken("Open Borrow Pool Tokens", "OBPT", pool));
+        IPool(pool).setPoolToken(poolToken);
         openBorrowPoolRegistry[pool] = true;
-        IRepayment(repaymentImpl).initializeRepayment(_noOfRepaymentIntervals, _repaymentInterval);
         emit PoolCreated(pool, msg.sender);
 
     }
