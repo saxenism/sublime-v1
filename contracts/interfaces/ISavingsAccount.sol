@@ -21,6 +21,7 @@ interface ISavingsAccount {
         address token,
         address strategy
     );
+    event WithdrawnFrom(address from, address sender, uint256 amountReceived, address token, address strategy);
     event WithdrawnAll(address user, uint256 tokenReceived, address asset);
     event Approved(address token, address from, address to, uint256 amount);
     event Transfer(
@@ -30,6 +31,8 @@ interface ISavingsAccount {
         address to,
         uint256 amount
     );
+
+    event CreditLineAllowanceRefreshed(address token, address from, uint256 amount);
 
     function deposit(
         uint256 amount,
@@ -99,4 +102,9 @@ interface ISavingsAccount {
         address investedTo,
         uint256 amount
     ) external returns (uint256);
+
+    function userLockedBalance(address user,address asset,address strategy) external view returns (uint256);
+    function approveFromToCreditLine(address token, address from, uint256 amount) external;
+    function withdrawFrom(address from, uint256 amount, address asset, address strategy, bool withdrawShares) external returns (uint256 amountReceived);
+
 }
