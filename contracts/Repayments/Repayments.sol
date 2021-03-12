@@ -28,12 +28,14 @@ contract Repayments is RepaymentStorage, IRepayment {
         _;
     }
 
-    function initialize(uint256 _votingExtensionlength, uint256 _votingPassRatio)
+    function initialize(address _owner, uint256 _votingExtensionlength, uint256 _votingPassRatio)
         public
         initializer
     {
         // _votingExtensionlength - should enforce conditions with repaymentInterval
-        __Ownable_init();
+        OwnableUpgradeable.__Ownable_init();
+        OwnableUpgradeable.transferOwnership(_owner);
+
         //poolFactory = IPoolFactory(_poolFactory);
         votingExtensionlength = _votingExtensionlength;
         votingPassRatio = _votingPassRatio;

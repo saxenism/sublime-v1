@@ -6,6 +6,7 @@ import "../interfaces/IPoolFactory.sol";
 import "../interfaces/IVerification.sol";
 import "../interfaces/IStrategyRegistry.sol";
 import "../interfaces/IRepayment.sol";
+import "../interfaces/IPriceOracle.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./PoolToken.sol";
 
@@ -136,6 +137,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         require(_minBorrowAmountFraction <= 10**8, "PoolFactory::createPool - invalid min borrow fraction");
         require(isBorrowToken[_borrowTokenType], "PoolFactory::createPool - Invalid borrow token type");
         require(isCollateralToken[_collateralTokenType], "PoolFactory::createPool - Invalid collateral token type");
+        require(IPriceOracle(priceOracle).doesFeedExist(_collateralTokenType, _borrowTokenType), "PoolFactory::createPool - Price feed doesn't support token pair");
         require(IStrategyRegistry(strategyRegistry).registry(_investedTo), "PoolFactory::createPool - Invalid strategy");
         require(isWithinLimits(_poolSize, poolSizeLimit.min, poolSizeLimit.max), "PoolFactory::createPool - PoolSize not within limits");
         require(isWithinLimits(_collateralRatio, collateralRatioLimit.min, collateralRatioLimit.max), "PoolFactory::createPool - Collateral Ratio not within limits");

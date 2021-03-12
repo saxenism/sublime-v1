@@ -2,46 +2,45 @@
 pragma solidity ^0.7.0;
 
 import "@chainlink/contracts/src/v0.7/interfaces/AggregatorV3Interface.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-contract PriceOracle {
+import "./interfaces/IPriceOracle.sol";
+
+contract PriceOracle is OwnableUpgradeable, IPriceOracle {
     AggregatorV3Interface internal priceFeed;
     mapping(bytes32 => address) feedAddresses;
-    mapping(address => string) addressToString;
 
-    constructor(address btoken, address ctoken, address priceOracle1, address priceOracle2) {
-        addressToString[btoken] = "BTOKEN";
-        addressToString[ctoken] = "CTOKEN";
-        setfeedAddress(priceOracle1, priceOracle2);
+    constructor(address _admin) {
+        OwnableUpgradeable.__Ownable_init();
+        OwnableUpgradeable.transferOwnership(_admin);
     }
  
     function getLatestPrice(address num, address den)
         public
+        override
         view
-        returns (int256 price)
+        returns (uint256)
     {
-        // 0x9326BFA02ADD2366b30bacB125260Af641031331
-        (, price, , , ) = AggregatorV3Interface(
-            feedAddresses[getHash(num, den)]
-        )
-            .latestRoundData();
+        address _feedAddress = feedAddresses[keccak256(abi.encodePacked(num, den))];
+        require(_feedAddress != address(0), "PriceOracle::getLatestPrice - Price Feed doesn't exist");
+        int256 price;
+        (, price, , , ) = AggregatorV3Interface(_feedAddress).latestRoundData();
+        return uint256(price);
     }
 
-    function getHash(address num, address den) internal view returns (bytes32) {
+    function doesFeedExist(address btoken, address ctoken) external view override returns(bool) {
         return (
-            bytes32(
-                keccak256(
-                    abi.encodePacked(addressToString[num], addressToString[den])
-                )
-            )
+            feedAddresses[keccak256(abi.encodePacked(btoken, ctoken))] != address(0) 
+            && feedAddresses[keccak256(abi.encodePacked(ctoken, btoken))] != address(0)
         );
     }
 
-    function setfeedAddress(address priceOracle1, address priceOracle2) internal {
+    function setfeedAddress(address btoken, address ctoken, address priceOracle1, address priceOracle2) external onlyOwner {
         feedAddresses[
-            keccak256(abi.encodePacked("BTOKEN", "CTOKEN"))
+            keccak256(abi.encodePacked(btoken, ctoken))
         ] =  priceOracle1;
         feedAddresses[
-            keccak256(abi.encodePacked("CTOKEN", "BTOKEN"))
+            keccak256(abi.encodePacked(ctoken, btoken))
         ] = priceOracle2;
     }
 }
