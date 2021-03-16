@@ -865,8 +865,8 @@ contract Pool is Initializable, IPool {
                 _collateralTokens
                     .mul(
                     IPriceOracle(_poolFactory.priceOracle()).getLatestPrice(
-                        poolConstants.borrowAsset,
-                        poolConstants.collateralAsset
+                        poolConstants.collateralAsset,
+                        poolConstants.borrowAsset
                     )
                 )
                     .div(10**8)
