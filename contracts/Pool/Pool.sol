@@ -152,16 +152,18 @@ contract Pool is Initializable, IPool {
         uint256 _noOfRepaymentIntervals,
         address _investedTo,
         uint256 _collateralAmount,
-        bool _transferFromSavingsAccount
+        bool _transferFromSavingsAccount,
+        uint256 _matchCollateralRatioInterval,
+        uint256 _collectionPeriod
     ) external initializer {
-        uint256 _collectionPeriod = IPoolFactory(msg.sender).collectionPeriod();
+        require(_collateralAmount >= _collateralRatio.mul(_borrowAmountRequested), "36");
         poolConstants = PoolConstants(
             _borrower,
             _borrowAmountRequested,
             _minborrowAmount,
             block.timestamp.add(_collectionPeriod),
             block.timestamp.add(_collectionPeriod).add(
-                IPoolFactory(msg.sender).matchCollateralRatioInterval()
+                _matchCollateralRatioInterval
             ),
             _borrowAsset,
             _collateralRatio,
@@ -173,7 +175,6 @@ contract Pool is Initializable, IPool {
         );
 
         PoolFactory = msg.sender;
-
         depositCollateral(_collateralAmount, _transferFromSavingsAccount);
     }
 
