@@ -42,7 +42,8 @@
             "admin": "0xa9c24587019c197ccbc5c8998aae197fc1c5ab45",
             "proxyAdmin": "0x5649e99ff6358dd3e290b439e1f4b5513bb41bd4",
             "deployer": "0x5a9bac41426ad1637e9b4fa7d4aa9c69a0315802",
-            "verifier": "0x85aa82e9c7dd8c5c4878e1fdb80d72689ab61922"
+            "verifier": "0x85aa82e9c7dd8c5c4878e1fdb80d72689ab61922",
+            "borrower": "0x364c1d9dc06d8877e8d2ca2355579d0f887835a3"
         },
         "tx": {
             "gas": "8000000",
@@ -66,6 +67,19 @@
             "collateralVolatilityThreshold": 10000000,
             "gracePeriodPenaltyFraction": 5000000,
             "liquidatorRewardFraction": 5000000
+        },
+        "OpenBorrowPool":{
+            "poolSize": "1000000000000000000",
+            "minBorrowAmountFraction": 50000000,
+            "borrowTokenType": "0x0000000000000000000000000000000000000000",
+            "collateralTokenType": "0x8d40f9B7fd9AF24AAf8F8871af7026AeCCFB2b1e",
+            "collateralRatio": 1,
+            "borrowRate": "6000000",
+            "repaymentInterval": "86400",
+            "noOfRepaymentIntervals": 15,
+            "investedTo": "0x0000000000000000000000000000000000000000",
+            "collateralAmount": "500000000000000000000",
+            "transferFromSavingsAccount": false
         }
     },
     "ganache": {
