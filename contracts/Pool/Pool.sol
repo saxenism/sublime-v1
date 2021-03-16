@@ -344,13 +344,7 @@ contract Pool is Initializable, IPool {
     }
 
 
-    function withdrawAllCollateral() internal OnlyBorrower(msg.sender) {
-        LoanStatus _status = poolVars.loanStatus;
-        require(
-            _status == LoanStatus.CLOSED || _status == LoanStatus.CANCELLED,
-            "14"
-        );
-
+    function withdrawAllCollateral() internal {
         uint256 _collateralShares =
             poolVars.baseLiquidityShares.add(poolVars.extraLiquidityShares);
 
