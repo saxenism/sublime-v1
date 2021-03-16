@@ -65,6 +65,8 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     event GracePeriodPenaltyFractionUpdated(uint256 updatedGracePeriodPenaltyFraction);
     event LiquidatorRewardFractionUpdated(uint256 updatedLiquidatorRewardFraction);
     event LimitsUpdated(string limitType, uint256 max, uint256 min);
+    event BorrowTokenUpdated(address borrowToken, bool isSupported);
+    event CollateralTokenUpdated(address collateralToken, bool isSupported);
 
     modifier onlyPool() {
         require(openBorrowPoolRegistry[msg.sender], "PoolFactory::onlyPool - Only pool can destroy itself");
@@ -163,6 +165,16 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
 
     function destroyPool() public onlyPool {
         delete openBorrowPoolRegistry[msg.sender];
+    }
+
+    function updateSupportedBorrowTokens(address _borrowToken, bool _isSupported) external onlyOwner {
+        isBorrowToken[_borrowToken] = _isSupported;
+        emit BorrowTokenUpdated(_borrowToken, _isSupported);
+    }
+
+    function updateSupportedCollateralTokens(address _collateralToken, bool _isSupported) external onlyOwner {
+        isCollateralToken[_collateralToken] = _isSupported;
+        emit CollateralTokenUpdated(_collateralToken, _isSupported);
     }
 
     function updateInitializeFunctionId(bytes4 _functionId) external onlyOwner {
