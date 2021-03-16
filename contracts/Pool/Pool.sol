@@ -43,7 +43,7 @@ contract Pool is Initializable, IPool {
     struct PoolConstants {
         address borrower;
         uint256 borrowAmountRequested;
-        uint256 minborrowAmountFraction; // min fraction for the loan to continue
+        uint256 minborrowAmount;
         uint256 loanStartTime;
         uint256 matchCollateralRatioEndTime;
         address borrowAsset;
@@ -142,7 +142,7 @@ contract Pool is Initializable, IPool {
 
     function initialize(
         uint256 _borrowAmountRequested,
-        uint256 _minborrowAmountFraction, // denomination is 10^8
+        uint256 _minborrowAmount,
         address _borrower,
         address _borrowAsset,
         address _collateralAsset,
@@ -158,7 +158,7 @@ contract Pool is Initializable, IPool {
         poolConstants = PoolConstants(
             _borrower,
             _borrowAmountRequested,
-            _minborrowAmountFraction,
+            _minborrowAmount,
             block.timestamp.add(_collectionPeriod),
             block.timestamp.add(_collectionPeriod).add(
                 IPoolFactory(msg.sender).matchCollateralRatioInterval()
@@ -305,11 +305,7 @@ contract Pool is Initializable, IPool {
             poolConstants.loanStartTime < block.timestamp
         ) {
             if (
-                poolToken.totalSupply() <
-                poolConstants
-                    .borrowAmountRequested
-                    .mul(poolConstants.minborrowAmountFraction)
-                    .div(100)
+                poolToken.totalSupply() < poolConstants.minborrowAmount
             ) {
                 poolVars.loanStatus = LoanStatus.CANCELLED;
                 withdrawAllCollateral();

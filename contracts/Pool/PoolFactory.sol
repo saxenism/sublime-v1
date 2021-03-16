@@ -118,7 +118,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
 
     function createPool(
         uint256 _poolSize,
-        uint256 _minBorrowAmountFraction,
+        uint256 _minBorrowAmount,
         address _borrowTokenType,
         address _collateralTokenType,
         uint256 _collateralRatio,
@@ -129,7 +129,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         uint256 _collateralAmount,
         bool _transferFromSavingsAccount
     ) payable external onlyBorrower {
-        require(_minBorrowAmountFraction <= 10**8, "PoolFactory::createPool - invalid min borrow fraction");
+        require(_minBorrowAmount <= _poolSize, "PoolFactory::createPool - invalid min borrow fraction");
         require(isBorrowToken[_borrowTokenType], "PoolFactory::createPool - Invalid borrow token type");
         require(isCollateralToken[_collateralTokenType], "PoolFactory::createPool - Invalid collateral token type");
         require(IPriceOracle(priceOracle).doesFeedExist(_collateralTokenType, _borrowTokenType), "PoolFactory::createPool - Price feed doesn't support token pair");
@@ -139,7 +139,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         require(isWithinLimits(_borrowRate, borrowRateLimit.min, borrowRateLimit.max), "PoolFactory::createPool - Borrow rate not within limits");
         require(isWithinLimits(_noOfRepaymentIntervals, noOfRepaymentIntervalsLimit.min, noOfRepaymentIntervalsLimit.max), "PoolFactory::createPool - Loan duration not within limits");
         require(isWithinLimits(_repaymentInterval, repaymentIntervalLimit.min, repaymentIntervalLimit.max), "PoolFactory::createPool - Repayment interval not within limits");
-        bytes memory data = abi.encodeWithSelector(initializeFunctionId, _poolSize, _minBorrowAmountFraction, msg.sender, _borrowTokenType, _collateralTokenType, _collateralRatio, _borrowRate, _repaymentInterval, _noOfRepaymentIntervals, _investedTo, _collateralAmount, _transferFromSavingsAccount);
+        bytes memory data = abi.encodeWithSelector(initializeFunctionId, _poolSize, _minBorrowAmount, msg.sender, _borrowTokenType, _collateralTokenType, _collateralRatio, _borrowRate, _repaymentInterval, _noOfRepaymentIntervals, _investedTo, _collateralAmount, _transferFromSavingsAccount);
         // TODO: Setting 0x00 as admin, so that it is not upgradable. Remove the upgradable functionality to optimize
         address pool = address((new SublimeProxy){value: msg.value}(poolImpl, address(0), data));
         address poolToken = address(new PoolToken("Open Borrow Pool Tokens", "OBPT", pool));
