@@ -197,7 +197,7 @@ contract Pool is Initializable, IPool {
     ) internal {
         //collateral ratio with 8 decimal precision
         uint256 price =IPriceOracle(IPoolFactory(PoolFactory).priceOracle()).getLatestPrice(poolConstants.borrowAsset, poolConstants.collateralAsset);
-        require(_amount >= poolConstants.idealCollateralRatio.mul(poolConstants.borrowAmountRequested.mul(price)).div(1e8), "36"); 
+        require(_amount >= poolConstants.idealCollateralRatio.mul(poolConstants.borrowAmountRequested.mul(price)).div(1e16), "36"); 
 
         _depositCollateral(_borrower, _amount, _transferFromSavingsAccount);
     }
