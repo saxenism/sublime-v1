@@ -1,4 +1,5 @@
 const Web3 = require('web3')
+const fs = require('fs')
 const allConfigs = require('../config/config.json')
 const keystore = require('../keystore/keystore.json')
 
@@ -16,13 +17,6 @@ const deploymentConfig = {
   gasPrice: config.tx.gasPrice,
 }
 
-const addAccounts = async (web3, keystore) => {
-  for (let account in keystore) {
-    await web3.eth.accounts.wallet.add(keystore[account])
-  }
-  return web3
-}
-
 const deploy = async (web3) => {
   const token = await utils.deployContract(
     web3,
@@ -34,12 +28,13 @@ const deploy = async (web3) => {
 
   await mintTokens(
     web3,
-    token.options.address,
+    token,
     config.actors.borrower,
     '1000000000000000000000', //1K USDT
   )
+
   const addresses = {
-    token: token.options.address,
+    token: token,
   }
   console.table(addresses)
 }
@@ -53,4 +48,4 @@ const mintTokens = async (web3, tokenAddress, receiver, amount) => {
     .then(console.log)
 }
 
-addAccounts(web3, keystore).then(deploy)
+utils.addAccounts(web3, keystore).then(deploy)

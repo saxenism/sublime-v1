@@ -13,6 +13,7 @@ const config = allConfigs[allConfigs.network]
 const address = deployedAddresses[deployedAddresses.network]
 
 let web3 = new Web3(config.blockchain.url)
+const utils = require('./utils')
 
 const admin = config.actors.admin
 const verifier = config.actors.verifier
@@ -40,14 +41,8 @@ const borrowerTransactionConfig = {
 const borrowerDetails =
   '0x0100000000000000000000000000000000000000000000000000000000000000'
 
-const addAccounts = async (web3, keystore) => {
-  for (let account in keystore) {
-    await web3.eth.accounts.wallet.add(keystore[account])
-  }
-  return web3
-}
-
 const createPool = async (web3) => {
+  web3 = await utils.addAccounts(web3, keystore)
   //verify borrower
   await verifyBorrower(web3, borrower)
 
@@ -56,17 +51,23 @@ const createPool = async (web3) => {
     web3,
     config.OpenBorrowPool.borrowTokenType,
     config.OpenBorrowPool.collateralTokenType,
-    address.oracle.usd,
-    address.oracle.usd,
+    config.oracle.usd,
+    config.oracle.usd,
   )
 
-  //approve collateral
-  await approveTokens(
-    web3,
-    borrowerTransactionConfig,
-    address.pool,
-    config.OpenBorrowPool.collateralAmount,
-  )
+  const poolContract = await utils.generateAddress(web3, address.poolFactory)
+  // approve collateral
+  if (
+    config.OpenBorrowPool.collateralTokenType !=
+    '0x0000000000000000000000000000000000000000'
+  ) {
+    await approveTokens(
+      web3,
+      borrowerTransactionConfig,
+      poolContract,
+      config.OpenBorrowPool.collateralAmount,
+    )
+  }
 
   //add yield to verified strategy
   await addStrategy(web3, config.OpenBorrowPool.investedTo)
@@ -77,7 +78,7 @@ const createPool = async (web3) => {
     address.poolFactory,
   )
 
-  register borrow and collateral tokens to Sublime
+  // register borrow and collateral tokens to Sublime
   await poolFactory.methods
     .updateSupportedBorrowTokens(config.OpenBorrowPool.borrowTokenType, true)
     .send(adminTransactionConfig)
@@ -160,7 +161,7 @@ const addPriceFeed = async (
 }
 
 const approveTokens = async (web3, transactionConfig, to, amount) => {
-  const token = await new web3.eth.Contract(tokenCompiled.abi, address.USDT)
+  const token = await new web3.eth.Contract(tokenCompiled.abi, config.USDT)
 
   await token.methods
     .approve(to, amount)
@@ -186,5 +187,4 @@ const addStrategy = async (web3, yieldAddress) => {
   await strategyRegistry.methods.registry(yieldAddress).call().then(console.log)
 }
 
-addAccounts(web3, keystore).then(createPool)
-// createPool(web3)
+createPool(web3)
