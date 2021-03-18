@@ -156,23 +156,25 @@ contract Pool is Initializable, IPool {
         uint256 _loanWithdrawalDuration,
         uint256 _collectionPeriod
     ) external payable initializer {
-        poolConstants.borrower = _borrower;
+        PoolFactory = msg.sender;
+        poolConstants.borrowAsset = _borrowAsset;
+        poolConstants.idealCollateralRatio = _idealCollateralRatio;
+        poolConstants.collateralAsset = _collateralAsset;
+        poolConstants.poolSavingsStrategy = _poolSavingsStrategy;
         poolConstants.borrowAmountRequested = _borrowAmountRequested;
+
+        _initialDeposit(_borrower, _collateralAmount, _transferFromSavingsAccount);
+
+        poolConstants.borrower = _borrower;
         poolConstants.minborrowAmount = _minborrowAmount;
         poolConstants.loanStartTime = block.timestamp.add(_collectionPeriod);
         poolConstants.loanWithdrawalDeadline = block.timestamp.add(_collectionPeriod).add(
                 _loanWithdrawalDuration
             );
-        poolConstants.borrowAsset = _borrowAsset;
-        poolConstants.idealCollateralRatio = _idealCollateralRatio;
+        
         poolConstants.borrowRate = _borrowRate;
         poolConstants.noOfRepaymentIntervals = _noOfRepaymentIntervals;
         poolConstants.repaymentInterval = _repaymentInterval;
-        poolConstants.collateralAsset = _collateralAsset;
-        poolConstants.poolSavingsStrategy = _poolSavingsStrategy;
-
-        PoolFactory = msg.sender;
-        depositCollateral(_borrower, _collateralAmount, _transferFromSavingsAccount);
     }
 
     function setPoolToken(address _poolToken) external override {
@@ -181,17 +183,30 @@ contract Pool is Initializable, IPool {
     }
 
     function depositCollateral(
-        address _borrower,
         uint256 _amount,
         bool _transferFromSavingsAccount
     ) public payable override {
         require(_amount != 0, "7");
-    
+        _depositCollateral(msg.sender, _amount, _transferFromSavingsAccount);
+    }
+
+    function _initialDeposit(
+        address _borrower,
+        uint256 _amount,
+        bool _transferFromSavingsAccount
+    ) internal {
         //collateral ratio with 8 decimal precision
         uint256 price =IPriceOracle(IPoolFactory(PoolFactory).priceOracle()).getLatestPrice(poolConstants.borrowAsset, poolConstants.collateralAsset);
         require(_amount >= poolConstants.idealCollateralRatio.mul(poolConstants.borrowAmountRequested.mul(price)).div(1e8), "36"); 
-        
 
+        _depositCollateral(_borrower, _amount, _transferFromSavingsAccount);
+    }
+
+    function _depositCollateral(
+        address _borrower,
+        uint256 _amount,
+        bool _transferFromSavingsAccount
+    ) internal {
         uint256 _sharesReceived =
             _depositToSavingsAccount(
                 _transferFromSavingsAccount,

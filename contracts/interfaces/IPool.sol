@@ -6,7 +6,7 @@ interface IPool {
     
     function getLoanStatus() external view returns (uint256);
 
-    function depositCollateral(address _borrower, uint256 _amount, bool _transferFromSavingsAccount) external payable;
+    function depositCollateral(uint256 _amount, bool _transferFromSavingsAccount) external payable;
 
     function addCollateralInMarginCall(
         address _lender,
