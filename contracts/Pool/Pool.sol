@@ -684,19 +684,21 @@ contract Pool is Initializable, IPool {
                     _collateralLiquidityShare,
                     _collateralAsset
                 );
-        uint256 _poolBorrowTokens =
-            correspondingBorrowTokens(_collateralTokens, _poolFactory);
+        {
+            uint256 _poolBorrowTokens =
+                correspondingBorrowTokens(_collateralTokens, _poolFactory);
 
-        if (_borrowAsset == address(0)) {
-            if (msg.value < _poolBorrowTokens) {
-                revert("Pool::liquidatePool - Not enough tokens");
+            if (_borrowAsset == address(0)) {
+                if (msg.value < _poolBorrowTokens) {
+                    revert("Pool::liquidatePool - Not enough tokens");
+                }
+            } else {
+                IERC20(_borrowAsset).transferFrom(
+                    msg.sender,
+                    address(this),
+                    _poolBorrowTokens
+                );
             }
-        } else {
-            IERC20(_borrowAsset).transferFrom(
-                msg.sender,
-                address(this),
-                _poolBorrowTokens
-            );
         }
 
         if (_transferToSavingsAccount) {
@@ -775,13 +777,16 @@ contract Pool is Initializable, IPool {
         address _collateralAsset = poolConstants.collateralAsset;
         address _investedTo = poolConstants.investedTo;
         uint256 _lenderBalance = poolToken.balanceOf(lender);
-        uint256 _poolBaseLPShares = poolVars.baseLiquidityShares;
-        uint256 _lenderBaseLPShares = (_poolBaseLPShares.mul(_lenderBalance)).div(poolToken.totalSupply());
-        uint256 _lenderExtraLPShares = lenders[lender].extraLiquidityShares;
-        poolVars.baseLiquidityShares = _poolBaseLPShares.sub(_lenderBaseLPShares);
-        poolVars.extraLiquidityShares = poolVars.extraLiquidityShares.sub(_lenderExtraLPShares);
+        uint256 _lenderCollateralLPShare;
+        {
+            uint256 _poolBaseLPShares = poolVars.baseLiquidityShares;
+            uint256 _lenderBaseLPShares = (_poolBaseLPShares.mul(_lenderBalance)).div(poolToken.totalSupply());
+            uint256 _lenderExtraLPShares = lenders[lender].extraLiquidityShares;
+            poolVars.baseLiquidityShares = _poolBaseLPShares.sub(_lenderBaseLPShares);
+            poolVars.extraLiquidityShares = poolVars.extraLiquidityShares.sub(_lenderExtraLPShares);
 
-        uint256 _lenderCollateralLPShare = _lenderBaseLPShares.add(_lenderExtraLPShares);
+            _lenderCollateralLPShare = _lenderBaseLPShares.add(_lenderExtraLPShares);
+        }
         
         uint256 _lenderCollateralShare =
             IYield(_investedTo).getTokensForShares(
