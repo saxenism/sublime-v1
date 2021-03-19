@@ -94,7 +94,7 @@ interface ISavingsAccount {
     function transfer(
         address token,
         address to,
-        address investedTo,
+        address poolSavingsStrategy,
         uint256 amount
     ) external returns (uint256);
 
@@ -102,7 +102,7 @@ interface ISavingsAccount {
         address token,
         address from,
         address to,
-        address investedTo,
+        address poolSavingsStrategy,
         uint256 amount
     ) external returns (uint256);
 
