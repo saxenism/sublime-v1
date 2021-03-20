@@ -7,9 +7,8 @@
     "test": "test"
   },
   "scripts": {
-    "test": "truffle test",
-    "pool-test": "truffle test ./test/pool/*.js",
-    "compile": "truffle compile",
+    "test": "npx hardhat test",
+    "compile": "npx hardhat compile",
     "coverage": "truffle run coverage",
     "sol2uml": "sol2uml ./contracts/ -f png"
   },
@@ -35,10 +34,16 @@
     "npm": ">=6.0.0"
   },
   "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.0.2",
+    "@nomiclabs/hardhat-waffle": "^2.0.1",
     "@openzeppelin/test-helpers": "^0.5.10",
+    "chai": "^4.3.4",
+    "ethereum-waffle": "^3.3.0",
     "ethereumjs-abi": "^0.6.8",
+    "ethers": "^5.0.32",
     "ethlint": "^1.2.5",
     "ganache": "^6.4.4",
+    "hardhat": "^2.1.1",
     "solidity-coverage": "^0.7.14"
   },
   "dependencies": {
