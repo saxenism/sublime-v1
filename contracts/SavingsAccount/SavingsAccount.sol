@@ -386,24 +386,24 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
     function transfer(
         address token,
         address to,
-        address investedTo,
+        address poolSavingsStrategy,
         uint256 amount
     ) external override returns (uint256) {
         require(amount != 0, "SavingsAccount::transfer zero amount");
 
         //reduce msg.sender balance
-        userLockedBalance[msg.sender][token][investedTo] = userLockedBalance[
+        userLockedBalance[msg.sender][token][poolSavingsStrategy] = userLockedBalance[
             msg.sender
-        ][token][investedTo]
+        ][token][poolSavingsStrategy]
             .sub(amount, "SavingsAccount::transfer insufficient funds");
 
         //update receiver's balance
-        userLockedBalance[to][token][investedTo] = userLockedBalance[to][token][
-            investedTo
+        userLockedBalance[to][token][poolSavingsStrategy] = userLockedBalance[to][token][
+            poolSavingsStrategy
         ]
             .add(amount);
 
-        emit Transfer(token, investedTo, msg.sender, to, amount);
+        emit Transfer(token, poolSavingsStrategy, msg.sender, to, amount);
         //not sure
         return amount;
     }
@@ -412,7 +412,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         address token,
         address from,
         address to,
-        address investedTo,
+        address poolSavingsStrategy,
         uint256 amount
     ) external override returns (uint256) {
         require(amount != 0, "SavingsAccount::transferFrom zero amount");
@@ -425,18 +425,18 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         );
 
         //reduce sender's balance
-        userLockedBalance[from][token][investedTo] = userLockedBalance[from][
+        userLockedBalance[from][token][poolSavingsStrategy] = userLockedBalance[from][
             token
-        ][investedTo]
+        ][poolSavingsStrategy]
             .sub(amount, "SavingsAccount::transferFrom insufficient allowance");
 
         //update receiver's balance
-        userLockedBalance[to][token][investedTo] = (
-            userLockedBalance[to][token][investedTo]
+        userLockedBalance[to][token][poolSavingsStrategy] = (
+            userLockedBalance[to][token][poolSavingsStrategy]
         )
             .add(amount);
 
-        emit Transfer(token, investedTo, from, to, amount);
+        emit Transfer(token, poolSavingsStrategy, from, to, amount);
 
         //not sure
         return amount;
