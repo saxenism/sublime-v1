@@ -3,6 +3,7 @@ pragma solidity 0.7.0;
 
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "../interfaces/IPoolFactory.sol";
 import "../interfaces/IPriceOracle.sol";
@@ -14,7 +15,7 @@ import "../interfaces/IExtension.sol";
 import "../interfaces/IPoolToken.sol";
 
 // TODO: set modifiers to disallow any transfers directly
-contract Pool is Initializable, IPool {
+contract Pool is Initializable, IPool, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -328,7 +329,7 @@ contract Pool is Initializable, IPool {
         );
     }
 
-    function withdrawBorrowedAmount() external override OnlyBorrower(msg.sender) {
+    function withdrawBorrowedAmount() external override OnlyBorrower(msg.sender) nonReentrant {
         LoanStatus _poolStatus = poolVars.loanStatus;
         if (
             _poolStatus == LoanStatus.COLLECTION &&
@@ -390,7 +391,7 @@ contract Pool is Initializable, IPool {
         delete poolVars.extraLiquidityShares;
     }
 
-    function lend(address _lender, uint256 _amountLent) external payable {
+    function lend(address _lender, uint256 _amountLent) external payable nonReentrant {
         require(
             poolVars.loanStatus == LoanStatus.COLLECTION,
             "15"
@@ -524,7 +525,7 @@ contract Pool is Initializable, IPool {
 
     // Note - Only when closed, cancelled or terminated, lender can withdraw
     //burns all shares and returns total remaining repayments along with provided liquidity
-    function withdrawLiquidity() external isLender(msg.sender) {
+    function withdrawLiquidity() external isLender(msg.sender) nonReentrant {
         LoanStatus _loanStatus = poolVars.loanStatus;
         require(
             _loanStatus == LoanStatus.CLOSED ||
@@ -687,7 +688,7 @@ contract Pool is Initializable, IPool {
     function liquidatePool(
         bool _transferToSavingsAccount,
         bool _recieveLiquidityShare
-    ) external payable {
+    ) external payable nonReentrant {
         LoanStatus _currentPoolStatus;
         address _poolFactory = PoolFactory;
         if (poolVars.loanStatus != LoanStatus.DEFAULTED) {
@@ -770,7 +771,7 @@ contract Pool is Initializable, IPool {
         address lender,
         bool _transferToSavingsAccount,
         bool _recieveLiquidityShare
-    ) public payable {
+    ) public payable nonReentrant {
         //avoid stack too deep
         address _poolFactory = PoolFactory;
         {
