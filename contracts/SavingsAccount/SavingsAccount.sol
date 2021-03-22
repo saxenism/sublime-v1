@@ -306,7 +306,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         bool withdrawShares
     ) internal returns (address token, uint256 amountReceived) {
         amountReceived = amount;
-        if (!withdrawShares || strategy != address(0)) {
+        if (!withdrawShares && strategy != address(0)) {
             amountReceived = IYield(strategy).unlockTokens(asset, amount);
         }
 
