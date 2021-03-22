@@ -1,5 +1,4 @@
 const Web3 = require('web3');
-const fs = require('fs');
 const allConfigs = require("../config/config.json");
 const keystore = require("../keystore/keystore.json");
 
@@ -130,16 +129,6 @@ const deploy = async (web3) => {
         "creditLines": creditLines.options.address
     }
     console.table(addresses);
-
-    const data = JSON.stringify(addresses);
-
-    // write JSON string to a file
-    fs.writeFile('./config/address.json', data, (err) => {
-        if (err) {
-            throw err;
-        }
-        console.log("JSON data is saved.");
-    });
 }
 
 addAccounts(web3, keystore).then(deploy);

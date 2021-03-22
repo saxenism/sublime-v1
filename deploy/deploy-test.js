@@ -1,7 +1,6 @@
 const Web3 = require('web3')
 const fs = require('fs')
 const allConfigs = require('../config/config.json')
-const keystore = require('../keystore/keystore.json')
 
 const proxyCompiled = require('../build/contracts/SublimeProxy.json')
 
@@ -276,19 +275,5 @@ const deploy = async () => {
     console.log('JSON data is saved.')
   })
 }
-
-const deployToken = async (web3, deploymentConfig) => {
-  const token = await utils.deployContract(
-    web3,
-    tokenCompiled.abi,
-    tokenCompiled.bytecode,
-    ['USDT Token', 'USDT', '10000000000000000000'], //1M USDT
-    deploymentConfig,
-  )
-  console.log(token, '0000000000000000')
-  return token
-}
-
-
 
 deploy()
