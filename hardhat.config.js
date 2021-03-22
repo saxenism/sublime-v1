@@ -1,5 +1,10 @@
+require('@nomiclabs/hardhat-ethers')
 require('@nomiclabs/hardhat-waffle')
-require("@nomiclabs/hardhat-ganache");
+require('@nomiclabs/hardhat-ganache')
+require('@openzeppelin/hardhat-upgrades')
+
+const config = require('./config/config.json')
+const mnemonic = config['ganache']['blockchain']['mnemonic']
 
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more
@@ -8,8 +13,16 @@ require("@nomiclabs/hardhat-ganache");
  * @type import('hardhat/config').HardhatUserConfig
  */
 module.exports = {
-  localhost: {
-    url: 'http://127.0.0.1:8545',
+  defaultNetwork: 'ganache',
+  networks: {
+    ganache: {
+      url: 'http://127.0.0.1:8546',
+      fork: 'http://127.0.0.1:8545',
+      gasLimit: 6000000000,
+      defaultBalanceEther: 10,
+      deterministic: true,
+      mnemonic,
+    },
   },
   solidity: {
     version: '0.7.0',
