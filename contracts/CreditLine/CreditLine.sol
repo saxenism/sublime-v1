@@ -220,7 +220,6 @@ contract CreditLine is CreditLineStorage {
                 _tokenInStrategy = IYield(_strategyList[_index]).getTokensForShares(_liquidityShares, creditLineInfo[_creditLineHash].collateralAsset);
 
                 if (_activeAmount.add(_tokenInStrategy) >= _amount) {
-                    _activeAmount = _amount;
                     _sharesToTransfer = (_amount.sub(_activeAmount)).div(_tokenInStrategy).mul(_liquidityShares);
                     _savingsAccount.transferFrom(creditLineInfo[_creditLineHash].collateralAsset, creditLineInfo[_creditLineHash].borrower, _recipient, _strategyList[_index], _sharesToTransfer);
                     collateralShareInStrategy[_creditLineHash][_strategyList[_index]] = collateralShareInStrategy[_creditLineHash][_strategyList[_index]]
@@ -393,7 +392,6 @@ contract CreditLine is CreditLineStorage {
                 _tokenInStrategy = IYield(_strategyList[_index]).getTokensForShares(_liquidityShares, _asset); //TODO might not pass since yield is included in tokenInStrategy
 
                 if (_activeAmount.add(_tokenInStrategy) >= _amount) {
-                    _activeAmount = _amount;
                     _sharesToTransfer = (_amount.sub(_activeAmount)).div(_tokenInStrategy).mul(_liquidityShares);
                     _savingsAccount.withdrawFrom(_lender, _sharesToTransfer, _asset, _strategyList[_index], false);
                     //_savingsAccount.transferFrom(_asset, _sender, _recipient, _strategyList[_index], _sharesToTransfer);
