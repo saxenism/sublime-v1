@@ -183,7 +183,7 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable {
 
         //mint cToken
         IERC20(asset).approve(cToken, amount);
-        require(ICToken(cToken).mint(amount) == 0, "Error in redeeming tokens");
+        require(ICToken(cToken).mint(amount) == 0, "Error in minting tokens");
 
         sharesReceived = IERC20(cToken).balanceOf(address(this)).sub(
             initialCTokenBalance
