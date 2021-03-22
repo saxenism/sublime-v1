@@ -415,7 +415,7 @@ contract Pool is Initializable, IPool {
                 msg.sender.transfer(_amountLent.sub(_amount));
             }
         } else {
-            IERC20(_borrowToken).transferFrom(
+            IERC20(_borrowToken).safeTransferFrom(
                 msg.sender,
                 address(this),
                 _amount
@@ -512,7 +512,7 @@ contract Pool is Initializable, IPool {
         if(_borrowAsset == address(0)) {
             require(msg.value == _principleToPayback, "37");
         } else {
-            IERC20(_borrowAsset).transferFrom(msg.sender, address(this), _principleToPayback);
+            IERC20(_borrowAsset).safeTransferFrom(msg.sender, address(this), _principleToPayback);
         }
         
         poolVars.loanStatus = LoanStatus.CLOSED;
@@ -719,7 +719,7 @@ contract Pool is Initializable, IPool {
                     revert("Pool::liquidatePool - Not enough tokens");
                 }
             } else {
-                IERC20(_borrowAsset).transferFrom(
+                IERC20(_borrowAsset).safeTransferFrom(
                     msg.sender,
                     address(this),
                     _poolBorrowTokens
@@ -754,7 +754,7 @@ contract Pool is Initializable, IPool {
                 if (_collateralAsset == address(0)) {
                     msg.sender.transfer(_amountReceived);
                 } else {
-                    IERC20(_collateralAsset).transfer(
+                    IERC20(_collateralAsset).safeTransfer(
                         msg.sender,
                         _amountReceived
                     );
@@ -833,7 +833,7 @@ contract Pool is Initializable, IPool {
                     _poolSavingsStrategy
                 );
             } else {
-                IERC20(_borrowAsset).transferFrom(
+                IERC20(_borrowAsset).safeTransferFrom(
                     msg.sender,
                     address(this),
                     _lenderLiquidationTokens
@@ -873,7 +873,7 @@ contract Pool is Initializable, IPool {
             if (_recieveLiquidityShare) {
                 address _liquidityShareAddress =
                     IYield(_poolSavingsStrategy).liquidityToken(_collateralAsset);
-                IERC20(_liquidityShareAddress).transfer(
+                IERC20(_liquidityShareAddress).safeTransfer(
                     msg.sender,
                     _amountReceived
                 );
@@ -881,7 +881,7 @@ contract Pool is Initializable, IPool {
                 if (_collateralAsset == address(0)) {
                     msg.sender.transfer(_amountReceived);
                 } else {
-                    IERC20(_collateralAsset).transfer(
+                    IERC20(_collateralAsset).safeTransfer(
                         msg.sender,
                         _amountReceived
                     );
