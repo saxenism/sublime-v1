@@ -362,10 +362,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         address to,
         uint256 amount
     ) external override {
-        require(amount != 0, "SavingsAccount::approve zero amount");
-        allowance[msg.sender][token][to] = allowance[msg.sender][token][to].add(
-            amount
-        );
+        allowance[msg.sender][token][to] = allowance[msg.sender][token][to];
 
         emit Approved(token, msg.sender, to, amount);
     }
@@ -375,10 +372,8 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         address from,
         uint256 amount
     ) external override onlyCreditLine(msg.sender) {
-        require(amount != 0, "SavingsAccount::approveFromTo Invalid amount");
 
-        allowance[from][token][msg.sender] = allowance[from][token][msg.sender]
-            .add(amount);
+        allowance[from][token][msg.sender] = allowance[from][token][msg.sender];
 
         emit CreditLineAllowanceRefreshed(token, from, amount);
     }
