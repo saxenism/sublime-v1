@@ -3,6 +3,7 @@ pragma solidity 0.7.0;
 
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./CreditLineStorage.sol";
 import "../interfaces/IPoolFactory.sol";
 import "../interfaces/IPriceOracle.sol";
@@ -16,7 +17,7 @@ import "../interfaces/IStrategyRegistry.sol";
  * @author Sublime
  **/
 
-contract CreditLine is CreditLineStorage {
+contract CreditLine is CreditLineStorage, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -414,6 +415,7 @@ contract CreditLine is CreditLineStorage {
 
     function borrowFromCreditLine(uint256 borrowAmount, bytes32 creditLineHash)
         external payable
+        nonReentrant
         ifCreditLineExists(creditLineHash)
         onlyCreditLineBorrower(creditLineHash)
     {   
@@ -641,8 +643,8 @@ contract CreditLine is CreditLineStorage {
                 if(_activeAmount>_amountInTokens){
                     liquidityShares = liquidityShares.sub((_activeAmount.sub(_amountInTokens)).mul(liquidityShares).div(_tokenInStrategy));
                 }
-                ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()).withdraw(msg.sender,liquidityShares, _asset, _strategyList[index], false);
                 collateralShareInStrategy[creditLineHash][_strategyList[index]] = collateralShareInStrategy[creditLineHash][_strategyList[index]].sub(liquidityShares);
+                ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()).withdraw(msg.sender,liquidityShares, _asset, _strategyList[index], false);
                 if(_activeAmount>_amountInTokens){
                     return;
                 }
