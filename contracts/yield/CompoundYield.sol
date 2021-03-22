@@ -77,7 +77,7 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable {
             _wallet.transfer(received);
         } else {
             received = _withdrawERC(_asset, investedTo, amount);
-            IERC20(_asset).transfer(_wallet, received);
+            IERC20(_asset).safeTransfer(_wallet, received);
         }
     }
 
@@ -134,7 +134,7 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable {
             savingsAccount.transfer(received);
         } else {
             received = _withdrawERC(asset, investedTo, amount);
-            IERC20(asset).transfer(savingsAccount, received);
+            IERC20(asset).safeTransfer(savingsAccount, received);
         }
 
         emit UnlockedTokens(asset, received);

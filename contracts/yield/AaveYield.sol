@@ -136,7 +136,7 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
             _wallet.transfer(received);
         } else {
             received = _withdrawERC(_asset, amount);
-            IERC20(_asset).transfer(_wallet, received);
+            IERC20(_asset).safeTransfer(_wallet, received);
         }
     }
 
@@ -191,7 +191,7 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
             savingsAccount.transfer(received);
         } else {
             received = _withdrawERC(asset, amount);
-            IERC20(asset).transfer(savingsAccount, received);
+            IERC20(asset).safeTransfer(savingsAccount, received);
         }
 
         emit UnlockedTokens(asset, received);

@@ -367,7 +367,7 @@ contract CreditLine is CreditLineStorage {
                 _sharesReceived = _savingsAccount.deposit{value:msg.value}(_collateralAmount, _collateralAsset, _strategy);
             }
             else{
-                IERC20(_collateralAsset).transferFrom(msg.sender, address(this), _collateralAmount);           
+                IERC20(_collateralAsset).safeTransferFrom(msg.sender, address(this), _collateralAmount);           
                 _sharesReceived = _savingsAccount.deposit(_collateralAmount, _collateralAsset, _strategy);
             }
             collateralShareInStrategy[_creditLineHash][_strategy] = collateralShareInStrategy[_creditLineHash][_strategy].add(_sharesReceived);
@@ -452,7 +452,7 @@ contract CreditLine is CreditLineStorage {
             msg.sender.transfer(borrowAmount);
         }
         else{
-            IERC20(_borrowAsset).transfer(msg.sender, borrowAmount);
+            IERC20(_borrowAsset).safeTransfer(msg.sender, borrowAmount);
         }
         emit BorrowedFromCreditLine(borrowAmount, creditLineHash);
     }
@@ -679,7 +679,7 @@ contract CreditLine is CreditLineStorage {
                     _collateralAsset);
 
                 uint256 _borrowToken = (_totalCollateralToken.mul(_ratioOfPrices).div(10**8));
-                IERC20(_borrowAsset).transferFrom(msg.sender,_lender, _borrowToken);
+                IERC20(_borrowAsset).safeTransferFrom(msg.sender,_lender, _borrowToken);
                 _withdrawCollateral(_collateralAsset, _totalCollateralToken,creditLineHash);   
             }
            

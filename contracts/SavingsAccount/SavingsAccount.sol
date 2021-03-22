@@ -131,7 +131,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         } else {
             sharesReceived = amount;
             if (asset != address(0)) {
-                IERC20(asset).transferFrom(msg.sender, address(this), amount);
+                IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
             } else {
                 require(
                     msg.value == amount,
