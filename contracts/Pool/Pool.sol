@@ -320,39 +320,37 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
 
     function withdrawBorrowedAmount() external override OnlyBorrower(msg.sender) nonReentrant {
         LoanStatus _poolStatus = poolVars.loanStatus;
-        if (
-            _poolStatus == LoanStatus.COLLECTION &&
-            poolConstants.loanStartTime < block.timestamp
-        ) {
-            if (
-                poolToken.totalSupply() < poolConstants.minborrowAmount
-            ) {
-                poolVars.loanStatus = LoanStatus.CANCELLED;
-                withdrawAllCollateral();
-                return;
-            }
-
-            poolVars.loanStatus = LoanStatus.ACTIVE;
-        }
         require(
-            (poolVars.loanStatus == LoanStatus.ACTIVE) &&
-                (poolConstants.loanWithdrawalDeadline != 0),
+            _poolStatus == LoanStatus.COLLECTION &&
+                poolConstants.loanStartTime < block.timestamp,
             "12"
         );
+
+        uint256 _tokensLent = poolToken.totalSupply();
+
+        if (
+            _tokensLent < poolConstants.minborrowAmount
+        ) {
+            poolVars.loanStatus = LoanStatus.CANCELLED;
+            withdrawAllCollateral();
+            return;
+        }
+
+        poolVars.loanStatus = LoanStatus.ACTIVE;
+        
         uint256 _currentCollateralRatio = getCurrentCollateralRatio();
+        IPoolFactory _poolFactory = IPoolFactory(PoolFactory);
         require(
             _currentCollateralRatio >
                 poolConstants.idealCollateralRatio.sub(
-                    IPoolFactory(PoolFactory).collateralVolatilityThreshold()
+                    _poolFactory.collateralVolatilityThreshold()
                 ),
             "13"
         );
         uint256 _noOfRepaymentIntervals = poolConstants.noOfRepaymentIntervals;
         uint256 _repaymentInterval = poolConstants.repaymentInterval;
-        IPoolFactory _poolFactory = IPoolFactory(PoolFactory);
         IRepayment(_poolFactory.repaymentImpl()).initializeRepayment(_noOfRepaymentIntervals, _repaymentInterval, poolConstants.borrowRate, poolConstants.loanStartTime);
         IExtension(_poolFactory.extension()).initializePoolExtension(_repaymentInterval);
-        uint256 _tokensLent = poolToken.totalSupply();
         IERC20(poolConstants.borrowAsset).transfer(
             poolConstants.borrower,
             _tokensLent
@@ -455,6 +453,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     }
 
     function cancelOpenBorrowPool() external OnlyBorrower(msg.sender) {
+        require(poolVars.loanStatus == LoanStatus.ACTIVE, "20");
         require(
             block.timestamp < poolConstants.loanWithdrawalDeadline,
             "20"
