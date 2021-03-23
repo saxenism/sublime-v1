@@ -46,13 +46,14 @@ contract StrategyRegistry is
 
     /**
      * @dev Add strategies to invest in. Please ensure that number of strategies are less than maxStrategies.
-     * @param _strategy address of the owner of the savings account contract
+     * @param _strategy address of the strategy contract
      **/
     function addStrategy(address _strategy) external override onlyOwner {
         require(
             strategies.length.add(1) <= maxStrategies,
             "StrategyRegistry::addStrategy - Can't add more strategies"
         );
+        require(!registry[_strategy], "StrategyRegistry::addStrategy - Strategy already exists");
         registry[_strategy] = true;
         strategies.push(_strategy);
 

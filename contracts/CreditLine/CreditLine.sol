@@ -3,6 +3,7 @@ pragma solidity 0.7.0;
 
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./CreditLineStorage.sol";
 import "../interfaces/IPoolFactory.sol";
 import "../interfaces/IPriceOracle.sol";
@@ -16,7 +17,7 @@ import "../interfaces/IStrategyRegistry.sol";
  * @author Sublime
  **/
 
-contract CreditLine is CreditLineStorage {
+contract CreditLine is CreditLineStorage, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -220,7 +221,6 @@ contract CreditLine is CreditLineStorage {
                 _tokenInStrategy = IYield(_strategyList[_index]).getTokensForShares(_liquidityShares, creditLineInfo[_creditLineHash].collateralAsset);
 
                 if (_activeAmount.add(_tokenInStrategy) >= _amount) {
-                    _activeAmount = _amount;
                     _sharesToTransfer = (_amount.sub(_activeAmount)).div(_tokenInStrategy).mul(_liquidityShares);
                     _savingsAccount.transferFrom(creditLineInfo[_creditLineHash].collateralAsset, creditLineInfo[_creditLineHash].borrower, _recipient, _strategyList[_index], _sharesToTransfer);
                     collateralShareInStrategy[_creditLineHash][_strategyList[_index]] = collateralShareInStrategy[_creditLineHash][_strategyList[_index]]
@@ -368,7 +368,7 @@ contract CreditLine is CreditLineStorage {
                 _sharesReceived = _savingsAccount.deposit{value:msg.value}(_collateralAmount, _collateralAsset, _strategy);
             }
             else{
-                IERC20(_collateralAsset).transferFrom(msg.sender, address(this), _collateralAmount);           
+                IERC20(_collateralAsset).safeTransferFrom(msg.sender, address(this), _collateralAmount);           
                 _sharesReceived = _savingsAccount.deposit(_collateralAmount, _collateralAsset, _strategy);
             }
             collateralShareInStrategy[_creditLineHash][_strategy] = collateralShareInStrategy[_creditLineHash][_strategy].add(_sharesReceived);
@@ -393,7 +393,6 @@ contract CreditLine is CreditLineStorage {
                 _tokenInStrategy = IYield(_strategyList[_index]).getTokensForShares(_liquidityShares, _asset); //TODO might not pass since yield is included in tokenInStrategy
 
                 if (_activeAmount.add(_tokenInStrategy) >= _amount) {
-                    _activeAmount = _amount;
                     _sharesToTransfer = (_amount.sub(_activeAmount)).div(_tokenInStrategy).mul(_liquidityShares);
                     _savingsAccount.withdrawFrom(_lender, _sharesToTransfer, _asset, _strategyList[_index], false);
                     //_savingsAccount.transferFrom(_asset, _sender, _recipient, _strategyList[_index], _sharesToTransfer);
@@ -416,6 +415,7 @@ contract CreditLine is CreditLineStorage {
 
     function borrowFromCreditLine(uint256 borrowAmount, bytes32 creditLineHash)
         external payable
+        nonReentrant
         ifCreditLineExists(creditLineHash)
         onlyCreditLineBorrower(creditLineHash)
     {   
@@ -454,7 +454,7 @@ contract CreditLine is CreditLineStorage {
             msg.sender.transfer(borrowAmount);
         }
         else{
-            IERC20(_borrowAsset).transfer(msg.sender, borrowAmount);
+            IERC20(_borrowAsset).safeTransfer(msg.sender, borrowAmount);
         }
         emit BorrowedFromCreditLine(borrowAmount, creditLineHash);
     }
@@ -643,8 +643,8 @@ contract CreditLine is CreditLineStorage {
                 if(_activeAmount>_amountInTokens){
                     liquidityShares = liquidityShares.sub((_activeAmount.sub(_amountInTokens)).mul(liquidityShares).div(_tokenInStrategy));
                 }
-                ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()).withdraw(msg.sender,liquidityShares, _asset, _strategyList[index], false);
                 collateralShareInStrategy[creditLineHash][_strategyList[index]] = collateralShareInStrategy[creditLineHash][_strategyList[index]].sub(liquidityShares);
+                ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()).withdraw(msg.sender,liquidityShares, _asset, _strategyList[index], false);
                 if(_activeAmount>_amountInTokens){
                     return;
                 }
@@ -681,7 +681,7 @@ contract CreditLine is CreditLineStorage {
                     _collateralAsset);
 
                 uint256 _borrowToken = (_totalCollateralToken.mul(_ratioOfPrices).div(10**8));
-                IERC20(_borrowAsset).transferFrom(msg.sender,_lender, _borrowToken);
+                IERC20(_borrowAsset).safeTransferFrom(msg.sender,_lender, _borrowToken);
                 _withdrawCollateral(_collateralAsset, _totalCollateralToken,creditLineHash);   
             }
            

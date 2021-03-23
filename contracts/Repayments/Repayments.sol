@@ -110,7 +110,7 @@ contract Repayments is RepaymentStorage, IRepayment {
 
             else {
                 //add check to see if user has sufficient asset balance?
-                IERC20(asset).transferFrom(msg.sender, address(this), amount);
+                IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
             }
 
             uint256 periodCovered = amount.div(interestPerSecond);
@@ -136,7 +136,7 @@ contract Repayments is RepaymentStorage, IRepayment {
 
                 else {
                     //add check to see if user has sufficient asset balance?
-                    IERC20(asset).transferFrom(msg.sender, address(this), amount);
+                    IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
                 }
                 
                 amount = amount.sub(repaymentDetails[poolID].repaymentOverdue);
@@ -168,7 +168,7 @@ contract Repayments is RepaymentStorage, IRepayment {
 
                 else {
                     //add check to see if user has sufficient asset balance?
-                    IERC20(asset).transferFrom(msg.sender, address(this), amount);
+                    IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
                 }
 
                 repaymentDetails[poolID].repaymentOverdue = repaymentDetails[poolID].repaymentOverdue

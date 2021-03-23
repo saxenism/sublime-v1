@@ -3,6 +3,7 @@ pragma solidity 0.7.0;
 
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "../interfaces/IPoolFactory.sol";
 import "../interfaces/IPriceOracle.sol";
@@ -14,7 +15,7 @@ import "../interfaces/IExtension.sol";
 import "../interfaces/IPoolToken.sol";
 
 // TODO: set modifiers to disallow any transfers directly
-contract Pool is Initializable, IPool {
+contract Pool is Initializable, IPool, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -317,41 +318,39 @@ contract Pool is Initializable, IPool {
         );
     }
 
-    function withdrawBorrowedAmount() external override OnlyBorrower(msg.sender) {
+    function withdrawBorrowedAmount() external override OnlyBorrower(msg.sender) nonReentrant {
         LoanStatus _poolStatus = poolVars.loanStatus;
-        if (
-            _poolStatus == LoanStatus.COLLECTION &&
-            poolConstants.loanStartTime < block.timestamp
-        ) {
-            if (
-                poolToken.totalSupply() < poolConstants.minborrowAmount
-            ) {
-                poolVars.loanStatus = LoanStatus.CANCELLED;
-                withdrawAllCollateral();
-                return;
-            }
-
-            poolVars.loanStatus = LoanStatus.ACTIVE;
-        }
         require(
-            (poolVars.loanStatus == LoanStatus.ACTIVE) &&
-                (poolConstants.loanWithdrawalDeadline != 0),
+            _poolStatus == LoanStatus.COLLECTION &&
+                poolConstants.loanStartTime < block.timestamp,
             "12"
         );
+
+        uint256 _tokensLent = poolToken.totalSupply();
+
+        if (
+            _tokensLent < poolConstants.minborrowAmount
+        ) {
+            poolVars.loanStatus = LoanStatus.CANCELLED;
+            withdrawAllCollateral();
+            return;
+        }
+
+        poolVars.loanStatus = LoanStatus.ACTIVE;
+        
         uint256 _currentCollateralRatio = getCurrentCollateralRatio();
+        IPoolFactory _poolFactory = IPoolFactory(PoolFactory);
         require(
             _currentCollateralRatio >
                 poolConstants.idealCollateralRatio.sub(
-                    IPoolFactory(PoolFactory).collateralVolatilityThreshold()
+                    _poolFactory.collateralVolatilityThreshold()
                 ),
             "13"
         );
         uint256 _noOfRepaymentIntervals = poolConstants.noOfRepaymentIntervals;
         uint256 _repaymentInterval = poolConstants.repaymentInterval;
-        IPoolFactory _poolFactory = IPoolFactory(PoolFactory);
         IRepayment(_poolFactory.repaymentImpl()).initializeRepayment(_noOfRepaymentIntervals, _repaymentInterval, poolConstants.borrowRate, poolConstants.loanStartTime);
         IExtension(_poolFactory.extension()).initializePoolExtension(_repaymentInterval);
-        uint256 _tokensLent = poolToken.totalSupply();
         IERC20(poolConstants.borrowAsset).transfer(
             poolConstants.borrower,
             _tokensLent
@@ -379,7 +378,7 @@ contract Pool is Initializable, IPool {
         delete poolVars.extraLiquidityShares;
     }
 
-    function lend(address _lender, uint256 _amountLent) external payable {
+    function lend(address _lender, uint256 _amountLent) external payable nonReentrant {
         require(
             poolVars.loanStatus == LoanStatus.COLLECTION,
             "15"
@@ -404,7 +403,7 @@ contract Pool is Initializable, IPool {
                 msg.sender.transfer(_amountLent.sub(_amount));
             }
         } else {
-            IERC20(_borrowToken).transferFrom(
+            IERC20(_borrowToken).safeTransferFrom(
                 msg.sender,
                 address(this),
                 _amount
@@ -454,6 +453,7 @@ contract Pool is Initializable, IPool {
     }
 
     function cancelOpenBorrowPool() external OnlyBorrower(msg.sender) {
+        require(poolVars.loanStatus == LoanStatus.ACTIVE, "20");
         require(
             block.timestamp < poolConstants.loanWithdrawalDeadline,
             "20"
@@ -501,7 +501,7 @@ contract Pool is Initializable, IPool {
         if(_borrowAsset == address(0)) {
             require(msg.value == _principleToPayback, "37");
         } else {
-            IERC20(_borrowAsset).transferFrom(msg.sender, address(this), _principleToPayback);
+            IERC20(_borrowAsset).safeTransferFrom(msg.sender, address(this), _principleToPayback);
         }
         
         poolVars.loanStatus = LoanStatus.CLOSED;
@@ -513,7 +513,7 @@ contract Pool is Initializable, IPool {
 
     // Note - Only when closed, cancelled or terminated, lender can withdraw
     //burns all shares and returns total remaining repayments along with provided liquidity
-    function withdrawLiquidity() external isLender(msg.sender) {
+    function withdrawLiquidity() external isLender(msg.sender) nonReentrant {
         LoanStatus _loanStatus = poolVars.loanStatus;
         require(
             _loanStatus == LoanStatus.CLOSED ||
@@ -676,7 +676,7 @@ contract Pool is Initializable, IPool {
     function liquidatePool(
         bool _transferToSavingsAccount,
         bool _recieveLiquidityShare
-    ) external payable {
+    ) external payable nonReentrant {
         LoanStatus _currentPoolStatus;
         address _poolFactory = PoolFactory;
         if (poolVars.loanStatus != LoanStatus.DEFAULTED) {
@@ -708,7 +708,7 @@ contract Pool is Initializable, IPool {
                     revert("Pool::liquidatePool - Not enough tokens");
                 }
             } else {
-                IERC20(_borrowAsset).transferFrom(
+                IERC20(_borrowAsset).safeTransferFrom(
                     msg.sender,
                     address(this),
                     _poolBorrowTokens
@@ -743,7 +743,7 @@ contract Pool is Initializable, IPool {
                 if (_collateralAsset == address(0)) {
                     msg.sender.transfer(_amountReceived);
                 } else {
-                    IERC20(_collateralAsset).transfer(
+                    IERC20(_collateralAsset).safeTransfer(
                         msg.sender,
                         _amountReceived
                     );
@@ -759,7 +759,7 @@ contract Pool is Initializable, IPool {
         address lender,
         bool _transferToSavingsAccount,
         bool _recieveLiquidityShare
-    ) public payable {
+    ) public payable nonReentrant {
         //avoid stack too deep
         address _poolFactory = PoolFactory;
         {
@@ -822,7 +822,7 @@ contract Pool is Initializable, IPool {
                     _poolSavingsStrategy
                 );
             } else {
-                IERC20(_borrowAsset).transferFrom(
+                IERC20(_borrowAsset).safeTransferFrom(
                     msg.sender,
                     address(this),
                     _lenderLiquidationTokens
@@ -862,7 +862,7 @@ contract Pool is Initializable, IPool {
             if (_recieveLiquidityShare) {
                 address _liquidityShareAddress =
                     IYield(_poolSavingsStrategy).liquidityToken(_collateralAsset);
-                IERC20(_liquidityShareAddress).transfer(
+                IERC20(_liquidityShareAddress).safeTransfer(
                     msg.sender,
                     _amountReceived
                 );
@@ -870,7 +870,7 @@ contract Pool is Initializable, IPool {
                 if (_collateralAsset == address(0)) {
                     msg.sender.transfer(_amountReceived);
                 } else {
-                    IERC20(_collateralAsset).transfer(
+                    IERC20(_collateralAsset).safeTransfer(
                         msg.sender,
                         _amountReceived
                     );
