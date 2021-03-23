@@ -53,6 +53,7 @@ contract StrategyRegistry is
             strategies.length.add(1) <= maxStrategies,
             "StrategyRegistry::addStrategy - Can't add more strategies"
         );
+        require(!registry[_strategy], "StrategyRegistry::addStrategy - Strategy already exists");
         registry[_strategy] = true;
         strategies.push(_strategy);
 
