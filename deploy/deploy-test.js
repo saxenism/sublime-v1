@@ -17,6 +17,7 @@ const extensionCompiled = require('../build/contracts/Extension.json')
 const poolFactoryCompiled = require('../build/contracts/PoolFactory.json')
 const creditLinesCompiled = require('../build/contracts/CreditLine.json')
 const poolCompiled = require('../build/contracts/Pool.json')
+const oracleCompiled = require('../build/contracts/FluxAggregator.json')
 
 const utils = require('./utils')
 
@@ -151,7 +152,15 @@ const deploy = async () => {
     proxyAdmin,
     deploymentConfig,
   )
-  // TODO add price oracles
+
+  //deploy test price oracle
+  const oracle = await utils.deployContract(
+    web3,
+    oracleCompiled.abi,
+    oracleCompiled.bytecode,
+    [],
+    deploymentConfig,
+  )
 
   // deploy verification
   const verificationInitParams = [config.actors.verifier]
@@ -262,6 +271,7 @@ const deploy = async () => {
     pool: pool,
     creditLines: creditLines.options.address,
     token: token,
+    oracle: oracle,
   }
   console.table(addresses)
 
