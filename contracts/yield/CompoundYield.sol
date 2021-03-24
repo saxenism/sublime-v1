@@ -110,7 +110,6 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable {
             IERC20(asset).safeTransferFrom(user, address(this), amount);
             sharesReceived = _depositERC20(asset, investedTo, amount);
         }
-
         emit LockedTokens(user, investedTo, sharesReceived);
     }
 
@@ -184,7 +183,7 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable {
         //mint cToken
         IERC20(asset).approve(cToken, amount);
         require(ICToken(cToken).mint(amount) == 0, "Error in redeeming tokens");
-
+        
         sharesReceived = IERC20(cToken).balanceOf(address(this)).sub(
             initialCTokenBalance
         );

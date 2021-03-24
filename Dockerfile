@@ -16,4 +16,4 @@ COPY package-lock.json /home/app/package-lock.json
 
 COPY . /home/app
 
-CMD [ "ganache-cli","-a","100", "-l","12000000"]
+CMD [ "ganache-cli","-a","100", "-l","12000000","-f","https://eth-mainnet.alchemyapi.io/v2/snGskhAXMQaRLnJaxbcfOL7U5_bSZl_Y"]
