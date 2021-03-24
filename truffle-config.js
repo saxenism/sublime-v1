@@ -1,15 +1,15 @@
 module.exports = {
   networks: {
     development: {
-      host: 'localhost',
+      host: "localhost",
       port: 8545,
-      network_id: '*', // Match any network id
-      gas: 5000000,
+      network_id: "*", // Match any network id
+      gas: 12000000,
     },
   },
   compilers: {
     solc: {
-      version: '0.7.0',
+      version: "0.7.0",
       settings: {
         optimizer: {
           enabled: true, // Default: false
@@ -20,6 +20,8 @@ module.exports = {
   },
   mocha: {
     enableTimeouts: false,
+    before_timeout: 120000,
+    timeout: 120000,
   },
-  plugins: ['solidity-coverage'],
-}
+  plugins: ["solidity-coverage"],
+};

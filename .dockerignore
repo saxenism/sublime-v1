@@ -1,0 +1,14 @@
+build/*
+.vscode/*
+coverage/*
+node_modules/*
+.DS_Store
+
+coverage/
+coverage.json
+
+cache/*
+cache
+
+artifacts/*
+artifacts

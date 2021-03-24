@@ -11,3 +11,9 @@ coverage.json
 
 keystore/*
 keystore.json
+
+cache/*
+cache
+
+artifacts/*
+artifacts
