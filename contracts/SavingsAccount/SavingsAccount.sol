@@ -93,29 +93,6 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         emit Deposited(to, amount, asset, strategy);
     }
 
-    /**
-     * @dev This function is used to deposit asset into savings account.
-     * @dev It also helps in investing the asset.
-     * @notice The asset should be approved to desired strategy beforehand
-     * @param amount amount of asset deposited
-     * @param asset address of asset deposited
-     * @param strategy address of strategy to invest in
-     */
-    function deposit(
-        uint256 amount,
-        address asset,
-        address strategy
-    ) external payable override returns (uint256 sharesReceived) {
-        sharesReceived = _deposit(amount, asset, strategy);
-
-        userLockedBalance[msg.sender][asset][strategy] = userLockedBalance[
-            msg.sender
-        ][asset][strategy]
-            .add(sharesReceived);
-
-        emit Deposited(msg.sender, amount, asset, strategy);
-    }
-
     function _deposit(
         uint256 amount,
         address asset,

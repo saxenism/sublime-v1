@@ -365,11 +365,11 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
             address _strategy = defaultStrategy;
             if(_collateralAsset == address(0)){
                 require(msg.value == _collateralAmount, "CreditLine ::borrowFromCreditLine - value to transfer doesn't match argument");
-                _sharesReceived = _savingsAccount.deposit{value:msg.value}(_collateralAmount, _collateralAsset, _strategy);
+                _sharesReceived = _savingsAccount.depositTo{value:msg.value}(_collateralAmount, _collateralAsset, _strategy, address(this));
             }
             else{
                 IERC20(_collateralAsset).safeTransferFrom(msg.sender, address(this), _collateralAmount);           
-                _sharesReceived = _savingsAccount.deposit(_collateralAmount, _collateralAsset, _strategy);
+                _sharesReceived = _savingsAccount.depositTo(_collateralAmount, _collateralAsset, _strategy, address(this));
             }
             collateralShareInStrategy[_creditLineHash][_strategy] = collateralShareInStrategy[_creditLineHash][_strategy].add(_sharesReceived);
         }
@@ -489,10 +489,10 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         if(_transferFromSavingAccount == false){
             if(_borrowAsset == address(0)){
                 require(msg.value == _repayAmount, "creditLine::repay - value to transfer doesn't match argument");
-                _sharesReceived = _savingsAccount.deposit{value:msg.value}(_repayAmount, _borrowAsset, _defaultStrategy);
+                _sharesReceived = _savingsAccount.depositTo{value:msg.value}(_repayAmount, _borrowAsset, _defaultStrategy, address(this));
             }
             else{
-                _sharesReceived = _savingsAccount.deposit(_repayAmount, _borrowAsset, _defaultStrategy);
+                _sharesReceived = _savingsAccount.depositTo(_repayAmount, _borrowAsset, _defaultStrategy, address(this));
             }
             _savingsAccount.transfer(_borrowAsset, _lender, _defaultStrategy, _sharesReceived);
         }
