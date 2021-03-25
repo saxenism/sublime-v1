@@ -365,11 +365,11 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
             address _strategy = defaultStrategy;
             if(_collateralAsset == address(0)){
                 require(msg.value == _collateralAmount, "CreditLine ::borrowFromCreditLine - value to transfer doesn't match argument");
-                _sharesReceived = _savingsAccount.deposit{value:msg.value}(_collateralAmount, _collateralAsset, _strategy);
+                _sharesReceived = _savingsAccount.depositTo{value:msg.value}(_collateralAmount, _collateralAsset, _strategy, address(this));
             }
             else{
                 IERC20(_collateralAsset).safeTransferFrom(msg.sender, address(this), _collateralAmount);           
-                _sharesReceived = _savingsAccount.deposit(_collateralAmount, _collateralAsset, _strategy);
+                _sharesReceived = _savingsAccount.depositTo(_collateralAmount, _collateralAsset, _strategy, address(this));
             }
             collateralShareInStrategy[_creditLineHash][_strategy] = collateralShareInStrategy[_creditLineHash][_strategy].add(_sharesReceived);
         }
@@ -381,7 +381,6 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         //address _lender = creditLineInfo[creditLineHash].lender;
         address[] memory _strategyList = IStrategyRegistry(strategyRegistry).getStrategies();
         ISavingsAccount _savingsAccount = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
-        uint256 _amount = _amountInTokens;
         uint256 _liquidityShares;
         uint256 _activeAmount;
         uint256 _sharesToTransfer;
@@ -392,9 +391,9 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
             if (_liquidityShares > 0) {
                 _tokenInStrategy = IYield(_strategyList[_index]).getTokensForShares(_liquidityShares, _asset); //TODO might not pass since yield is included in tokenInStrategy
 
-                if (_activeAmount.add(_tokenInStrategy) >= _amount) {
-                    _sharesToTransfer = (_amount.sub(_activeAmount)).div(_tokenInStrategy).mul(_liquidityShares);
-                    _savingsAccount.withdrawFrom(_lender, _sharesToTransfer, _asset, _strategyList[_index], false);
+                if (_activeAmount.add(_tokenInStrategy) >= _amountInTokens) {
+                    _sharesToTransfer = (_amountInTokens.sub(_activeAmount)).div(_tokenInStrategy).mul(_liquidityShares);
+                    _savingsAccount.withdrawFrom(_lender, address(this), _sharesToTransfer, _asset, _strategyList[_index], false);
                     //_savingsAccount.transferFrom(_asset, _sender, _recipient, _strategyList[_index], _sharesToTransfer);
                     collateralShareInStrategy[_creditLineHash][_strategyList[_index]] = collateralShareInStrategy[_creditLineHash][_strategyList[_index]]
                                                                                         .add(_sharesToTransfer);
@@ -402,14 +401,14 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
                 }
                 else {
                     _activeAmount = _activeAmount.add(_tokenInStrategy);
-                    _savingsAccount.withdrawFrom(_lender, _liquidityShares, _asset, _strategyList[_index], false);
+                    _savingsAccount.withdrawFrom(_lender, address(this), _liquidityShares, _asset, _strategyList[_index], false);
                     //_savingsAccount.transferFrom(_asset, _sender, _recipient, _strategyList[_index], _liquidityShares);
                     collateralShareInStrategy[_creditLineHash][_strategyList[_index]] = collateralShareInStrategy[_creditLineHash][_strategyList[_index]]
                                                                                         .add(_liquidityShares);
                 }   
             }
         }
-        require(_activeAmount == _amount,"insufficient balance");
+        require(_activeAmount == _amountInTokens,"insufficient balance");
     }
 
 
@@ -489,10 +488,10 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         if(_transferFromSavingAccount == false){
             if(_borrowAsset == address(0)){
                 require(msg.value == _repayAmount, "creditLine::repay - value to transfer doesn't match argument");
-                _sharesReceived = _savingsAccount.deposit{value:msg.value}(_repayAmount, _borrowAsset, _defaultStrategy);
+                _sharesReceived = _savingsAccount.depositTo{value:msg.value}(_repayAmount, _borrowAsset, _defaultStrategy, address(this));
             }
             else{
-                _sharesReceived = _savingsAccount.deposit(_repayAmount, _borrowAsset, _defaultStrategy);
+                _sharesReceived = _savingsAccount.depositTo(_repayAmount, _borrowAsset, _defaultStrategy, address(this));
             }
             _savingsAccount.transfer(_borrowAsset, _lender, _defaultStrategy, _sharesReceived);
         }
