@@ -371,7 +371,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         );
         uint256 _noOfRepaymentIntervals = poolConstants.noOfRepaymentIntervals;
         uint256 _repaymentInterval = poolConstants.repaymentInterval;
-        IRepayment(_poolFactory.repaymentImpl()).initializeRepayment(_noOfRepaymentIntervals, _repaymentInterval, poolConstants.borrowRate, poolConstants.loanStartTime);
+        IRepayment(_poolFactory.repaymentImpl()).initializeRepayment(_noOfRepaymentIntervals, _repaymentInterval, poolConstants.borrowRate, poolConstants.loanStartTime, poolConstants.borrowAsset);
         IExtension(_poolFactory.extension()).initializePoolExtension(_repaymentInterval);
         IERC20(poolConstants.borrowAsset).transfer(
             poolConstants.borrower,

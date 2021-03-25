@@ -6,6 +6,7 @@ import "../interfaces/IPoolFactory.sol";
 contract RepaymentStorage is OwnableUpgradeable {
     address internal _owner;
     IPoolFactory poolFactory;
+    address savingsAccount;
     
     enum LoanStatus {
         COLLECTION, //denotes collection period
@@ -34,6 +35,8 @@ contract RepaymentStorage is OwnableUpgradeable {
         uint256 borrowRate;
         uint256 repaymentDetails;
         uint256 loanStartTime;
+        address repayAsset;
+        address savingsAccount;
     }
 
     mapping(address => RepaymentDetails) repaymentDetails;
