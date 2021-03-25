@@ -241,6 +241,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
 
     function withdrawFrom(
         address from,
+        address payable to,
         uint256 amount,
         address asset,
         address strategy,
@@ -265,7 +266,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
 
         address token;
         (token, amountReceived) = _withdraw(
-            msg.sender,
+            to,
             amount,
             asset,
             strategy,

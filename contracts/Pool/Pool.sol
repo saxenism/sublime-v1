@@ -294,6 +294,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             } else {
                 _savingsAccount.withdrawFrom(
                     _depositFrom,
+                    address(this),
                     _liquidityshare,
                     _asset,
                     _poolSavingsStrategy,
