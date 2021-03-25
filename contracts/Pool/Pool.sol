@@ -14,7 +14,6 @@ import "../interfaces/IPool.sol";
 import "../interfaces/IExtension.sol";
 import "../interfaces/IPoolToken.sol";
 
-// TODO: set modifiers to disallow any transfers directly
 contract Pool is Initializable, IPool, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
@@ -353,9 +352,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         if (
             _tokensLent < poolConstants.minborrowAmount
         ) {
-            poolVars.loanStatus = LoanStatus.CANCELLED;
-            withdrawAllCollateral();
-            return;
+            _cancelPool();
         }
 
         poolVars.loanStatus = LoanStatus.ACTIVE;
@@ -469,11 +466,12 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     }
 
     function cancelOpenBorrowPool() external OnlyBorrower(msg.sender) {
-        require(poolVars.loanStatus == LoanStatus.ACTIVE, "20");
-        require(
-            block.timestamp < poolConstants.loanWithdrawalDeadline,
-            "20"
-        );
+        LoanStatus _poolStatus = poolVars.loanStatus;
+        require(_poolStatus == LoanStatus.COLLECTION || _poolStatus == LoanStatus.CANCELLED, "20");
+        _cancelPool();
+    }
+
+    function _cancelPool() internal {
         poolVars.loanStatus = LoanStatus.CANCELLED;
         IExtension(IPoolFactory(PoolFactory).extension()).closePoolExtension();
         withdrawAllCollateral();
@@ -525,6 +523,14 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     //burns all shares and returns total remaining repayments along with provided liquidity
     function withdrawLiquidity() external isLender(msg.sender) nonReentrant {
         LoanStatus _loanStatus = poolVars.loanStatus;
+
+        if (
+            _loanStatus == LoanStatus.COLLECTION && 
+            poolConstants.loanStartTime < block.timestamp && 
+            poolToken.totalSupply() < poolConstants.minborrowAmount
+        ) {
+            poolVars.loanStatus = LoanStatus.CANCELLED;
+        }
         require(
             _loanStatus == LoanStatus.CLOSED ||
                 _loanStatus == LoanStatus.CANCELLED ||
