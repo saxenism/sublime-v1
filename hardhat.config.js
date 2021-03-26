@@ -22,6 +22,8 @@ module.exports = {
           "https://eth-mainnet.alchemyapi.io/v2/snGskhAXMQaRLnJaxbcfOL7U5_bSZl_Y",
         blockNumber: 12000000,
       },
+      gasLimit: 12000000,
+      gasPrice: 0,
     },
   },
   solidity: {
@@ -34,7 +36,7 @@ module.exports = {
     },
   },
   gasReporter: {
-    enabled: false,
+    enabled: true,
   },
   mocha: {
     timeout: 20000000,

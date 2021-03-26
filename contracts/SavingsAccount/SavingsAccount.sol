@@ -306,7 +306,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         bool withdrawShares
     ) internal returns (address token, uint256 amountReceived) {
         amountReceived = amount;
-        if (!withdrawShares || strategy != address(0)) {
+        if (!withdrawShares && strategy != address(0)) {
             amountReceived = IYield(strategy).unlockTokens(asset, amount);
         }
 
@@ -443,9 +443,11 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
     }
 
     receive() external payable {
-        require(
-            IStrategyRegistry(strategyRegistry).registry(msg.sender),
-            "SavingsAccount::receive invalid transaction"
-        );
+        // require(
+        //     IStrategyRegistry(strategyRegistry).registry(msg.sender),
+        //     "SavingsAccount::receive invalid transaction"
+        // );
+
+        // the above snippet of code causes gas issues. Commented till solution is found
     }
 }
