@@ -17,7 +17,7 @@ const CompoundWithdrawAccount = "0x33333333deadbeefdeadbeefdeadbeefdeadbeef";
 
 const zeroAddress = "0x0000000000000000000000000000000000000000";
 
-const depositValueToTest = BigNumber.from(10000000000); //1 ETH
+const depositValueToTest = BigNumber.from("1000000000000000000"); //1 ETH
 
 describe.only("Test Savings Account: Asset ETH", () => {
   before(async () => {
@@ -219,12 +219,15 @@ describe.only("Test Savings Account: Asset ETH", () => {
         params: [AaveWithdrawAccount],
       });
 
-      let amountReceived =
-        parseInt(balanceAfterWithdraw) - parseInt(balanceBeforeWithdraw);
+      let amountReceived = BigNumber.from(balanceAfterWithdraw).sub(
+        balanceBeforeWithdraw
+      );
+
       console.log({ amountReceived });
+
       expect(amountReceived).gt(
         depositValueToTest,
-        "AaveYield does't return amount more than deposited"
+        `Amount should be more than ${depositValueToTest}, after withdrawing`
       );
     });
 
@@ -309,14 +312,15 @@ describe.only("Test Savings Account: Asset ETH", () => {
         params: [YearnWithdrawAccount],
       });
 
-      let amountReceived =
-        parseInt(balanceAfterWithdraw) - parseInt(balanceBeforeWithdraw);
+      let amountReceived = BigNumber.from(balanceAfterWithdraw).sub(
+        balanceBeforeWithdraw
+      );
 
       console.log({ amountReceived });
 
-      expect(parseInt(amountReceived)).gt(
+      expect(amountReceived).gt(
         depositValueToTest,
-        "Amount should be more than depositValueToTest, after withdrawing"
+        `Amount should be more than ${depositValueToTest}, after withdrawing`
       );
     });
   });
@@ -378,7 +382,7 @@ describe.only("Test Savings Account: Asset ETH", () => {
         .connect(this.accountToDeposit)
         .withdraw(
           CompoundWithdrawAccount,
-          1,
+          sharesReceivedWithCompound,
           zeroAddress,
           this.compoundYield.address,
           false
@@ -389,14 +393,15 @@ describe.only("Test Savings Account: Asset ETH", () => {
         params: [CompoundWithdrawAccount],
       });
 
-      let amountReceived =
-        parseInt(balanceAfterWithdraw) - parseInt(balanceBeforeWithdraw);
+      let amountReceived = BigNumber.from(balanceAfterWithdraw).sub(
+        balanceBeforeWithdraw
+      );
 
       console.log({ amountReceived });
 
-      expect(parseInt(amountReceived)).gt(
+      expect(amountReceived).gt(
         depositValueToTest,
-        "Amount should be more than depositValueToTest, after withdrawing"
+        `Amount should be more than ${depositValueToTest}, after withdrawing`
       );
     });
   });
