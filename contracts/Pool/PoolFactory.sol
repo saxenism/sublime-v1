@@ -21,8 +21,10 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         uint256 max;
     }
 
-    bytes4 public initializeFunctionId; //  bytes4(keccak256("initialize(uint256,address,address,address,uint256,uint256,uint256,uint256,bool)"))
+    bytes4 public poolInitFuncSelector; //  bytes4(keccak256("initialize(uint256,address,address,address,uint256,uint256,uint256,uint256,bool)"))
+    bytes4 public poolTokenInitFuncSelector;
     address public poolImpl;
+    address public poolTokenImpl;
     address public userRegistry;
     address public strategyRegistry;
     address public override extension;
@@ -52,11 +54,13 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     Limits noOfRepaymentIntervalsLimit;
 
     event PoolCreated(address pool, address borrower, address poolToken);
-    event InitializeFunctionUpdated(bytes4 updatedFunctionId);
+    event PoolInitSelectorUpdated(bytes4 updatedSelector);
+    event PoolTokenInitFuncSelector(bytes4 updatedSelector);
     event PoolLogicUpdated(address updatedPoolLogic);
     event UserRegistryUpdated(address updatedBorrowerRegistry);
     event StrategyRegistryUpdated(address updatedStrategyRegistry);
     event RepaymentImplUpdated(address updatedRepaymentImpl);
+    event PoolTokenImplUpdated(address updatedPoolTokenImpl);
     event PriceOracleUpdated(address updatedPriceOracle);
     event CollectionPeriodUpdated(uint256 updatedCollectionPeriod);
     event MatchCollateralRatioIntervalUpdated(uint256 updatedMatchCollateralRatioInterval);
@@ -92,15 +96,19 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         uint256 _marginCallDuration,
         uint256 _collateralVolatilityThreshold,
         uint256 _gracePeriodPenaltyFraction,
-        bytes4 _initializeFunctionId,
+        bytes4 _poolInitFuncSelector,
+        bytes4 _poolTokenInitFuncSelector,
         uint256 _liquidatorRewardFraction,
         address _repaymentImpl,
         address _priceOracle,
         address _savingsAccount,
-        address _extension
+        address _extension,
+        address _poolTokenImpl
     ) external initializer {
-        OwnableUpgradeable.__Ownable_init();
-        OwnableUpgradeable.transferOwnership(_admin);
+        {
+            OwnableUpgradeable.__Ownable_init();
+            OwnableUpgradeable.transferOwnership(_admin);
+        }
         poolImpl = _poolImpl;
         userRegistry = _userRegistry;
         strategyRegistry = _strategyRegistry;
@@ -110,12 +118,14 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         marginCallDuration = _marginCallDuration;
         collateralVolatilityThreshold = _collateralVolatilityThreshold;
         gracePeriodPenaltyFraction = _gracePeriodPenaltyFraction;
-        initializeFunctionId = _initializeFunctionId;
+        poolInitFuncSelector = _poolInitFuncSelector;
+        poolTokenInitFuncSelector = _poolTokenInitFuncSelector;
         liquidatorRewardFraction = _liquidatorRewardFraction;
         repaymentImpl = _repaymentImpl;
         priceOracle = _priceOracle;
         savingsAccount = _savingsAccount;
         extension = _extension;
+        poolTokenImpl = _poolTokenImpl;
     }
 
     function createPool(
@@ -141,10 +151,11 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         require(isWithinLimits(_borrowRate, borrowRateLimit.min, borrowRateLimit.max), "PoolFactory::createPool - Borrow rate not within limits");
         require(isWithinLimits(_noOfRepaymentIntervals, noOfRepaymentIntervalsLimit.min, noOfRepaymentIntervalsLimit.max), "PoolFactory::createPool - Loan duration not within limits");
         require(isWithinLimits(_repaymentInterval, repaymentIntervalLimit.min, repaymentIntervalLimit.max), "PoolFactory::createPool - Repayment interval not within limits");
-        bytes memory data = abi.encodeWithSelector(initializeFunctionId, _poolSize, _minBorrowAmount, msg.sender, _borrowTokenType, _collateralTokenType, _collateralRatio, _borrowRate, _repaymentInterval, _noOfRepaymentIntervals, _poolSavingsStrategy, _collateralAmount, _transferFromSavingsAccount, matchCollateralRatioInterval, collectionPeriod);
+        bytes memory data = abi.encodeWithSelector(poolInitFuncSelector, _poolSize, _minBorrowAmount, msg.sender, _borrowTokenType, _collateralTokenType, _collateralRatio, _borrowRate, _repaymentInterval, _noOfRepaymentIntervals, _poolSavingsStrategy, _collateralAmount, _transferFromSavingsAccount, matchCollateralRatioInterval, collectionPeriod);
         // TODO: Setting 0x00 as admin, so that it is not upgradable. Remove the upgradable functionality to optimize
         address pool = address((new SublimeProxy){value: msg.value}(poolImpl, address(0), data));
-        address poolToken = address(new PoolToken("Open Borrow Pool Tokens", "OBPT", pool));
+        bytes memory tokenData = abi.encodeWithSelector(poolTokenInitFuncSelector, "Open Borrow Pool Tokens", "OBPT", pool);
+        address poolToken = address(new SublimeProxy(poolTokenImpl, address(0), tokenData));
         IPool(pool).setPoolToken(poolToken);
         openBorrowPoolRegistry[pool] = true;
         emit PoolCreated(pool, msg.sender, poolToken);
@@ -176,9 +187,14 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         emit CollateralTokenUpdated(_collateralToken, _isSupported);
     }
 
-    function updateInitializeFunctionId(bytes4 _functionId) external onlyOwner {
-        initializeFunctionId = _functionId;
-        emit InitializeFunctionUpdated(_functionId);
+    function updatepoolInitFuncSelector(bytes4 _functionId) external onlyOwner {
+        poolInitFuncSelector = _functionId;
+        emit PoolInitSelectorUpdated(_functionId);
+    }
+
+    function updatePoolTokenInitFuncSelector(bytes4 _functionId) external onlyOwner {
+        poolTokenInitFuncSelector = _functionId;
+        emit PoolTokenInitFuncSelector(_functionId);
     }
 
     function updatePoolLogic(address _poolLogic) external onlyOwner {
@@ -199,6 +215,11 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     function updateRepaymentImpl(address _repaymentImpl) external onlyOwner {
         repaymentImpl = _repaymentImpl;
         emit RepaymentImplUpdated(_repaymentImpl);
+    }
+
+    function updatePoolTokenImpl(address _poolTokenImpl) external onlyOwner {
+        poolTokenImpl = _poolTokenImpl;
+        emit PoolTokenImplUpdated(_poolTokenImpl);
     }
 
     function updatePriceoracle(address _priceOracle) external onlyOwner {

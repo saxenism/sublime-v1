@@ -30,7 +30,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
      **/
     modifier ifCreditLineExists(bytes32 creditLineHash) {
         require(
-            creditLineInfo[creditLineHash].exists == true,
+            creditLineInfo[creditLineHash].exists,
             "Credit line does not exist"
         );
         _;
