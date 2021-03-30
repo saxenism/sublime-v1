@@ -87,7 +87,6 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     }
 
     function initialize(
-        address _poolImpl, 
         address _userRegistry, 
         address _strategyRegistry, 
         address _admin, 
@@ -99,17 +98,14 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         bytes4 _poolInitFuncSelector,
         bytes4 _poolTokenInitFuncSelector,
         uint256 _liquidatorRewardFraction,
-        address _repaymentImpl,
         address _priceOracle,
         address _savingsAccount,
-        address _extension,
-        address _poolTokenImpl
+        address _extension
     ) external initializer {
         {
             OwnableUpgradeable.__Ownable_init();
             OwnableUpgradeable.transferOwnership(_admin);
         }
-        poolImpl = _poolImpl;
         userRegistry = _userRegistry;
         strategyRegistry = _strategyRegistry;
 
@@ -121,11 +117,19 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         poolInitFuncSelector = _poolInitFuncSelector;
         poolTokenInitFuncSelector = _poolTokenInitFuncSelector;
         liquidatorRewardFraction = _liquidatorRewardFraction;
-        repaymentImpl = _repaymentImpl;
         priceOracle = _priceOracle;
         savingsAccount = _savingsAccount;
         extension = _extension;
+    }
+
+    function setImplemntations(address _poolImpl, address _repaymentImpl, address _poolTokenImpl) external onlyOwner {
+        poolImpl = _poolImpl;
+        repaymentImpl = _repaymentImpl;
         poolTokenImpl = _poolTokenImpl;
+
+        emit PoolLogicUpdated(_poolImpl);
+        emit RepaymentImplUpdated(_repaymentImpl);
+        emit PoolTokenImplUpdated(_poolTokenImpl);
     }
 
     function createPool(
