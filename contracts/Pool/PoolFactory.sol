@@ -51,7 +51,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     Limits repaymentIntervalLimit;
     Limits noOfRepaymentIntervalsLimit;
 
-    event PoolCreated(address pool, address borrower);
+    event PoolCreated(address pool, address borrower, address poolToken);
     event InitializeFunctionUpdated(bytes4 updatedFunctionId);
     event PoolLogicUpdated(address updatedPoolLogic);
     event UserRegistryUpdated(address updatedBorrowerRegistry);
@@ -147,8 +147,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         address poolToken = address(new PoolToken("Open Borrow Pool Tokens", "OBPT", pool));
         IPool(pool).setPoolToken(poolToken);
         openBorrowPoolRegistry[pool] = true;
-        emit PoolCreated(pool, msg.sender);
-
+        emit PoolCreated(pool, msg.sender, poolToken);
     }
 
     function isWithinLimits(uint256 _value, uint256 _min, uint256 _max) internal pure returns(bool) {
