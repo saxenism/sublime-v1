@@ -28,7 +28,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     }
 
     address PoolFactory;
-    IPoolToken poolToken;
+    IPoolToken public poolToken;
 
     struct LendingDetails {
         uint256 principalWithdrawn;

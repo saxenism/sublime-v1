@@ -7,11 +7,10 @@ import "../interfaces/IVerification.sol";
 import "../interfaces/IStrategyRegistry.sol";
 import "../interfaces/IRepayment.sol";
 import "../interfaces/IPriceOracle.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./PoolToken.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
-
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
@@ -41,7 +40,6 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
 
     mapping(address => bool) isBorrowToken;
     mapping(address => bool) isCollateralToken;
-    
 
     mapping(address => bool) public override openBorrowPoolRegistry;
 
@@ -59,34 +57,53 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     event RepaymentImplUpdated(address updatedRepaymentImpl);
     event PriceOracleUpdated(address updatedPriceOracle);
     event CollectionPeriodUpdated(uint256 updatedCollectionPeriod);
-    event MatchCollateralRatioIntervalUpdated(uint256 updatedMatchCollateralRatioInterval);
+    event MatchCollateralRatioIntervalUpdated(
+        uint256 updatedMatchCollateralRatioInterval
+    );
     event MarginCallDurationUpdated(uint256 updatedMarginCallDuration);
-    event CollateralVolatilityThresholdUpdated(uint256 updatedCollateralVolatilityThreshold);
-    event GracePeriodPenaltyFractionUpdated(uint256 updatedGracePeriodPenaltyFraction);
-    event LiquidatorRewardFractionUpdated(uint256 updatedLiquidatorRewardFraction);
+    event CollateralVolatilityThresholdUpdated(
+        uint256 updatedCollateralVolatilityThreshold
+    );
+    event GracePeriodPenaltyFractionUpdated(
+        uint256 updatedGracePeriodPenaltyFraction
+    );
+    event LiquidatorRewardFractionUpdated(
+        uint256 updatedLiquidatorRewardFraction
+    );
     event LimitsUpdated(string limitType, uint256 max, uint256 min);
     event BorrowTokenUpdated(address borrowToken, bool isSupported);
     event CollateralTokenUpdated(address collateralToken, bool isSupported);
 
     modifier onlyPool() {
-        require(openBorrowPoolRegistry[msg.sender], "PoolFactory::onlyPool - Only pool can destroy itself");
+        require(
+            openBorrowPoolRegistry[msg.sender],
+            "PoolFactory::onlyPool - Only pool can destroy itself"
+        );
         _;
     }
 
     modifier onlyBorrower() {
-        require(IVerification(userRegistry).isUser(msg.sender), "PoolFactory::onlyBorrower - Only a valid Borrower can create Pool");
+        require(
+            IVerification(userRegistry).isUser(msg.sender),
+            "PoolFactory::onlyBorrower - Only a valid Borrower can create Pool"
+        );
         _;
     }
 
-    function owner() override(IPoolFactory, OwnableUpgradeable) public view returns(address) {
+    function owner()
+        public
+        view
+        override(IPoolFactory, OwnableUpgradeable)
+        returns (address)
+    {
         return OwnableUpgradeable.owner();
     }
 
     function initialize(
-        address _poolImpl, 
-        address _userRegistry, 
-        address _strategyRegistry, 
-        address _admin, 
+        address _poolImpl,
+        address _userRegistry,
+        address _strategyRegistry,
+        address _admin,
         uint256 _collectionPeriod,
         uint256 _matchCollateralRatioInterval,
         uint256 _marginCallDuration,
@@ -129,26 +146,128 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         uint256 _noOfRepaymentIntervals,
         address _poolSavingsStrategy,
         uint256 _collateralAmount,
-        bool _transferFromSavingsAccount
-    ) payable external onlyBorrower {
-        require(_minBorrowAmount <= _poolSize, "PoolFactory::createPool - invalid min borrow fraction");
-        require(isBorrowToken[_borrowTokenType], "PoolFactory::createPool - Invalid borrow token type");
-        require(isCollateralToken[_collateralTokenType], "PoolFactory::createPool - Invalid collateral token type");
-        require(IPriceOracle(priceOracle).doesFeedExist(_collateralTokenType, _borrowTokenType), "PoolFactory::createPool - Price feed doesn't support token pair");
-        require(IStrategyRegistry(strategyRegistry).registry(_poolSavingsStrategy), "PoolFactory::createPool - Invalid strategy");
-        require(isWithinLimits(_poolSize, poolSizeLimit.min, poolSizeLimit.max), "PoolFactory::createPool - PoolSize not within limits");
-        require(isWithinLimits(_collateralRatio, collateralRatioLimit.min, collateralRatioLimit.max), "PoolFactory::createPool - Collateral Ratio not within limits");
-        require(isWithinLimits(_borrowRate, borrowRateLimit.min, borrowRateLimit.max), "PoolFactory::createPool - Borrow rate not within limits");
-        require(isWithinLimits(_noOfRepaymentIntervals, noOfRepaymentIntervalsLimit.min, noOfRepaymentIntervalsLimit.max), "PoolFactory::createPool - Loan duration not within limits");
-        require(isWithinLimits(_repaymentInterval, repaymentIntervalLimit.min, repaymentIntervalLimit.max), "PoolFactory::createPool - Repayment interval not within limits");
-        bytes memory data = abi.encodeWithSelector(initializeFunctionId, _poolSize, _minBorrowAmount, msg.sender, _borrowTokenType, _collateralTokenType, _collateralRatio, _borrowRate, _repaymentInterval, _noOfRepaymentIntervals, _poolSavingsStrategy, _collateralAmount, _transferFromSavingsAccount, matchCollateralRatioInterval, collectionPeriod);
-        // TODO: Setting 0x00 as admin, so that it is not upgradable. Remove the upgradable functionality to optimize
-        address pool = address((new SublimeProxy){value: msg.value}(poolImpl, address(0), data));
-        address poolToken = address(new PoolToken("Open Borrow Pool Tokens", "OBPT", pool));
+        bool _transferFromSavingsAccount,
+        bytes32 _salt
+    ) external payable onlyBorrower {
+        require(
+            _minBorrowAmount <= _poolSize,
+            "PoolFactory::createPool - invalid min borrow fraction"
+        );
+        require(
+            isBorrowToken[_borrowTokenType],
+            "PoolFactory::createPool - Invalid borrow token type"
+        );
+        require(
+            isCollateralToken[_collateralTokenType],
+            "PoolFactory::createPool - Invalid collateral token type"
+        );
+        require(
+            IPriceOracle(priceOracle).doesFeedExist(
+                _collateralTokenType,
+                _borrowTokenType
+            ),
+            "PoolFactory::createPool - Price feed doesn't support token pair"
+        );
+        require(
+            IStrategyRegistry(strategyRegistry).registry(_poolSavingsStrategy),
+            "PoolFactory::createPool - Invalid strategy"
+        );
+        require(
+            isWithinLimits(_poolSize, poolSizeLimit.min, poolSizeLimit.max),
+            "PoolFactory::createPool - PoolSize not within limits"
+        );
+        require(
+            isWithinLimits(
+                _collateralRatio,
+                collateralRatioLimit.min,
+                collateralRatioLimit.max
+            ),
+            "PoolFactory::createPool - Collateral Ratio not within limits"
+        );
+        require(
+            isWithinLimits(
+                _borrowRate,
+                borrowRateLimit.min,
+                borrowRateLimit.max
+            ),
+            "PoolFactory::createPool - Borrow rate not within limits"
+        );
+        require(
+            isWithinLimits(
+                _noOfRepaymentIntervals,
+                noOfRepaymentIntervalsLimit.min,
+                noOfRepaymentIntervalsLimit.max
+            ),
+            "PoolFactory::createPool - Loan duration not within limits"
+        );
+        require(
+            isWithinLimits(
+                _repaymentInterval,
+                repaymentIntervalLimit.min,
+                repaymentIntervalLimit.max
+            ),
+            "PoolFactory::createPool - Repayment interval not within limits"
+        );
+        bytes memory data =
+            abi.encodeWithSelector(
+                initializeFunctionId,
+                _poolSize,
+                _minBorrowAmount,
+                msg.sender,
+                _borrowTokenType,
+                _collateralTokenType,
+                _collateralRatio,
+                _borrowRate,
+                _repaymentInterval,
+                _noOfRepaymentIntervals,
+                _poolSavingsStrategy,
+                _collateralAmount,
+                _transferFromSavingsAccount,
+                matchCollateralRatioInterval,
+                collectionPeriod
+            );
+
+        bytes32 salt = keccak256(abi.encodePacked(_salt, msg.sender));
+        bytes memory bytecode =
+            abi.encodePacked(
+                type(SublimeProxy).creationCode,
+                abi.encode(poolImpl, address(0x01), data)
+            );
+        address pool = _deploy(msg.value, salt, bytecode);
+
+        address poolToken =
+            address(new PoolToken("Open Borrow Pool Tokens", "OBPT", pool));
         IPool(pool).setPoolToken(poolToken);
         openBorrowPoolRegistry[pool] = true;
         emit PoolCreated(pool, msg.sender);
+    }
 
+    /**
+     * @dev Deploys a contract using `CREATE2`. The address where the contract
+     * will be deployed can be known in advance via {computeAddress}.
+     *
+     * The bytecode for a contract can be obtained from Solidity with
+     * `type(contractName).creationCode`.
+     *
+     * Requirements:
+     *
+     * - `bytecode` must not be empty.
+     * - `salt` must have not been used for `bytecode` already.
+     * - the factory must have a balance of at least `amount`.
+     * - if `amount` is non-zero, `bytecode` must have a `payable` constructor.
+     */
+    function _deploy(
+        uint256 amount,
+        bytes32 salt,
+        bytes memory bytecode
+    ) internal returns (address addr) {
+        require(bytecode.length != 0, "Create2: bytecode length is zero");
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            addr := create2(amount, add(bytecode, 0x20), mload(bytecode), salt)
+        }
+        require(addr != address(0), "Create2: Failed on deploy");
+        return addr;
     }
 
     function isWithinLimits(uint256 _value, uint256 _min, uint256 _max) internal pure returns(bool) {
