@@ -22,4 +22,18 @@ function encodeUserData(ethers, data) {
   return ethers.utils.formatBytes32String(data)
 }
 
-module.exports = { generateAddress, encodeUserData }
+function getSalt(ethers, address, salt) {
+  const encodedData = ethers.utils.defaultAbiCoder.encode(
+    ['bytes32', 'address'],
+    [salt, address],
+  )
+  return ethers.utils.keccak256(encodedData)
+}
+
+function getInitCodehash(ethers, proxyBytecode, poolImplAddr, poolData, admin) {
+  const initialize = ethers.utils.defaultAbiCoder.encode(['address', 'address', 'bytes'], [poolImplAddr, admin, poolData]);
+  const encodedData = ethers.utils.defaultAbiCoder.encode(['bytes', 'bytes'], [proxyBytecode, initialize])
+  return ethers.utils.keccak256(encodedData)
+}
+
+module.exports = { generateAddress, encodeUserData, getSalt, getInitCodehash }
