@@ -5,14 +5,9 @@ const { solidity } = require('ethereum-waffle')
 chai.use(solidity)
 const { expect } = chai
 const poolFactoryCompiled = require('../build/contracts/PoolFactory.json')
-const verificationCompiled = require('../build/contracts/Verification.json')
-const strategyRegistryCompiled = require('../build/contracts/StrategyRegistry.json')
-const priceOracleCompiled = require('../build/contracts/PriceOracle.json')
 
 const deployedAddress = require('../config/address.json')
-const { encodeUserData } = require('./utils/utils')
 let config = require('../config/config.json')
-const { getContractAddress } = require('@ethersproject/address')
 config = config['ganache']
 
 describe('PoolFactory', () => {
@@ -32,136 +27,6 @@ describe('PoolFactory', () => {
       poolFactoryCompiled.abi,
       this.admin,
     )
-  })
-
-  describe('createPool', async () => {
-    before(async () => {
-      //verification
-      this.verification = new ethers.Contract(
-        deployedAddress.verification,
-        verificationCompiled.abi,
-        this.verifier,
-      )
-
-      await this.verification.registerUser(
-        this.borrower.address,
-        encodeUserData(ethers, 'borrower'),
-      )
-
-      //add price feed
-      this.priceOracle = new ethers.Contract(
-        deployedAddress.priceOracle,
-        priceOracleCompiled.abi,
-        this.admin,
-      )
-      await this.priceOracle.setfeedAddress(
-        deployedAddress.token,
-        ethers.constants.AddressZero,
-        deployedAddress.oracle,
-        deployedAddress.oracle,
-      )
-
-      //add yield to verified strategy
-      this.strategyRegistry = new ethers.Contract(
-        deployedAddress.strategyRegistry,
-        strategyRegistryCompiled.abi,
-        this.admin,
-      )
-
-      //add yield
-      await this.strategyRegistry.addStrategy(ethers.constants.AddressZero)
-
-      // register borrow and collateral tokens to Sublime
-      await this.poolFactory.updateSupportedBorrowTokens(
-        deployedAddress.token,
-        true,
-      )
-
-      await this.poolFactory.updateSupportedCollateralTokens(
-        ethers.constants.AddressZero,
-        true,
-      )
-    })
-
-    it('should create pool', async () => {
-      this.pool = await getContractAddress({
-        from: this.poolFactory.address,
-        nonce: 1,
-      })
-
-      await expect(
-        this.poolFactory
-          .connect(this.borrower)
-          .createPool(
-            config.OpenBorrowPool.poolSize,
-            config.OpenBorrowPool.minBorrowAmountFraction,
-            deployedAddress.token,
-            ethers.constants.AddressZero,
-            config.OpenBorrowPool.collateralRatio,
-            config.OpenBorrowPool.borrowRate,
-            config.OpenBorrowPool.repaymentInterval,
-            config.OpenBorrowPool.noOfRepaymentIntervals,
-            ethers.constants.AddressZero,
-            config.OpenBorrowPool.collateralAmount,
-            config.OpenBorrowPool.transferFromSavingsAccount,
-            { value: config.OpenBorrowPool.collateralAmount },
-          ),
-      )
-        .to.emit(this.poolFactory, 'PoolCreated')
-        .withArgs(this.pool, this.borrower.address)
-    })
-
-    it('should revert if not deployed by borrower', async () => {
-      //verification
-      this.verification = new ethers.Contract(
-        deployedAddress.verification,
-        verificationCompiled.abi,
-        this.verifier,
-      )
-
-      await this.verification.unregisterUser(this.borrower.address)
-
-      await expect(
-        this.poolFactory.createPool(
-          config.OpenBorrowPool.poolSize,
-          config.OpenBorrowPool.minBorrowAmountFraction,
-          deployedAddress.token,
-          ethers.constants.AddressZero,
-          config.OpenBorrowPool.collateralRatio,
-          config.OpenBorrowPool.borrowRate,
-          config.OpenBorrowPool.repaymentInterval,
-          config.OpenBorrowPool.noOfRepaymentIntervals,
-          ethers.constants.AddressZero,
-          config.OpenBorrowPool.collateralAmount,
-          config.OpenBorrowPool.transferFromSavingsAccount,
-        ),
-      ).to.be.revertedWith(
-        'VM Exception while processing transaction: revert PoolFactory::onlyBorrower - Only a valid Borrower can create Pool',
-      )
-    })
-  })
-
-  //will be tested with pool
-  describe('destroyPool', async () => {
-    it('should revert if not called by registered pool', async () => {
-      await expect(
-        this.poolFactory.connect(this.address2).destroyPool(),
-      ).to.be.revertedWith(
-        'VM Exception while processing transaction: revert PoolFactory::onlyPool - Only pool can destroy itself',
-      )
-    })
-
-    // it('should destroyPool and remove pool from registry', async () => {
-    //   await this.poolFactory.openBorrowPoolRegistry
-    //     .withArgs(this.pool)
-    //     .returns(true)
-
-    //   await this.poolFactory.connect(this.pool).destroyPool()
-
-    //   await this.poolFactory.openBorrowPoolRegistry
-    //     .withArgs(this.pool)
-    //     .returns(false)
-    // })
   })
 
   describe('updateSupportedBorrowTokens', async () => {
