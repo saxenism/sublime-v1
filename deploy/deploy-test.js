@@ -192,6 +192,7 @@ const deploy = async () => {
     admin,
     poolFactory.options.address,
     config.repayments.votingPassRatio,
+    savingsAccount.options.address,
   ]
   const repayments = await utils.deployWithProxy(
     web3,
@@ -221,7 +222,7 @@ const deploy = async () => {
     web3,
     tokenCompiled.abi,
     tokenCompiled.bytecode,
-    ['USDT Token', 'USDT', '10000'], //1M USDT
+    ['USDT Token', 'USDT', web3.utils.toWei('10000', 'ether')],
     deploymentConfig,
   )
 

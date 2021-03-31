@@ -85,7 +85,7 @@ const deploy = async (web3) => {
     const poolFactory = await utils.deployWithProxy(web3, poolFactoryCompiled.abi, poolFactoryCompiled.bytecode, proxyCompiled.abi, proxyCompiled.bytecode, null, proxyAdmin, deploymentConfig);
     
     // deploy Repayments
-    const repaymentsInitParams = [admin, poolFactory.options.address, config.repayments.votingPassRatio];
+    const repaymentsInitParams = [admin, poolFactory.options.address, config.repayments.votingPassRatio, savingsAccount.options.address];
     const repayments = await utils.deployWithProxy(web3, repaymentsCompiled.abi, repaymentsCompiled.bytecode, proxyCompiled.abi, proxyCompiled.bytecode, repaymentsInitParams, proxyAdmin, deploymentConfig);
     
     // deploy Extension
