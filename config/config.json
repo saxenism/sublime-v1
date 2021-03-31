@@ -72,15 +72,16 @@
         "OpenBorrowPool":{
             "poolSize": "40000000000000000",
             "minBorrowAmountFraction": 50000000,
-            "borrowTokenType": "0x0000000000000000000000000000000000000000",
-            "collateralTokenType": "0x8d40f9B7fd9AF24AAf8F8871af7026AeCCFB2b1e",
+            "borrowTokenType": "0x8d40f9B7fd9AF24AAf8F8871af7026AeCCFB2b1e",
+            "collateralTokenType": "0x0000000000000000000000000000000000000000",
             "collateralRatio": 1,
             "borrowRate": "6000000",
             "repaymentInterval": "86400",
             "noOfRepaymentIntervals": 15,
             "investedTo": "0x0000000000000000000000000000000000000000",
             "collateralAmount": "50000000000000000",
-            "transferFromSavingsAccount": false
+            "transferFromSavingsAccount": false,
+            "salt": "borrower"
         },
         "creditLines": {
             "borrowLimit": "10000000000000000000",
@@ -92,18 +93,18 @@
             "collateralAsset": "0x0000000000000000000000000000000000000000"
         },
         "deployedAddress": {
-            "strategyRegistry": "0xDE4dA0ca536a6974A17fB6Bc7D8B6975237F79b9",
-            "savingsAccount": "0xBbD4558d69df4F0F411AeF2353aB622107C946Fa",
-            "aaveYield": "0xebea40F142ff5b9a9b17b8DfBD99c5A2f5125dD6",
-            "compoundYield": "0x0B4E5243f461cB5B2F746dA8964d74E4d9d0279F",
-            "yearnYield": "0x69BedEBfF32c00076Fa433E63BA403aec558f0D9",
-            "priceOracle": "0x8C8cA9C01392e6124D31713A1e3895b43770d1Ed",
-            "verification": "0x4A3Ad240634e9590014900313Ffc5493752Ac339",
-            "poolFactory": "0xa4Eca2Eae5A6A90fb32868E050986Ea3B900c95d",
-            "repayments": "0x37cd92d504cf64c12b1C8621e30870ac9fBfB119",
-            "extension": "0x9CD3128eb4BA5Dbb21c1CD9c787E0D7C96351c14",
-            "pool": "0x646094e1f024A0e0851D66966FCDD93b49C3F031",
-            "creditLines": "0xa454683Aed13A3D117408c61477b40677E227C6e"
+            "strategyRegistry": "0x9fcEecd5e7f6A5F8bF5d2bA9bEF02bC628a34bBB",
+            "savingsAccount": "0x275D2ae44F84EadcBCD0b415d953Fbe74b016306",
+            "aaveYield": "0xF3b0f0DDE33A068e5acFc8053B856c749fa6e714",
+            "compoundYield": "0x317A451ADA00E133Cf4E3eFd983C473996C6ECF9",
+            "yearnYield": "0x87534AE9d0FA696d425286af0435d036A958A8F7",
+            "priceOracle": "0xAE75f5CCf7F7ca33EEE1aa8c59e6c579C8B38BD7",
+            "verification": "0x5F0552DE7969e1b51e4C68ECFaBb448FcbB5903A",
+            "poolFactory": "0xE819FF68816BC42c922F49CF9e41984133065D27",
+            "repayments": "0x0E23F15A6Df56E3119C30b40De693F0a9413fd20",
+            "extension": "0xcC991F6faC0BEf2eB6ED397FaE0F88334f833c73",
+            "pool": "0xB6414aC76747E7aC26D984EB6c5Fc78650e7aAC4",
+            "creditLines": "0x18a46AfB754ff321648d4A0c5c7351d513cCC4d2"
         },
         "oracle": {
             "usd": "0x9326BFA02ADD2366b30bacB125260Af641031331"
@@ -155,7 +156,7 @@
             "repaymentInterval": "86400",
             "noOfRepaymentIntervals": 15,
             "investedTo": "0x0000000000000000000000000000000000000000",
-            "collateralAmount": "50000000000000000",
+            "collateralAmount": "500000000000000000",
             "transferFromSavingsAccount": false
         },
         "oracle": {
