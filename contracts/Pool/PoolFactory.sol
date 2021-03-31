@@ -104,9 +104,9 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     }
 
     function initialize(
-        address _userRegistry, 
-        address _strategyRegistry, 
-        address _admin, 
+        address _userRegistry,
+        address _strategyRegistry,
+        address _admin,
         uint256 _collectionPeriod,
         uint256 _matchCollateralRatioInterval,
         uint256 _marginCallDuration,
@@ -139,7 +139,11 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         extension = _extension;
     }
 
-    function setImplementations(address _poolImpl, address _repaymentImpl, address _poolTokenImpl) external onlyOwner {
+    function setImplementations(
+        address _poolImpl,
+        address _repaymentImpl,
+        address _poolTokenImpl
+    ) external onlyOwner {
         poolImpl = _poolImpl;
         repaymentImpl = _repaymentImpl;
         poolTokenImpl = _poolTokenImpl;
@@ -249,8 +253,15 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
             );
         address pool = _deploy(_collateralAmount, salt, bytecode);
 
-        bytes memory tokenData = abi.encodeWithSelector(poolTokenInitFuncSelector, "Open Borrow Pool Tokens", "OBPT", pool);
-        address poolToken = address(new SublimeProxy(poolTokenImpl, address(0), tokenData));
+        bytes memory tokenData =
+            abi.encodeWithSelector(
+                poolTokenInitFuncSelector,
+                "Open Borrow Pool Tokens",
+                "OBPT",
+                pool
+            );
+        address poolToken =
+            address(new SublimeProxy(poolTokenImpl, address(0), tokenData));
         IPool(pool).setPoolToken(poolToken);
         openBorrowPoolRegistry[pool] = true;
         emit PoolCreated(pool, msg.sender, poolToken);
@@ -284,12 +295,16 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         return addr;
     }
 
-    function isWithinLimits(uint256 _value, uint256 _min, uint256 _max) internal pure returns(bool) {
-        if(_min != 0 && _max != 0) {
+    function isWithinLimits(
+        uint256 _value,
+        uint256 _min,
+        uint256 _max
+    ) internal pure returns (bool) {
+        if (_min != 0 && _max != 0) {
             return (_value >= _min && _value <= _max);
-        } else if(_min != 0) {
+        } else if (_min != 0) {
             return (_value >= _min);
-        } else if(_max != 0) {
+        } else if (_max != 0) {
             return (_value <= _max);
         } else {
             return true;
@@ -300,12 +315,18 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         delete openBorrowPoolRegistry[msg.sender];
     }
 
-    function updateSupportedBorrowTokens(address _borrowToken, bool _isSupported) external onlyOwner {
+    function updateSupportedBorrowTokens(
+        address _borrowToken,
+        bool _isSupported
+    ) external onlyOwner {
         isBorrowToken[_borrowToken] = _isSupported;
         emit BorrowTokenUpdated(_borrowToken, _isSupported);
     }
 
-    function updateSupportedCollateralTokens(address _collateralToken, bool _isSupported) external onlyOwner {
+    function updateSupportedCollateralTokens(
+        address _collateralToken,
+        bool _isSupported
+    ) external onlyOwner {
         isCollateralToken[_collateralToken] = _isSupported;
         emit CollateralTokenUpdated(_collateralToken, _isSupported);
     }
@@ -315,7 +336,10 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         emit PoolInitSelectorUpdated(_functionId);
     }
 
-    function updatePoolTokenInitFuncSelector(bytes4 _functionId) external onlyOwner {
+    function updatePoolTokenInitFuncSelector(bytes4 _functionId)
+        external
+        onlyOwner
+    {
         poolTokenInitFuncSelector = _functionId;
         emit PoolTokenInitFuncSelector(_functionId);
     }
@@ -330,7 +354,10 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         emit UserRegistryUpdated(_userRegistry);
     }
 
-    function updateStrategyRegistry(address _strategyRegistry) external onlyOwner {
+    function updateStrategyRegistry(address _strategyRegistry)
+        external
+        onlyOwner
+    {
         strategyRegistry = _strategyRegistry;
         emit StrategyRegistryUpdated(_strategyRegistry);
     }
@@ -350,57 +377,89 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         emit PriceOracleUpdated(_priceOracle);
     }
 
-    function updateCollectionPeriod(uint256 _collectionPeriod) external onlyOwner {
+    function updateCollectionPeriod(uint256 _collectionPeriod)
+        external
+        onlyOwner
+    {
         collectionPeriod = _collectionPeriod;
         emit CollectionPeriodUpdated(_collectionPeriod);
     }
 
-    function updateMatchCollateralRatioInterval(uint256 _matchCollateralRatioInterval) external onlyOwner {
+    function updateMatchCollateralRatioInterval(
+        uint256 _matchCollateralRatioInterval
+    ) external onlyOwner {
         matchCollateralRatioInterval = _matchCollateralRatioInterval;
         emit MatchCollateralRatioIntervalUpdated(_matchCollateralRatioInterval);
     }
 
-    function updateMarginCallDuration(uint256 _marginCallDuration) external onlyOwner {
+    function updateMarginCallDuration(uint256 _marginCallDuration)
+        external
+        onlyOwner
+    {
         marginCallDuration = _marginCallDuration;
         emit MarginCallDurationUpdated(_marginCallDuration);
     }
 
-    function updateCollateralVolatilityThreshold(uint256 _collateralVolatilityThreshold) external onlyOwner {
+    function updateCollateralVolatilityThreshold(
+        uint256 _collateralVolatilityThreshold
+    ) external onlyOwner {
         collateralVolatilityThreshold = _collateralVolatilityThreshold;
-        emit CollateralVolatilityThresholdUpdated(_collateralVolatilityThreshold);
+        emit CollateralVolatilityThresholdUpdated(
+            _collateralVolatilityThreshold
+        );
     }
 
-    function updateGracePeriodPenaltyFraction(uint256 _gracePeriodPenaltyFraction) external onlyOwner {
+    function updateGracePeriodPenaltyFraction(
+        uint256 _gracePeriodPenaltyFraction
+    ) external onlyOwner {
         gracePeriodPenaltyFraction = _gracePeriodPenaltyFraction;
         emit GracePeriodPenaltyFractionUpdated(_gracePeriodPenaltyFraction);
     }
 
-    function updateLiquidatorRewardFraction(uint256 _liquidatorRewardFraction) external onlyOwner {
+    function updateLiquidatorRewardFraction(uint256 _liquidatorRewardFraction)
+        external
+        onlyOwner
+    {
         liquidatorRewardFraction = _liquidatorRewardFraction;
         emit LiquidatorRewardFractionUpdated(_liquidatorRewardFraction);
     }
 
-    function updatePoolSizeLimit(uint256 _min, uint256 _max) external onlyOwner {
+    function updatePoolSizeLimit(uint256 _min, uint256 _max)
+        external
+        onlyOwner
+    {
         poolSizeLimit = Limits(_min, _max);
         emit LimitsUpdated("PoolSize", _min, _max);
     }
 
-    function updateCollateralRatioLimit(uint256 _min, uint256 _max) external onlyOwner {
+    function updateCollateralRatioLimit(uint256 _min, uint256 _max)
+        external
+        onlyOwner
+    {
         collateralRatioLimit = Limits(_min, _max);
         emit LimitsUpdated("CollateralRatio", _min, _max);
     }
 
-    function updateBorrowRateLimit(uint256 _min, uint256 _max) external onlyOwner {
+    function updateBorrowRateLimit(uint256 _min, uint256 _max)
+        external
+        onlyOwner
+    {
         borrowRateLimit = Limits(_min, _max);
         emit LimitsUpdated("BorrowRate", _min, _max);
     }
 
-    function updateRepaymentIntervalLimit(uint256 _min, uint256 _max) external onlyOwner {
+    function updateRepaymentIntervalLimit(uint256 _min, uint256 _max)
+        external
+        onlyOwner
+    {
         repaymentIntervalLimit = Limits(_min, _max);
         emit LimitsUpdated("RepaymentInterval", _min, _max);
     }
 
-    function updateNoOfRepaymentIntervalsLimit(uint256 _min, uint256 _max) external onlyOwner {
+    function updateNoOfRepaymentIntervalsLimit(uint256 _min, uint256 _max)
+        external
+        onlyOwner
+    {
         noOfRepaymentIntervalsLimit = Limits(_min, _max);
         emit LimitsUpdated("NoOfRepaymentIntervals", _min, _max);
     }
