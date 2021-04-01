@@ -415,6 +415,19 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         return amount;
     }
 
+    function getTotalAsset(address _user, address _asset) public override returns(uint256 _totalTokens) {
+        address[] memory _strategyList = IStrategyRegistry(strategyRegistry).getStrategies();
+        
+        for (uint256 _index = 0; _index < _strategyList.length; _index++) {
+            uint256 _liquidityShares = userLockedBalance[_user][_strategyList[_index]][_asset];
+            
+            if (_liquidityShares != 0) {
+                uint256 _tokenInStrategy = IYield(_strategyList[_index]).getTokensForShares(_liquidityShares, _asset);
+                _totalTokens = _totalTokens.add(_tokenInStrategy);
+            }
+        }
+    }
+
     receive() external payable {
         require(
             IStrategyRegistry(strategyRegistry).registry(msg.sender),

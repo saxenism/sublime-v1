@@ -143,22 +143,6 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         creditLineUsage[creditLineHash].interestAccruedTillPrincipalUpdate = _newInterestAccrued;
     }
 
-    function getTotalTokensInStrategies(address _sender, address _asset) public returns(uint256 _totalTokens) {
-        address[] memory _strategyList = IStrategyRegistry(strategyRegistry).getStrategies();
-
-        ISavingsAccount _savingsAccount = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
-        
-        for (uint256 _index = 0; _index < _strategyList.length; _index++) {
-            
-            uint256 _liquidityShares = _savingsAccount.userLockedBalance(_sender, _asset, _strategyList[_index]);
-            
-            if (_liquidityShares != 0) {
-                uint256 _tokenInStrategy = IYield(_strategyList[_index]).getTokensForShares(_liquidityShares, _asset);
-                _totalTokens = _totalTokens.add(_tokenInStrategy);
-            }
-        }
-    }
-
      function transferFromSavingAccount(address _asset, uint256 _amount, address _sender, address _recipient) internal {
 
         address[] memory _strategyList = IStrategyRegistry(strategyRegistry).getStrategies();
