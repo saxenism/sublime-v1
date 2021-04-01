@@ -172,33 +172,6 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         revert("CreditLine::transferFromSavingAccount - Insufficient balance");
     }
 
-
-    function _transferCollateral(uint256 _amount, bytes32 _creditLineHash, address _recipient) internal {
-        address[] memory _strategyList = IStrategyRegistry(strategyRegistry).getStrategies();
-        uint256 _activeAmount;
-
-        ISavingsAccount _savingsAccount = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
-
-        for (uint256 _index = 0; _index < _strategyList.length; _index++) {
-            // TODO: Rename the  userrLockedBalance to something else
-            uint256 _liquidityShares = _savingsAccount.userLockedBalance(creditLineInfo[_creditLineHash].borrower, creditLineInfo[_creditLineHash].collateralAsset, _strategyList[_index]);
-            uint256 _sharesToTransfer = _liquidityShares;
-            if (_liquidityShares != 0) {
-                uint256 _tokenInStrategy = IYield(_strategyList[_index]).getTokensForShares(_liquidityShares, creditLineInfo[_creditLineHash].collateralAsset);
-
-                if (_activeAmount.add(_tokenInStrategy) >= _amount) {
-                    _sharesToTransfer = (_amount.sub(_activeAmount)).mul(_liquidityShares).div(_tokenInStrategy);
-                    return;
-                }
-                _activeAmount = _activeAmount.add(_tokenInStrategy);
-                _savingsAccount.transferFrom(creditLineInfo[_creditLineHash].collateralAsset, creditLineInfo[_creditLineHash].borrower, _recipient, _strategyList[_index], _sharesToTransfer);
-                collateralShareInStrategy[_creditLineHash][_strategyList[_index]] = collateralShareInStrategy[_creditLineHash][_strategyList[_index]]
-                                                                                    .add(_sharesToTransfer);
-            }
-        }
-        revert("CreditLine::_transferCollateral - Savings account doesn't have enough funds");
-    }
-
     /**
      * @dev used to request a credit line by a borrower
      * @param _lender lender from whom creditLine is requested
@@ -339,7 +312,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
     {
         if(_fromSavingAccount){
             // TODO: can we simplify the _transferCollateral logic by  allowing deposit only if depositor has enough collateralAsset
-            _transferCollateral(_collateralAmount, _creditLineHash, address(this));
+            transferFromSavingAccount(_collateralAsset, _collateralAmount, msg.sender, address(this));
         }
         else{
             address _strategy = defaultStrategy;
