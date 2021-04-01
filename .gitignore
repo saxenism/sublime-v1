@@ -11,3 +11,9 @@ coverage.json
 
 keystore/*
 keystore.json
+
+artifacts/
+cache/
+.openzeppelin
+
+config/address.json
