@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.0;
 
-
-
 interface IYield {
     /**
      * @dev emitted when tokens are locked
@@ -15,7 +13,7 @@ interface IYield {
         address investedTo,
         uint256 lpTokensReceived
     );
-    
+
     /**
      * @dev emitted when tokens are unlocked/redeemed
      * @param investedTo the address of contract invested in
@@ -65,4 +63,8 @@ interface IYield {
     function getTokensForShares(uint256 shares, address asset)
         external
         returns (uint256 amount);
+
+    function getSharesForTokens(uint256 amount, address asset)
+        external
+        returns (uint256 shares);
 }

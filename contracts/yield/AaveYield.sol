@@ -204,7 +204,7 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
      * @return amount amount of underlying tokens
      **/
     function getTokensForShares(uint256 shares, address asset)
-        external
+        public
         view
         override
         returns (uint256 amount)
@@ -220,6 +220,15 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
             .mul(liquidityIndex)
             .mul(shares)
             .div(IERC20(aToken).balanceOf(address(this)));
+    }
+
+    function getSharesForTokens(uint256 amount, address asset)
+        external
+        view
+        override
+        returns (uint256 shares)
+    {
+        shares = (amount.mul(1e18)).div(getTokensForShares(1e18, asset));
     }
 
     function _depositETH(uint256 amount)

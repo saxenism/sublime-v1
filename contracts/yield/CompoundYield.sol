@@ -147,7 +147,7 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable {
      * @return amount amount of underlying tokens
      **/
     function getTokensForShares(uint256 shares, address asset)
-        external
+        public
         override
         returns (uint256 amount)
     {
@@ -158,6 +158,14 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable {
             .balanceOfUnderlying(address(this))
             .mul(shares)
             .div(IERC20(cToken).balanceOf(address(this)));
+    }
+
+    function getSharesForTokens(uint256 amount, address asset)
+        external
+        override
+        returns (uint256 shares)
+    {
+        shares = (amount.mul(1e18)).div(getTokensForShares(1e18, asset));
     }
 
     function _depositETH(address cToken, uint256 amount)
