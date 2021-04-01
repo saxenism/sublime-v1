@@ -340,7 +340,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         address to,
         uint256 amount
     ) external override {
-        allowance[msg.sender][token][to] = allowance[msg.sender][token][to];
+        allowance[msg.sender][token][to] = amount;
 
         emit Approved(token, msg.sender, to, amount);
     }
@@ -351,7 +351,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         uint256 amount
     ) external override onlyCreditLine(msg.sender) {
 
-        allowance[from][token][msg.sender] = allowance[from][token][msg.sender];
+        allowance[from][token][msg.sender] = allowance[from][token][msg.sender].add(amount);
 
         emit CreditLineAllowanceRefreshed(token, from, amount);
     }
@@ -413,6 +413,19 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
 
         //not sure
         return amount;
+    }
+
+    function getTotalAsset(address _user, address _asset) public override returns(uint256 _totalTokens) {
+        address[] memory _strategyList = IStrategyRegistry(strategyRegistry).getStrategies();
+        
+        for (uint256 _index = 0; _index < _strategyList.length; _index++) {
+            uint256 _liquidityShares = userLockedBalance[_user][_strategyList[_index]][_asset];
+            
+            if (_liquidityShares != 0) {
+                uint256 _tokenInStrategy = IYield(_strategyList[_index]).getTokensForShares(_liquidityShares, _asset);
+                _totalTokens = _totalTokens.add(_tokenInStrategy);
+            }
+        }
     }
 
     receive() external payable {
