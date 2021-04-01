@@ -552,7 +552,6 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
     }
 
     function withdrawCollateralFromCreditLine(bytes32 creditLineHash,uint256 amount) public onlyCreditLineBorrower(creditLineHash){
-
         //check for ideal ratio
         uint256 _ratioOfPrices =
             IPriceOracle(IPoolFactory(PoolFactory).priceOracle())
@@ -633,20 +632,6 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
             transferFromSavingAccount(_collateralAsset, _totalCollateralToken, address(this), msg.sender);
         }
         creditLineInfo[creditLineHash].currentStatus = creditLineStatus.LIQUIDATED;
-    }
-
-    function activateLiquidatedCreditLine(bytes32 _creditLineHash, uint256 _collateralAmount, bool _fromSavingsAccount) external payable {
-        require(creditLineInfo[_creditLineHash].currentStatus == creditLineStatus.LIQUIDATED, "CreditLine not active");
-        _depositCollateral(
-            creditLineInfo[_creditLineHash].collateralAsset, 
-            _collateralAmount,
-            _creditLineHash, 
-            _fromSavingsAccount
-        );
-        uint256 currentCollateralRatio = calculateCurrentCollateralRatio(_creditLineHash);
-        require(currentCollateralRatio >= creditLineInfo[_creditLineHash].liquidationThreshold,
-                "CreditLine: Collateral ratio is lower than liquidation threshold");
-        creditLineInfo[_creditLineHash].currentStatus == creditLineStatus.ACTIVE;
     }
 
     receive() external payable {
