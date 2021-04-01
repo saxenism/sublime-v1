@@ -340,7 +340,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         address to,
         uint256 amount
     ) external override {
-        allowance[msg.sender][token][to] = allowance[msg.sender][token][to];
+        allowance[msg.sender][token][to] = amount;
 
         emit Approved(token, msg.sender, to, amount);
     }
@@ -351,7 +351,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         uint256 amount
     ) external override onlyCreditLine(msg.sender) {
 
-        allowance[from][token][msg.sender] = allowance[from][token][msg.sender];
+        allowance[from][token][msg.sender] = allowance[from][token][msg.sender].add(amount);
 
         emit CreditLineAllowanceRefreshed(token, from, amount);
     }
