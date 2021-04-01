@@ -17,7 +17,7 @@ contract CreditLineStorage is OwnableUpgradeable {
     using SafeMath for uint256;
 
     
-    enum creditLineStatus {REQUESTED, ACTIVE, CLOSED, CANCELLED}
+    enum creditLineStatus {NOT_CREATED, REQUESTED, ACTIVE, CLOSED, CANCELLED, LIQUIDATED}
 
     uint256 CreditLineCounter;
 

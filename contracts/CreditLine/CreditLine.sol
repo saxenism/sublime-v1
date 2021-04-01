@@ -30,7 +30,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
      **/
     modifier ifCreditLineExists(bytes32 creditLineHash) {
         require(
-            creditLineInfo[creditLineHash].borrowLimit != 0,
+            creditLineInfo[creditLineHash].currentStatus != creditLineStatus.NOT_CREATED,
             "Credit line does not exist"
         );
         _;
@@ -308,8 +308,22 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
     payable
     ifCreditLineExists(_creditLineHash)
     {
+        require(creditLineInfo[_creditLineHash].currentStatus == creditLineStatus.ACTIVE, "CreditLine not active");
+        _depositCollateral(
+            _collateralAsset, 
+            _collateralAmount,
+            _creditLineHash, 
+            _fromSavingAccount
+        );
+    }
+
+    function _depositCollateral(
+        address _collateralAsset, 
+        uint256 _collateralAmount,
+        bytes32 _creditLineHash, 
+        bool _fromSavingAccount
+    ) internal {
         if(_fromSavingAccount){
-            // TODO: can we simplify the _transferCollateral logic by  allowing deposit only if depositor has enough collateralAsset
             transferFromSavingAccount(_collateralAsset, _collateralAmount, msg.sender, address(this));
         }
         else{
@@ -325,7 +339,6 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
             uint256 _sharesReceived = _savingsAccount.depositTo{value:msg.value}(_collateralAmount, _collateralAsset, _strategy, address(this));
             collateralShareInStrategy[_creditLineHash][_strategy] = collateralShareInStrategy[_creditLineHash][_strategy].add(_sharesReceived);
         }
-
     }
 
     function _withdrawBorrowAmount(address _asset, uint256 _amountInTokens, address _lender) internal {
@@ -619,10 +632,22 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
             require(msg.sender == _lender,"CreditLine: Liquidation can only be performed by lender.");
             transferFromSavingAccount(_collateralAsset, _totalCollateralToken, address(this), msg.sender);
         }
-        // TODO: Status will change to requested, so I guess default should be doesn't exists ?
-        delete creditLineInfo[creditLineHash];
+        creditLineInfo[creditLineHash].currentStatus = creditLineStatus.LIQUIDATED;
     }
 
+    function activateLiquidatedCreditLine(bytes32 _creditLineHash, uint256 _collateralAmount, bool _fromSavingsAccount) external payable {
+        require(creditLineInfo[_creditLineHash].currentStatus == creditLineStatus.LIQUIDATED, "CreditLine not active");
+        _depositCollateral(
+            creditLineInfo[_creditLineHash].collateralAsset, 
+            _collateralAmount,
+            _creditLineHash, 
+            _fromSavingsAccount
+        );
+        uint256 currentCollateralRatio = calculateCurrentCollateralRatio(_creditLineHash);
+        require(currentCollateralRatio >= creditLineInfo[_creditLineHash].liquidationThreshold,
+                "CreditLine: Collateral ratio is lower than liquidation threshold");
+        creditLineInfo[_creditLineHash].currentStatus == creditLineStatus.ACTIVE;
+    }
 
     receive() external payable {
         require(
