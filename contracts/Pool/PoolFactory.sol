@@ -34,7 +34,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     uint256 public override collectionPeriod;
     uint256 public override matchCollateralRatioInterval;
     uint256 public override marginCallDuration;
-    uint256 public override collateralVolatilityThreshold;
+    
     uint256 public override gracePeriodPenaltyFraction;
     uint256 public override liquidatorRewardFraction;
     uint256 public override votingPassRatio;
@@ -42,6 +42,8 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
 
     mapping(address => bool) isBorrowToken;
     mapping(address => bool) isCollateralToken;
+
+    mapping(address => mapping(address => uint256)) public override collateralVolatilityThreshold; // collateralAsset -> borrowAsset -> uint256
 
     mapping(address => bool) public override openBorrowPoolRegistry;
 
@@ -66,6 +68,8 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     );
     event MarginCallDurationUpdated(uint256 updatedMarginCallDuration);
     event CollateralVolatilityThresholdUpdated(
+        address collateralAsset,
+        address borrowAsset,
         uint256 updatedCollateralVolatilityThreshold
     );
     event GracePeriodPenaltyFractionUpdated(
@@ -110,7 +114,6 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         uint256 _collectionPeriod,
         uint256 _matchCollateralRatioInterval,
         uint256 _marginCallDuration,
-        uint256 _collateralVolatilityThreshold,
         uint256 _gracePeriodPenaltyFraction,
         bytes4 _poolInitFuncSelector,
         bytes4 _poolTokenInitFuncSelector,
@@ -118,6 +121,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         address _priceOracle,
         address _savingsAccount,
         address _extension
+        //uint256 _collateralVolatilityThreshold
     ) external initializer {
         {
             OwnableUpgradeable.__Ownable_init();
@@ -129,7 +133,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         collectionPeriod = _collectionPeriod;
         matchCollateralRatioInterval = _matchCollateralRatioInterval;
         marginCallDuration = _marginCallDuration;
-        collateralVolatilityThreshold = _collateralVolatilityThreshold;
+        //collateralVolatilityThreshold = _collateralVolatilityThreshold;
         gracePeriodPenaltyFraction = _gracePeriodPenaltyFraction;
         poolInitFuncSelector = _poolInitFuncSelector;
         poolTokenInitFuncSelector = _poolTokenInitFuncSelector;
@@ -400,10 +404,14 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     }
 
     function updateCollateralVolatilityThreshold(
+        address _collateralAsset,
+        address _borrowAsset,
         uint256 _collateralVolatilityThreshold
     ) external onlyOwner {
-        collateralVolatilityThreshold = _collateralVolatilityThreshold;
+        collateralVolatilityThreshold[_collateralAsset][_borrowAsset] = _collateralVolatilityThreshold;
         emit CollateralVolatilityThresholdUpdated(
+            _collateralAsset,
+            _borrowAsset,
             _collateralVolatilityThreshold
         );
     }
