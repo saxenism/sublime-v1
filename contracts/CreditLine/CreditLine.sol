@@ -155,7 +155,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
                 uint256 _tokenInStrategy = IYield(_strategyList[_index]).getTokensForShares(_liquidityShares, _asset);
 
                 if(_activeAmount.add(_tokenInStrategy) >= _amount) {
-                    uint256 _sharesToTransfer = (_amount.sub(_activeAmount)).div(_tokenInStrategy).mul(_liquidityShares);
+                    uint256 _sharesToTransfer = (_amount.sub(_activeAmount)).mul(_liquidityShares).div(_tokenInStrategy);
                     _savingsAccount.transferFrom(_asset, _sender, _recipient, _strategyList[_index], _sharesToTransfer);
                     return;
                 }
@@ -355,7 +355,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
                 _tokenInStrategy = IYield(_strategyList[_index]).getTokensForShares(_liquidityShares, _asset); //TODO might not pass since yield is included in tokenInStrategy
                 uint256 _sharesToTransfer = _liquidityShares;
                 if (_activeAmount.add(_tokenInStrategy) >= _amountInTokens) {
-                    _sharesToTransfer = (_amountInTokens.sub(_activeAmount)).div(_tokenInStrategy).mul(_liquidityShares);
+                    _sharesToTransfer = (_amountInTokens.sub(_activeAmount)).mul(_liquidityShares).div(_tokenInStrategy);
                     _savingsAccount.withdrawFrom(_lender, address(this), _sharesToTransfer, _asset, _strategyList[_index], false);
                     //_savingsAccount.transferFrom(_asset, _sender, _recipient, _strategyList[_index], _sharesToTransfer);
                     // collateralShareInStrategy[_creditLineHash][_strategyList[_index]] = collateralShareInStrategy[_creditLineHash][_strategyList[_index]]
