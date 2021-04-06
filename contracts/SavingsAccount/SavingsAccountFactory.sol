@@ -345,26 +345,6 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         emit Approved(token, msg.sender, to, amount);
     }
 
-    function increaseAllowance(
-        address token,
-        address to,
-        uint256 amount
-    ) external {
-        uint256 _increasedAllowance = allowance[msg.sender][token][to].add(amount);
-        allowance[msg.sender][token][to] = _increasedAllowance;
-        emit Approved(token, msg.sender, to, _increasedAllowance);
-    }
-
-    function decreaseAllowance(
-        address token,
-        address to,
-        uint256 amount
-    ) external {
-        uint256 _decreasedAllowance = allowance[msg.sender][token][to].sub(amount);
-        allowance[msg.sender][token][to] = _decreasedAllowance;
-        emit Approved(token, msg.sender, to, _decreasedAllowance);
-    }
-
     function increaseCreditLineAllowance(
         address token,
         address from,

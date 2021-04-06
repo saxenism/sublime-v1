@@ -458,7 +458,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         else{
             transferFromSavingAccount(_borrowAsset, _repayAmount, msg.sender, creditLineInfo[_creditLineHash].lender);
         }
-        _savingsAccount.approveFromToCreditLine(_borrowAsset, _lender, _repayAmount);
+        _savingsAccount.increaseCreditLineAllowance(_borrowAsset, _lender, _repayAmount);
 
     }
 
