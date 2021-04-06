@@ -492,7 +492,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         if (creditLineUsage[creditLineHash].principal == 0) {
             _resetCreditLine(creditLineHash);
         }
-        PartialCreditLineRepaid(creditLineHash, repayAmount);
+        emit PartialCreditLineRepaid(creditLineHash, repayAmount);
     }
 
     function _resetCreditLine(bytes32 creditLineHash) internal {
