@@ -8,6 +8,7 @@
   },
   "scripts": {
     "test": "node deploy/deploy-test.js && npx hardhat --network ganache test",
+    "test1": "npx hardhat test",
     "compile": "npx truffle compile",
     "coverage": "truffle run coverage",
     "sol2uml": "sol2uml ./contracts/ -f png"

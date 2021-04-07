@@ -1,6 +1,7 @@
 const ethJsUtil = require('ethereumjs-util')
+const { ethers } = require('ethers')
 const Web3 = require('web3')
-let web3 = new Web3('http://127.0.0.1:8546')
+let web3 = new Web3('http://127.0.0.1:8545')
 
 async function generateAddress(address, toAdd = 0) {
   let transactionCount = await getTransactionCount(address)
@@ -18,7 +19,7 @@ async function getTransactionCount(address) {
   return transactionCount
 }
 
-function encodeUserData(ethers, data) {
+function encodeUserData( data) {
   return ethers.utils.formatBytes32String(data)
 }
 
@@ -36,4 +37,22 @@ function getInitCodehash(ethers, proxyBytecode, poolImplAddr, poolData, admin) {
   return ethers.utils.keccak256(encodedData)
 }
 
-module.exports = { generateAddress, encodeUserData, getSalt, getInitCodehash }
+function getInitializeABI(abi) {
+  let initializeABI;
+  for (let i = 0; i < abi.length; i++) {
+    if (abi[i].name == "initialize") {
+      initializeABI = abi[i];
+      break;
+    }
+  }
+  return initializeABI;
+}
+
+
+function encodeSignature(abi) {
+  return web3.eth.abi.encodeFunctionSignature(
+    getInitializeABI(abi),
+  )
+}
+
+module.exports = { generateAddress, encodeUserData, getSalt, getInitCodehash, encodeSignature }

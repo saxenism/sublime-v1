@@ -5,8 +5,7 @@ const { solidity } = require('ethereum-waffle')
 chai.use(solidity)
 const { expect } = chai
 
-const allConfigs = require('../config/address.json')
-const verificationCompiled = require('../build/contracts/Verification.json')
+const Deploy = require("./deploy.helper")
 const { encodeUserData } = require('./utils/utils')
 
 describe('Verification', () => {
@@ -20,11 +19,10 @@ describe('Verification', () => {
       this.borrower2,
     ] = await ethers.getSigners()
 
-    this.verification = new ethers.Contract(
-      allConfigs.verification,
-      verificationCompiled.abi,
-      this.verifier,
-    )
+    this.deploy = new Deploy(this.admin, this.deployer, this.verifier);
+
+    const contracts = await this.deploy.init()
+    this.verification = contracts['verification'].connect(this.verifier)
   })
 
   describe('registerUser', async () => {
@@ -32,7 +30,7 @@ describe('Verification', () => {
       await expect(
         this.verification.registerUser(
           this.borrower1.address,
-          encodeUserData(ethers, ''),
+          encodeUserData(''),
         ),
       ).to.be.revertedWith(
         'VM Exception while processing transaction: revert Verification: Offchain details should not be empty',
@@ -43,7 +41,7 @@ describe('Verification', () => {
       await expect(
         this.verification.registerUser(
           ethers.constants.AddressZero,
-          encodeUserData(ethers, 'borrower'),
+          encodeUserData('borrower'),
         ),
       ).to.be.revertedWith(
         'VM Exception while processing transaction: revert Verification: Invalid entity address',
@@ -53,8 +51,8 @@ describe('Verification', () => {
     it('should revert if not called by owner', async () => {
       await expect(
         this.verification
-          .connect(this.borrower1)
-          .registerUser(this.borrower1.address, encodeUserData(ethers, 'borrower')),
+          .connect(this.admin)
+          .registerUser(this.borrower1.address, encodeUserData('borrower')),
       ).to.be.revertedWith(
         'VM Exception while processing transaction: revert Ownable: caller is not the owner',
       )
@@ -68,7 +66,7 @@ describe('Verification', () => {
         ),
       )
         .to.emit(this.verification, 'UserRegistered')
-        .withArgs(this.borrower1.address, encodeUserData(ethers, 'borrower'))
+        .withArgs(this.borrower1.address, encodeUserData('borrower'))
 
       const isUser = await this.verification.isUser(this.borrower1.address)
       expect(isUser).to.equal(true)
@@ -78,7 +76,7 @@ describe('Verification', () => {
       await expect(
         this.verification.registerUser(
           this.borrower1.address,
-          encodeUserData(ethers, 'borrower'),
+          encodeUserData('borrower'),
         ),
       ).to.be.revertedWith(
         'VM Exception while processing transaction: revert Verification: User already registered',
@@ -91,23 +89,23 @@ describe('Verification', () => {
       await expect(
         this.verification.updateUserDetails(
           this.borrower1.address,
-          encodeUserData(ethers, 'borrower1'),
+          encodeUserData('borrower1'),
         ),
       )
         .to.emit(this.verification, 'UserDetailsUpdated')
-        .withArgs(this.borrower1.address, encodeUserData(ethers, 'borrower1'))
+        .withArgs(this.borrower1.address, encodeUserData('borrower1'))
 
       const userDetails = await this.verification.registeredUsers(
         this.borrower1.address,
       )
-      expect(userDetails).to.equal(encodeUserData(ethers, 'borrower1'))
+      expect(userDetails).to.equal(encodeUserData('borrower1'))
     })
 
     it('should revert if incorrect offchain details', async () => {
       await expect(
         this.verification.updateUserDetails(
           this.borrower1.address,
-          encodeUserData(ethers, ''),
+          encodeUserData(''),
         ),
       ).to.be.revertedWith(
         'VM Exception while processing transaction: revert Verification: Offchain details should not be empty',
@@ -118,7 +116,7 @@ describe('Verification', () => {
       await expect(
         this.verification.updateUserDetails(
           this.borrower2.address,
-          encodeUserData(ethers, 'borrower'),
+          encodeUserData('borrower'),
         ),
       ).to.be.revertedWith(
         'VM Exception while processing transaction: revert Verification: User must be registered',
@@ -128,10 +126,10 @@ describe('Verification', () => {
     it('should revert if not called by owner', async () => {
       await expect(
         this.verification
-          .connect(this.borrower1)
+          .connect(this.admin)
           .updateUserDetails(
             this.borrower1.address,
-            encodeUserData(ethers, 'borrower'),
+            encodeUserData('borrower'),
           ),
       ).to.be.revertedWith(
         'VM Exception while processing transaction: revert Ownable: caller is not the owner',
@@ -161,7 +159,7 @@ describe('Verification', () => {
     it('should revert if not called by owner', async () => {
       await expect(
         this.verification
-          .connect(this.borrower1)
+          .connect(this.admin)
           .unregisterUser(this.borrower1.address),
       ).to.be.revertedWith(
         'VM Exception while processing transaction: revert Ownable: caller is not the owner',
@@ -176,7 +174,7 @@ describe('Verification', () => {
       const userDetails = await this.verification.registeredUsers(
         this.borrower1.address,
       )
-      expect(userDetails).to.equal(encodeUserData(ethers, ''))
+      expect(userDetails).to.equal(encodeUserData(''))
     })
   })
 })

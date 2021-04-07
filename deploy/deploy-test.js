@@ -18,8 +18,9 @@ const poolFactoryCompiled = require('../build/contracts/PoolFactory.json')
 const creditLinesCompiled = require('../build/contracts/CreditLine.json')
 const poolCompiled = require('../build/contracts/Pool.json')
 const oracleCompiled = require('../build/contracts/FluxAggregator.json')
+const poolTokenCompiled = require('../build/contracts/PoolToken.json')
 
-const utils = require('../extra/deploy/utils')
+const utils = require('./utils')
 
 const config = allConfigs['ganache']
 let web3 = new Web3(config.blockchain.url)
@@ -234,9 +235,16 @@ const deploy = async () => {
     deploymentConfig,
   )
 
+  const poolToken = await utils.deployContract(
+    web3,
+    poolTokenCompiled.abi,
+    poolTokenCompiled.bytecode,
+    [],
+    deploymentConfig,
+  )
+  
   // initialize PoolFactory
   const poolFactoryInitParams = [
-    pool,
     verification.options.address,
     strategyRegistry.options.address,
     admin,
@@ -248,8 +256,10 @@ const deploy = async () => {
     web3.eth.abi.encodeFunctionSignature(
       utils.getInitializeABI(poolCompiled.abi),
     ),
+    web3.eth.abi.encodeFunctionSignature(
+      utils.getInitializeABI(poolTokenCompiled.abi),
+    ),
     config.pool.liquidatorRewardFraction,
-    repayments.options.address,
     priceOracle.options.address,
     savingsAccount.options.address,
     extension.options.address,
@@ -273,6 +283,7 @@ const deploy = async () => {
     creditLines: creditLines.options.address,
     token: token,
     oracle: oracle,
+    poolToken: poolToken
   }
   console.table(addresses)
 

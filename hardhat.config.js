@@ -25,9 +25,6 @@ module.exports = {
   networks: {
     hardhat: {
       throwOnTransactionFailures: true,
-      forking: {
-        url: 'http://127.0.0.1:8545',
-      },
       accounts: {
         count: 20,
         mnemonic,
