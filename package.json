@@ -7,8 +7,7 @@
     "test": "test"
   },
   "scripts": {
-    "test": "node deploy/deploy-test.js && npx hardhat --network ganache test",
-    "test1": "npx hardhat test",
+    "test": "npx hardhat test",
     "compile": "npx truffle compile",
     "coverage": "truffle run coverage",
     "sol2uml": "sol2uml ./contracts/ -f png"
@@ -47,7 +46,7 @@
     "ethlint": "^1.2.5",
     "ganache": "^6.4.4",
     "hardhat": "^2.1.1",
-    "solidity-coverage": "^0.7.14"
+    "solidity-coverage": "^0.7.16"
   },
   "dependencies": {
     "@chainlink/contracts": "^0.1.6",
