@@ -69,7 +69,7 @@
             "gracePeriodPenaltyFraction": 5000000,
             "liquidatorRewardFraction": 5000000
         },
-        "OpenBorrowPool":{
+        "OpenBorrowPool": {
             "poolSize": "40000000000000000",
             "minBorrowAmountFraction": 50000000,
             "borrowTokenType": "0x8d40f9B7fd9AF24AAf8F8871af7026AeCCFB2b1e",
@@ -146,7 +146,7 @@
             "gracePeriodPenaltyFraction": 5000000,
             "liquidatorRewardFraction": 5000000
         },
-        "OpenBorrowPool":{
+        "OpenBorrowPool": {
             "poolSize": "40000000000000000",
             "minBorrowAmountFraction": 50000000,
             "borrowTokenType": "0x0000000000000000000000000000000000000000",
@@ -157,7 +157,8 @@
             "noOfRepaymentIntervals": 15,
             "investedTo": "0x0000000000000000000000000000000000000000",
             "collateralAmount": "500000000000000000",
-            "transferFromSavingsAccount": false
+            "transferFromSavingsAccount": false,
+            "salt": "borrower"
         },
         "oracle": {
             "usd": "0x9326BFA02ADD2366b30bacB125260Af641031331"

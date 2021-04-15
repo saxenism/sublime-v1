@@ -1,8 +1,8 @@
-const { ethers } = require('hardhat')
+const { ethers, network } = require('hardhat')
 
 const allConfigs = require('../config/config.json')
 const config = allConfigs['ganache']
-const { encodeSignature } = require('./utils/utils')
+const { encodeSignature, encodeUserData } = require('./utils/utils')
 
 const poolCompiled = require('../build/contracts/Pool.json')
 const poolTokenCompiled = require('../build/contracts/PoolToken.json')
@@ -163,13 +163,16 @@ class Deploy {
     await this.verification.connect(this.verifier).registerUser(borrower, borrowerDetails)
   }
 
-  async deployPool(borrower, borrowToken, collateralToken) {
+  async deployPool(poolFactory, borrower, borrowToken, collateralToken) {
     //TODO
-    // const poolContract = await utils.generateAddress(web3, address.poolFactory)
+    // const poolContractAddress = await utils.generateAddress(web3, address.poolFactory)
 
-    if (collateralToken.address !== ethers.constants.AddressZero) {
-      await this.token.connect(borrower).approve(poolContract, config.OpenBorrowPool.collateralAmount)
+    let etherAmount = config.OpenBorrowPool.collateralAmount;
+    if (collateralToken.address && collateralToken.address !== ethers.constants.AddressZero) {
+      await this.token.connect(borrower).approve(poolContractAddress, config.OpenBorrowPool.collateralAmount)
+      etherAmount = 0;
     }
+
     //create pool
     await poolFactory
       .connect(borrower)
@@ -186,7 +189,23 @@ class Deploy {
         config.OpenBorrowPool.collateralAmount,
         config.OpenBorrowPool.transferFromSavingsAccount,
         encodeUserData(config.OpenBorrowPool.salt),
+        { value: etherAmount }
       )
+
+    const abi = [
+      "event PoolCreated (address pool, address borrower, address poolToken)"
+    ];
+
+    const iface = new ethers.utils.Interface(abi)
+    const logs = await network.provider.send(
+      "eth_getLogs",
+      [{ "address": this.poolFactory.address }]
+    );
+    const { pool, poolToken } = await iface.decodeEventLog(iface.getEvent("PoolCreated"), logs[0].data)
+    return {
+      pool,
+      poolToken
+    }
 
   }
 }
