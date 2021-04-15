@@ -86,6 +86,9 @@ class Deploy {
         await this.setupYields(this.strategyRegistry, [ethers.constants.AddressZero, this.aaveYield.address, this.yearnYield.address, this.compoundYield.address])
         await this.setupPoolFactory(this.token.address, ethers.constants.AddressZero);
 
+        //transfer token ownership to admin
+        await this.token.transferOwnership(this.admin.address)
+
         return {
             token: this.token,
             aaveYield: this.aaveYield,
@@ -132,6 +135,8 @@ class Deploy {
             this.oracle.address,
             this.oracle.address,
         )
+
+        await this.poolFactory.connect(this.admin).setImplementations(this.pool.address, this.repayments.address, this.poolToken.address)
     }
 
     async addPriceFeed(
