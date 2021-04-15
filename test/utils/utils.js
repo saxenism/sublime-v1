@@ -19,7 +19,7 @@ async function getTransactionCount(address) {
   return transactionCount
 }
 
-function encodeUserData( data) {
+function encodeUserData(data) {
   return ethers.utils.formatBytes32String(data)
 }
 
