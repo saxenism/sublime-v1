@@ -19,7 +19,7 @@ const zeroAddress = "0x0000000000000000000000000000000000000000";
 
 const depositValueToTest = BigNumber.from("1000000000000000000"); //1 ETH
 
-describe.only("Test Savings Account: Asset ETH", () => {
+describe("Test Savings Account: Asset ETH", () => {
   before(async () => {
     [
       this.deployer,
@@ -297,6 +297,7 @@ describe.only("Test Savings Account: Asset ETH", () => {
           params: [],
         });
       }
+
       await this.savingsAccount
         .connect(this.accountToDeposit)
         .withdraw(
