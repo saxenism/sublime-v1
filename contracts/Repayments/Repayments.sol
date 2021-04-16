@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./RepaymentStorage.sol";
 import "../interfaces/IPool.sol";
 import "../interfaces/IRepayment.sol";
+import "../interfaces/ISavingsAccount.sol";
 
 contract Repayments is RepaymentStorage, IRepayment {
     using SafeERC20 for IERC20;
@@ -28,7 +29,7 @@ contract Repayments is RepaymentStorage, IRepayment {
         _;
     }
 
-    function initialize(address _owner, address _poolFactory, uint256 _votingPassRatio)
+    function initialize(address _owner, address _poolFactory, uint256 _votingPassRatio, address _savingsAccount)
         public
         initializer
     {
@@ -38,13 +39,15 @@ contract Repayments is RepaymentStorage, IRepayment {
 
         votingPassRatio = _votingPassRatio;
         PoolFactory = _poolFactory;
+        savingsAccount = _savingsAccount;
     }
 
     function initializeRepayment(
         uint256 numberOfTotalRepayments,
         uint256 repaymentInterval,
         uint256 borrowRate,
-        uint256 loanStartTime
+        uint256 loanStartTime,
+        address lentAsset
     ) external onlyValidPool override {
         repaymentDetails[msg.sender].gracePenaltyRate = gracePenaltyRate;
         repaymentDetails[msg.sender].gracePeriodFraction = gracePeriodFraction;
@@ -53,7 +56,8 @@ contract Repayments is RepaymentStorage, IRepayment {
         repaymentDetails[msg.sender].repaymentInterval = repaymentInterval;
         repaymentDetails[msg.sender].borrowRate = borrowRate;
         repaymentDetails[msg.sender].loanStartTime = loanStartTime;
-        
+        repaymentDetails[msg.sender].repayAsset = lentAsset;
+        repaymentDetails[msg.sender].savingsAccount = savingsAccount;
     }
 
 
@@ -79,8 +83,7 @@ contract Repayments is RepaymentStorage, IRepayment {
 
     function repayAmount(
         address poolID,
-        uint256 amount,
-        address asset
+        uint256 amount
     ) public isPoolInitialized payable {
         //repayAmount() in Pool.sol is already performing pool status check - confirm this
 
@@ -98,25 +101,34 @@ contract Repayments is RepaymentStorage, IRepayment {
 
         interestDueTillPeriodEnd = calculateRepayAmount(poolID);
 
-        if (repaymentDetails[poolID].isLoanExtensionActive == false) {
-            // might consider transferring interestDueTillPeriodEnd and refunding the rest
+        address asset = repaymentDetails[poolID].repayAsset;
+
+        if (asset == address(0)) {
+            require(amount == msg.value, "Repayments::repayAmount amount does not match message value.");
+        }
+
+        else {
+            ISavingsAccount(savingsAccount).depositTo(
+                amount,
+                asset,
+                address(0),
+                poolID
+            );
+        }
+
+        if(repaymentDetails[poolID].isLoanExtensionActive == false || (amount >= repaymentDetails[poolID].repaymentOverdue)) {
+            if(repaymentDetails[poolID].isLoanExtensionActive) {
+                amount = amount.sub(repaymentDetails[poolID].repaymentOverdue);
+                repaymentDetails[poolID].repaymentOverdue = 0;
+                repaymentDetails[poolID].isLoanExtensionActive = false;
+                emit MissedRepaymentRepaid(poolID);
+                repaymentDetails[poolID].totalRepaidAmount = repaymentDetails[poolID].totalRepaidAmount.add(amount);
+            }
             require(amount <= interestDueTillPeriodEnd,
                     "Repayments - amount is greater than interest due this period.");
 
-            //if asset == address(0), payable function receives tokens in contract
-            if (asset == address(0)) {
-                require(amount == msg.value, "Repayments::repayAmount amount does not match message value.");
-            }
-
-            else {
-                //add check to see if user has sufficient asset balance?
-                IERC20(asset).transferFrom(msg.sender, address(this), amount);
-            }
-
             uint256 periodCovered = amount.div(interestPerSecond);
 
-            //repaymentDetails[poolID].repaymentPeriodCovered = repaymentDetails[poolID].repaymentPeriodCovered
-            //                                                 .add(periodCovered);
             if(repaymentDetails[poolID].repaymentPeriodCovered.add(periodCovered) == repaymentDetails[poolID].repaymentInterval) {
                 repaymentDetails[poolID].repaymentPeriodCovered = 0;
             }
@@ -126,50 +138,8 @@ contract Repayments is RepaymentStorage, IRepayment {
             }
 
             emit InterestRepaid(poolID, amount);
-
-        }
-        else {
-            if (amount >= repaymentDetails[poolID].repaymentOverdue) {
-                if (asset == address(0)) {
-                    require(amount == msg.value, "Repayments::repayAmount amount does not match message value.");
-                }
-
-                else {
-                    //add check to see if user has sufficient asset balance?
-                    IERC20(asset).transferFrom(msg.sender, address(this), amount);
-                }
-                
-                amount = amount.sub(repaymentDetails[poolID].repaymentOverdue);
-                repaymentDetails[poolID].repaymentOverdue = 0;
-                repaymentDetails[poolID].isLoanExtensionActive = false;
-                emit MissedRepaymentRepaid(poolID);
-
-                // might consider transferring interestDueTillPeriodEnd and refunding the rest
-                require(amount < interestDueTillPeriodEnd,
-                        "Repayments - amount is greater than interest due this period.");
-
-                uint256 periodCovered = amount.div(interestPerSecond);
-
-                if(repaymentDetails[poolID].repaymentPeriodCovered.add(periodCovered) == repaymentDetails[poolID].repaymentInterval) {
-                    repaymentDetails[poolID].repaymentPeriodCovered = 0;
-                }
-                else{
-                    repaymentDetails[poolID].repaymentPeriodCovered = repaymentDetails[poolID].repaymentPeriodCovered
-                                                                      .add(periodCovered);
-                }
-                repaymentDetails[poolID].totalRepaidAmount = repaymentDetails[poolID].totalRepaidAmount.add(amount);
-                emit InterestRepaid(poolID, amount);
-            }
-
-            else {
-                if (asset == address(0)) {
-                    require(amount == msg.value, "Repayments::repayAmount amount does not match message value.");
-                }
-
-                else {
-                    //add check to see if user has sufficient asset balance?
-                    IERC20(asset).transferFrom(msg.sender, address(this), amount);
-                }
+        } else {
+            if (amount < repaymentDetails[poolID].repaymentOverdue) {
 
                 repaymentDetails[poolID].repaymentOverdue = repaymentDetails[poolID].repaymentOverdue
                                                             .sub(amount);
