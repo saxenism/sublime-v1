@@ -1,4 +1,4 @@
-const { ethers } = require('hardhat')
+const { ethers, network } = require('hardhat')
 const chai = require('chai')
 const { solidity } = require('ethereum-waffle')
 
@@ -7,6 +7,7 @@ const { expect } = chai
 const Deploy = require("./deploy.helper")
 
 const { encodeUserData } = require('./utils/utils')
+const timeTravel = require('./utils/time')
 let config = require('../config/config.json')
 
 const { getCreate2Address } = require('@ethersproject/address')
@@ -30,6 +31,8 @@ describe('Pool', () => {
         this.address2,
       ] = accounts
 
+    this.salt = encodeUserData(config.OpenBorrowPool.salt)
+
     this.deploy = new Deploy(this.admin, this.deployer, this.verifier);
     const contracts = await this.deploy.init()
     this.poolFactory = await contracts['poolFactory'].connect(this.admin)
@@ -43,11 +46,8 @@ describe('Pool', () => {
 
   describe('createPool', async () => {
     it('should create pool', async () => {
-
-      const salt = encodeUserData('Borrower')
-
       //TODO: correct create2 address prediction
-      this.newPool = '0xF8061dA1715f0cfFD7A61b0615e66D8754355848'
+      const newPool = '0x7F69150Ce04438E44Df70A172D8fBbcFE2e827F3'
       const newPoolTokenAddress = '0xCBA0851DcDd6218eaDAAB8fD6ea91626F64D0535'
 
       await expect(
@@ -65,14 +65,14 @@ describe('Pool', () => {
             ethers.constants.AddressZero,
             config.OpenBorrowPool.collateralAmount,
             config.OpenBorrowPool.transferFromSavingsAccount,
-            encodeUserData('Borrower'),
+            this.salt,
             { value: config.OpenBorrowPool.collateralAmount },
           ),
       )
         .to.emit(this.poolFactory, 'PoolCreated')
-        .withArgs(this.newPool, this.borrower.address, newPoolTokenAddress)
+        .withArgs(newPool, this.borrower.address, newPoolTokenAddress)
 
-      expect(await this.poolFactory.openBorrowPoolRegistry(this.newPool)).to.be
+      expect(await this.poolFactory.openBorrowPoolRegistry(newPool)).to.be
         .true
     })
 
@@ -90,7 +90,7 @@ describe('Pool', () => {
           ethers.constants.AddressZero,
           config.OpenBorrowPool.collateralAmount,
           config.OpenBorrowPool.transferFromSavingsAccount,
-          encodeUserData('Borrower')
+          this.salt
         ),
       ).to.be.revertedWith(
         'VM Exception while processing transaction: revert PoolFactory::onlyBorrower - Only a valid Borrower can create Pool',
@@ -113,7 +113,7 @@ describe('Pool', () => {
             ethers.constants.AddressZero,
             config.OpenBorrowPool.collateralAmount,
             config.OpenBorrowPool.transferFromSavingsAccount,
-            encodeUserData('Borrower'),
+            this.salt,
             { value: config.OpenBorrowPool.collateralAmount },
 
           ),
@@ -124,22 +124,34 @@ describe('Pool', () => {
   })
 
   describe('Pool functions', async () => {
-    before(async () => {
+    beforeEach(async () => {
+      const contracts = await this.deploy.init()
+      this.poolFactory = await contracts['poolFactory'].connect(this.admin)
+      this.token = await contracts['token'].connect(this.admin)
+
+      await this.deploy.verifyBorrower(
+        this.borrower.address,
+        encodeUserData('borrower'),
+      )
+      const { pool, poolToken } = await this.deploy.deployPool(
+        this.poolFactory,
+        this.borrower,
+        this.token.address,
+        ethers.constants.AddressZero
+      );
+
       this.pool = new ethers.Contract(
-        this.newPool,
+        pool,
         poolCompiled.abi,
         this.borrower,
       )
 
-      this.borrowToken = this.token
-
-      await this.borrowToken
+      await this.token
         .connect(this.admin)
         .mint(this.lender.address, parseEther('10'))
 
-      const OPTaddress = await this.pool.poolToken()
       this.poolToken = await new ethers.Contract(
-        OPTaddress,
+        poolToken,
         poolTokenCompiled.abi,
         this.admin,
       )
@@ -180,7 +192,7 @@ describe('Pool', () => {
     describe('lend', async () => {
       const amountLent = parseEther('0.01')
       it('should lend tokens and mint pool tokens to lender', async () => {
-        await this.borrowToken
+        await this.token
           .connect(this.lender)
           .approve(this.pool.address, amountLent)
 
@@ -220,6 +232,15 @@ describe('Pool', () => {
       })
 
       it('should withdraw borrowed amount', async () => {
+        await this.token
+          .connect(this.lender)
+          .approve(this.pool.address, parseEther('1'))
+
+        await this.pool
+          .connect(this.lender)
+          .lend(this.lender.address, parseEther('1'), false)
+
+        await timeTravel(network, config.pool.collectionPeriod + 100);
         await expect(
           this.pool.withdrawBorrowedAmount(),
         )
@@ -228,179 +249,259 @@ describe('Pool', () => {
       })
     })
 
-    // describe('cancelOpenBorrowPool', async () => {
-    //     it('should revert if not called by borrower', async () => { })
+    describe('End OpenBorrowPool', async () => {
+      describe('cancelOpenBorrowPool', async () => {
+        it('should revert if not called by borrower', async () => {
+          await expect(
+            this.pool.connect(this.admin).cancelOpenBorrowPool(),
+          ).to.be.revertedWith(
+            'VM Exception while processing transaction: revert 1',
+          )
+        })
 
-    //     it('should revert if withdrawal deadline is reached', async () => { })
+        it('should cancel pool', async () => {
+          await this.pool.connect(this.borrower).cancelOpenBorrowPool()
+        })
+      })
 
-    //     it('should cancel pool', async () => { })
-    // })
+      describe('terminateOpenBorrowPool', async () => {
+        it('should revert if not called by owner', async () => {
+          await expect(
+            this.pool.terminateOpenBorrowPool(),
+          ).to.be.revertedWith(
+            'VM Exception while processing transaction: revert 3',
+          )
+        })
 
-    // describe('terminateOpenBorrowPool', async () => {
-    //     it('should revert if not called by owner', async () => { })
+        it('should teminate pool', async () => {
+          await this.pool.connect(this.admin).terminateOpenBorrowPool()
+        })
+      })
 
-    //     it('should revert if loan status neither ACTIVE nor COLLECTION', async () => { })
+      describe('closeLoan', async () => {
+        before(async () => {
+          await this.token
+            .connect(this.lender)
+            .approve(this.pool.address, parseEther('1'))
 
-    //     it('should teminate pool', async () => { })
-    // })
+          await this.pool
+            .connect(this.lender)
+            .lend(this.lender.address, parseEther('1'), false)
 
-    // describe('closeLoan', async () => {
-    //     it('should revert if not called by borrower', async () => { })
+          await timeTravel(network, config.pool.collectionPeriod + 100);
+          await expect(
+            this.pool.withdrawBorrowedAmount(),
+          )
+            .to.emit(this.pool, 'AmountBorrowed')
+            .withArgs(config.OpenBorrowPool.poolSize)
 
-    //     it('should revert if loan status is not ACTIVE', async () => { })
+        })
 
-    //     it('should close loan', async () => { })
-    // })
+        it('should revert if not called by borrower', async () => {
+          await expect(
+            this.pool.closeLoan(),
+          ).to.be.revertedWith(
+            'VM Exception while processing transaction: revert 1',
+          )
+        })
 
-    // describe('withdrawLiquidity', async () => {
-    //     it('should revert if not called by lender', async () => { })
+        it('should revert if loan status is not ACTIVE', async () => {
+          await expect(
+            this.pool.connect(this.borrower).closeLoan(),
+          ).to.be.revertedWith(
+            'VM Exception while processing transaction: revert 1',
+          )
+        })
 
-    //     it('should revert if loan status is active or collection', async () => { })
+        it('should close loan', async () => {
+          await this.pool.connect(this.borrower).closeLoan()
+        })
 
-    //     it('should transfer borrowed amount to lender and burn pool tokens', async () => { })
-    // })
+        describe('withdrawLiquidity', async () => {
+          it('should revert if not called by lender', async () => {
+            await expect(
+              this.pool.connect(this.borrower).closeLoan(),
+            ).to.be.revertedWith(
+              'VM Exception while processing transaction: revert 1',
+            )
+          })
 
-    // describe('requestMarginCall', async () => {
-    //     it('should revert if not called by lender', async () => { })
+          it('should revert if loan status is active or collection', async () => {
+            await expect(
+              this.pool.connect(this.borrower).closeLoan(),
+            ).to.be.revertedWith(
+              'VM Exception while processing transaction: revert 1',
+            )
+          })
 
-    //     it('should revert if pool is not active', async () => { })
+          it('should transfer borrowed amount to lender and burn pool tokens', async () => {
+            await this.pool.connect(this.borrower).closeLoan()
+          })
+        })
+      })
+    })
 
-    //     it('should revert if already in margin call', async () => { })
+    describe('MarginCall', async () => {
+      describe('requestMarginCall', async () => {
+        it('should revert if not called by lender', async () => {
+          await this.token
+            .connect(this.lender)
+            .approve(this.pool.address, parseEther('1'))
 
-    //     it('should revert if collateral ratio is not below ideal', async () => { })
+          await this.pool
+            .connect(this.lender)
+            .lend(this.lender.address, parseEther('1'), false)
 
-    //     it('should request margin call', async () => { })
-    // })
+          await timeTravel(network, config.pool.collectionPeriod + 100);
+          await this.pool.connect(this.borrower).withdrawBorrowedAmount();
 
-    // describe('addCollateralInMarginCall', async () => {
-    //     const collateral = parseEther('1')
+          await expect(
+            this.pool.requestMarginCall(),
+          ).to.be.revertedWith(
+            'VM Exception while processing transaction: revert 2',
+          )
 
-    //     it('should revert if loan status is not ACTIVE', async () => {
-    //         await expect(
-    //             this.pool.addCollateralInMarginCall(
-    //                 this.lender.address,
-    //                 collateral,
-    //                 false,
-    //             ),
-    //         ).to.be.revertedWith(
-    //             'VM Exception while processing transaction: revert 9',
-    //         )
-    //     })
+        })
 
-    //     it('should revert if margin call time has ended', async () => {
-    //         await expect(
-    //             this.pool.addCollateralInMarginCall(
-    //                 this.lender.address,
-    //                 collateral,
-    //                 false,
-    //             ),
-    //         ).to.be.revertedWith(
-    //             'VM Exception while processing transaction: revert 10',
-    //         )
-    //     })
+        it('should revert if pool is not active', async () => {
+          await this.token
+            .connect(this.lender)
+            .approve(this.pool.address, parseEther('1'))
 
-    //     it('should revert if amount is 0', async () => {
-    //         await expect(
-    //             this.pool.addCollateralInMarginCall(this.lender.address, 0, false),
-    //         ).to.be.revertedWith(
-    //             'VM Exception while processing transaction: revert 11',
-    //         )
-    //     })
+          await this.pool
+            .connect(this.lender)
+            .lend(this.lender.address, parseEther('1'), false)
 
-    //     it('should updateSupportedBorrowTokens', async () => {
-    //         await expect(
-    //             this.pool.addCollateralInMarginCall(
-    //                 this.lender.address,
-    //                 collateral,
-    //                 false,
-    //             ),
-    //         )
-    //             .to.emit(this.pool, 'MarginCallCollateralAdded')
-    //             .withArgs(
-    //                 this.borrower.address,
-    //                 this.borrower.address,
-    //                 collateral,
-    //                 collateral,
-    //             )
-    //     })
-    // })
+          await expect(
+            this.pool.connect(this.lender).requestMarginCall(),
+          ).to.be.revertedWith(
+            'VM Exception while processing transaction: revert 4',
+          )
+        })
 
-    // describe('calculateCollateralRatio', async () => {
-    //     it('should revert if not called by owner', async () => { })
+        it('should revert if already in margin call', async () => {
+          await this.token
+            .connect(this.lender)
+            .approve(this.pool.address, parseEther('1'))
 
-    //     it('should updateSupportedBorrowTokens', async () => { })
-    // })
+          await this.pool
+            .connect(this.lender)
+            .lend(this.lender.address, parseEther('1'), false)
 
-    // describe('getCurrentCollateralRatio for pool', async () => {
-    //     it('should get current collateral ratio of the pool', async () => {
-    //         await this.pool.balanceOf
-    //             .withArgs(wallet.address)
-    //             .returns(utils.parseEther('1000001'))
-    //     })
-    // })
+          await timeTravel(network, config.pool.collectionPeriod + 100);
+          await this.pool.connect(this.borrower).withdrawBorrowedAmount();
 
-    // describe('getCurrentCollateralRatio for lender', async () => {
-    //     it('should get current collateral ratio for given lender', async () => {
-    //         await this.pool.balanceOf
-    //             .withArgs(wallet.address)
-    //             .returns(utils.parseEther('1000001'))
-    //     })
-    // })
+          await this.pool.connect(this.lender).requestMarginCall();
+          await expect(
+            this.pool.connect(this.lender).requestMarginCall(),
+          ).to.be.revertedWith(
+            'VM Exception while processing transaction: revert 1',
+          )
+        })
 
-    // describe('liquidatePool', async () => {
-    //     it('should revert if not called by owner', async () => { })
+        it('should request margin call', async () => {
+          await this.token
+            .connect(this.lender)
+            .approve(this.pool.address, parseEther('1'))
 
-    //     it('should updateSupportedBorrowTokens', async () => { })
-    // })
+          await this.pool
+            .connect(this.lender)
+            .lend(this.lender.address, parseEther('1'), false)
 
-    // describe('liquidateLender', async () => {
-    //     it('should revert if not called by owner', async () => { })
+          await timeTravel(network, config.pool.collectionPeriod + 100);
+          await this.pool.connect(this.borrower).withdrawBorrowedAmount();
+          await this.pool.connect(this.lender).requestMarginCall();
+        })
+      })
 
-    //     it('should updateSupportedBorrowTokens', async () => { })
-    // })
+      describe('addCollateralInMarginCall', async () => {
+        const collateral = parseEther('1')
 
-    // describe('correspondingBorrowTokens', async () => {
-    //     it('should revert if not called by owner', async () => { })
+        it('should revert if loan status is not ACTIVE', async () => {
+          await expect(
+            this.pool.addCollateralInMarginCall(
+              this.lender.address,
+              collateral,
+              false,
+            ),
+          ).to.be.revertedWith(
+            'VM Exception while processing transaction: revert 9',
+          )
+        })
 
-    //     it('should updateSupportedBorrowTokens', async () => { })
-    // })
+        it('should revert if margin call time has ended', async () => {
+          await this.token
+            .connect(this.lender)
+            .approve(this.pool.address, parseEther('1'))
 
-    // describe('checkRepayment', async () => {
-    //     it('should revert if not called by owner', async () => { })
+          await this.pool
+            .connect(this.lender)
+            .lend(this.lender.address, parseEther('1'), false)
 
-    //     it('should updateSupportedBorrowTokens', async () => { })
-    // })
+          await timeTravel(network, config.pool.collectionPeriod + 100);
+          await this.pool.connect(this.borrower).withdrawBorrowedAmount();
 
-    // describe('getNextDueTimeIfBorrower', async () => {
-    //     it('should revert if not called by owner', async () => { })
+          await this.pool.connect(this.lender).requestMarginCall();
 
-    //     it('should updateSupportedBorrowTokens', async () => { })
-    // })
+          await expect(
+            this.pool.addCollateralInMarginCall(this.lender.address, 0, false),
+          ).to.be.revertedWith(
+            'VM Exception while processing transaction: revert 11',
+          )
 
-    // describe('interestPerSecond', async () => {
-    //     it('should revert if not called by owner', async () => { })
+          await timeTravel(network, 1200);
 
-    //     it('should updateSupportedBorrowTokens', async () => { })
-    // })
+          await expect(
+            this.pool.addCollateralInMarginCall(
+              this.lender.address,
+              collateral,
+              false,
+            ),
+          ).to.be.revertedWith(
+            'VM Exception while processing transaction: revert 10',
+          )
+        })
 
-    // describe('interestPerPeriod', async () => {
-    //     it('should revert if not called by owner', async () => { })
+        it('should addCollateralInMarginCall', async () => {
+          await this.token
+            .connect(this.lender)
+            .approve(this.pool.address, parseEther('1'))
 
-    //     it('should updateSupportedBorrowTokens', async () => { })
-    // })
+          await this.pool
+            .connect(this.lender)
+            .lend(this.lender.address, parseEther('1'), false)
 
-    // describe('withdrawRepayment', async () => {
-    //     it('should revert if not called by owner', async () => { })
+          await timeTravel(network, config.pool.collectionPeriod + 100);
+          await this.pool.connect(this.borrower).withdrawBorrowedAmount();
 
-    //     it('should updateSupportedBorrowTokens', async () => { })
-    // })
+          await this.pool.connect(this.lender).requestMarginCall();
 
-    // describe('grantExtension', async () => {
-    //     it('should revert if caller is not extension contract address', async () => { })
+          await expect(
+            this.pool.addCollateralInMarginCall(this.lender.address, 0, false),
+          ).to.be.revertedWith(
+            'VM Exception while processing transaction: revert 11',
+          )
 
-    //     it('should grant extension', async () => { })
-    // })
+          await timeTravel(network, 1200);
 
+          await expect(
+            this.pool.addCollateralInMarginCall(
+              this.lender.address,
+              collateral,
+              false,
+            ),
+          )
+            .to.emit(this.pool, 'MarginCallCollateralAdded')
+            .withArgs(
+              this.borrower.address,
+              this.borrower.address,
+              collateral,
+              collateral,
+            )
+        })
+      })
+
+    })
 
     describe('receive', async () => {
       it('should revert if eth not received from savings account', async () => {

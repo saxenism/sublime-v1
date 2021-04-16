@@ -8,13 +8,12 @@ import "../interfaces/IPoolFactory.sol";
 import "../interfaces/IExtension.sol";
 import "../interfaces/IRepayment.sol";
 
-
 contract Extension is Initializable, IExtension {
     using SafeMath for uint256;
 
     uint256 constant MAX_INT = uint256(-1);
 
-    event VotingPassed(uint256 nextDuePeriod);//, uint256 periodWhenExtensionIsPassed); Confirm: do we need to pass the second var?
+    event VotingPassed(uint256 nextDuePeriod); //, uint256 periodWhenExtensionIsPassed); Confirm: do we need to pass the second var?
 
     struct PoolInfo {
         uint256 periodWhenExtensionIsPassed;
@@ -27,11 +26,8 @@ contract Extension is Initializable, IExtension {
     mapping(address => PoolInfo) poolInfo;
     IPoolFactory poolFactory;
 
-
     event ExtensionRequested(uint256 extensionVoteEndTime);
-    event ExtensionPassed(
-        uint256 nextDuePeriod
-    );
+    event ExtensionPassed(uint256 nextDuePeriod);
     event LenderVoted(
         address lender,
         uint256 totalExtensionSupport,
@@ -42,10 +38,16 @@ contract Extension is Initializable, IExtension {
         poolFactory = IPoolFactory(_poolFactory);
     }
 
-    function initializePoolExtension(uint256 _repaymentInterval) external override {
+    function initializePoolExtension(uint256 _repaymentInterval)
+        external
+        override
+    {
         IPoolFactory _poolFactory = poolFactory;
         require(poolInfo[msg.sender].repaymentInterval == 0);
-        require(_poolFactory.openBorrowPoolRegistry(msg.sender), "Repayments::onlyValidPool - Invalid Pool");
+        require(
+            _poolFactory.openBorrowPoolRegistry(msg.sender),
+            "Repayments::onlyValidPool - Invalid Pool"
+        );
         poolInfo[msg.sender].repaymentInterval = _repaymentInterval;
     }
 
@@ -68,7 +70,8 @@ contract Extension is Initializable, IExtension {
         uint256 _gracePeriodFraction = poolFactory.gracePeriodFraction();
         uint256 _gracePeriod =
             (_repaymentInterval * _gracePeriodFraction).div(100000000);
-        uint256 _nextDueTime = IPool(_pool).getNextDueTimeIfBorrower(msg.sender);
+        uint256 _nextDueTime =
+            IPool(_pool).getNextDueTimeIfBorrower(msg.sender);
         _extensionVoteEndTime = (_nextDueTime).add(_gracePeriod);
         poolInfo[_pool].extensionVoteEndTime = _extensionVoteEndTime;
         emit ExtensionRequested(_extensionVoteEndTime);
@@ -80,8 +83,9 @@ contract Extension is Initializable, IExtension {
             block.timestamp < _extensionVoteEndTime,
             "Pool::voteOnExtension - Voting is over"
         );
-        
-        (uint256 _balance, uint256 _totalSupply) = IPool(_pool).getBalanceDetails(msg.sender);
+
+        (uint256 _balance, uint256 _totalSupply) =
+            IPool(_pool).getBalanceDetails(msg.sender);
         require(
             _balance != 0,
             "Pool::voteOnExtension - Not a valid lender for pool"
@@ -95,15 +99,14 @@ contract Extension is Initializable, IExtension {
         uint256 _gracePeriod =
             (_repaymentInterval * _gracePeriodFraction).div(100000000);
         require(
-            _lastVoteTime < _extensionVoteEndTime.sub(_gracePeriod).sub(_repaymentInterval),
+            _lastVoteTime <
+                _extensionVoteEndTime.sub(_gracePeriod).sub(_repaymentInterval),
             "Pool::voteOnExtension - you have already voted"
         );
-        
+
         uint256 _extensionSupport = poolInfo[_pool].totalExtensionSupport;
         _lastVoteTime = block.timestamp;
-        _extensionSupport = _extensionSupport.add(
-            _balance
-        );
+        _extensionSupport = _extensionSupport.add(_balance);
 
         poolInfo[_pool].lastVoteTime[msg.sender] = _lastVoteTime;
         emit LenderVoted(msg.sender, _extensionSupport, _lastVoteTime);
@@ -127,7 +130,7 @@ contract Extension is Initializable, IExtension {
         poolInfo[_pool].extensionVoteEndTime = block.timestamp; // voting is over
 
         IRepayment(_poolFactory.repaymentImpl()).repaymentExtended(_pool);
-        
+
         emit ExtensionPassed(_nextDuePeriod);
     }
 
