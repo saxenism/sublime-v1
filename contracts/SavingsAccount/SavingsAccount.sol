@@ -108,7 +108,11 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         } else {
             sharesReceived = amount;
             if (asset != address(0)) {
-                IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
+                IERC20(asset).safeTransferFrom(
+                    msg.sender,
+                    address(this),
+                    amount
+                );
             } else {
                 require(
                     msg.value == amount,
@@ -350,8 +354,8 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         address from,
         uint256 amount
     ) external override onlyCreditLine(msg.sender) {
-
-        allowance[from][token][msg.sender] = allowance[from][token][msg.sender].add(amount);
+        allowance[from][token][msg.sender] = allowance[from][token][msg.sender]
+            .add(amount);
 
         emit CreditLineAllowanceRefreshed(token, from, amount);
     }
@@ -365,15 +369,17 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         require(amount != 0, "SavingsAccount::transfer zero amount");
 
         //reduce msg.sender balance
-        userLockedBalance[msg.sender][token][poolSavingsStrategy] = userLockedBalance[
-            msg.sender
-        ][token][poolSavingsStrategy]
-            .sub(amount, "SavingsAccount::transfer insufficient funds");
+        userLockedBalance[msg.sender][token][
+            poolSavingsStrategy
+        ] = userLockedBalance[msg.sender][token][poolSavingsStrategy].sub(
+            amount,
+            "SavingsAccount::transfer insufficient funds"
+        );
 
         //update receiver's balance
-        userLockedBalance[to][token][poolSavingsStrategy] = userLockedBalance[to][token][
-            poolSavingsStrategy
-        ]
+        userLockedBalance[to][token][poolSavingsStrategy] = userLockedBalance[
+            to
+        ][token][poolSavingsStrategy]
             .add(amount);
 
         emit Transfer(token, poolSavingsStrategy, msg.sender, to, amount);
@@ -398,9 +404,9 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         );
 
         //reduce sender's balance
-        userLockedBalance[from][token][poolSavingsStrategy] = userLockedBalance[from][
-            token
-        ][poolSavingsStrategy]
+        userLockedBalance[from][token][poolSavingsStrategy] = userLockedBalance[
+            from
+        ][token][poolSavingsStrategy]
             .sub(amount, "SavingsAccount::transferFrom insufficient allowance");
 
         //update receiver's balance
@@ -415,14 +421,25 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         return amount;
     }
 
-    function getTotalAsset(address _user, address _asset) public override returns(uint256 _totalTokens) {
-        address[] memory _strategyList = IStrategyRegistry(strategyRegistry).getStrategies();
-        
+    function getTotalAsset(address _user, address _asset)
+        public
+        override
+        returns (uint256 _totalTokens)
+    {
+        address[] memory _strategyList =
+            IStrategyRegistry(strategyRegistry).getStrategies();
+
         for (uint256 _index = 0; _index < _strategyList.length; _index++) {
-            uint256 _liquidityShares = userLockedBalance[_user][_strategyList[_index]][_asset];
-            
+            uint256 _liquidityShares =
+                userLockedBalance[_user][_strategyList[_index]][_asset];
+
             if (_liquidityShares != 0) {
-                uint256 _tokenInStrategy = IYield(_strategyList[_index]).getTokensForShares(_liquidityShares, _asset);
+                uint256 _tokenInStrategy = _liquidityShares;
+                if (_strategyList[_index] != address(0)) {
+                    _tokenInStrategy = IYield(_strategyList[_index])
+                        .getTokensForShares(_liquidityShares, _asset);
+                }
+
                 _totalTokens = _totalTokens.add(_tokenInStrategy);
             }
         }

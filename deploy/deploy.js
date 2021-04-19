@@ -1,5 +1,4 @@
 const Web3 = require('web3');
-const fs = require('fs');
 const allConfigs = require("../config/config.json");
 const keystore = require("../keystore/keystore.json");
 
@@ -17,6 +16,7 @@ const extensionCompiled = require("../build/contracts/Extension.json");
 const poolFactoryCompiled = require("../build/contracts/PoolFactory.json");
 const creditLinesCompiled = require("../build/contracts/CreditLine.json");
 const poolCompiled = require("../build/contracts/Pool.json");
+const poolTokenCompiled = require("../build/contracts/PoolToken.json");
 
 const utils = require("./utils");
 
@@ -34,14 +34,14 @@ const deploymentConfig = {
     gasPrice: config.tx.gasPrice
 };
 
-const adminDeploymentConfig  = {
+const adminDeploymentConfig = {
     from: admin,
     gas: config.tx.gas,
     gasPrice: config.tx.gasPrice
 }
 
 const addAccounts = async (web3, keystore) => {
-    for(let account in keystore) {
+    for (let account in keystore) {
         await web3.eth.accounts.wallet.add(keystore[account]);
     }
     return web3;
@@ -57,7 +57,7 @@ const deploy = async (web3) => {
     const creditLines = await utils.deployWithProxy(web3, creditLinesCompiled.abi, creditLinesCompiled.bytecode, proxyCompiled.abi, proxyCompiled.bytecode, creditLinesInitParams, proxyAdmin, deploymentConfig);
 
     // deploy savingsAccount
-    const savingsAccountInitParams =  [admin, strategyRegistry.options.address, creditLines.options.address];
+    const savingsAccountInitParams = [admin, strategyRegistry.options.address, creditLines.options.address];
     const savingsAccount = await utils.deployWithProxy(web3, savingsAccountCompiled.abi, savingsAccountCompiled.bytecode, proxyCompiled.abi, proxyCompiled.bytecode, savingsAccountInitParams, proxyAdmin, deploymentConfig);
 
     // deploy strategies
@@ -67,37 +67,37 @@ const deploy = async (web3) => {
     const compoundYield = await utils.deployWithProxy(web3, compoundYieldCompiled.abi, compoundYieldCompiled.bytecode, proxyCompiled.abi, proxyCompiled.bytecode, compoundYieldInitParams, proxyAdmin, deploymentConfig);
     const yearnYieldInitParams = [admin, savingsAccount.options.address];
     const yearnYield = await utils.deployWithProxy(web3, yearnYieldCompiled.abi, yearnYieldCompiled.bytecode, proxyCompiled.abi, proxyCompiled.bytecode, yearnYieldInitParams, proxyAdmin, deploymentConfig);
-    
+
     // add deployed strategies to registry
     await strategyRegistry.methods.addStrategy(aaveYield.options.address).send(adminDeploymentConfig).then(console.log);
     await strategyRegistry.methods.addStrategy(compoundYield.options.address).send(adminDeploymentConfig).then(console.log);
     await strategyRegistry.methods.addStrategy(yearnYield.options.address).send(adminDeploymentConfig).then(console.log);
 
     // deploy priceOracle - update it first
-    const priceOracleInitParams =  [admin];
+    const priceOracleInitParams = [admin];
     const priceOracle = await utils.deployWithProxy(web3, priceOracleCompiled.abi, priceOracleCompiled.bytecode, proxyCompiled.abi, proxyCompiled.bytecode, priceOracleInitParams, proxyAdmin, deploymentConfig);
     // TODO add price oracles
 
     // deploy verification
-    const verificationInitParams =  [config.actors.verifier];
+    const verificationInitParams = [config.actors.verifier];
     const verification = await utils.deployWithProxy(web3, verificationCompiled.abi, verificationCompiled.bytecode, proxyCompiled.abi, proxyCompiled.bytecode, verificationInitParams, proxyAdmin, deploymentConfig);
 
     // deploy poolFactory
     const poolFactory = await utils.deployWithProxy(web3, poolFactoryCompiled.abi, poolFactoryCompiled.bytecode, proxyCompiled.abi, proxyCompiled.bytecode, null, proxyAdmin, deploymentConfig);
-    
+
     // deploy Repayments
-    const repaymentsInitParams = [admin, poolFactory.options.address, config.repayments.votingPassRatio];
+    const repaymentsInitParams = [admin, poolFactory.options.address, config.repayments.votingPassRatio, savingsAccount.options.address];
     const repayments = await utils.deployWithProxy(web3, repaymentsCompiled.abi, repaymentsCompiled.bytecode, proxyCompiled.abi, proxyCompiled.bytecode, repaymentsInitParams, proxyAdmin, deploymentConfig);
-    
+
     // deploy Extension
-    const extensionInitParams =  [poolFactory.options.address];
+    const extensionInitParams = [poolFactory.options.address];
     const extension = await utils.deployWithProxy(web3, extensionCompiled.abi, extensionCompiled.bytecode, proxyCompiled.abi, proxyCompiled.bytecode, extensionInitParams, proxyAdmin, deploymentConfig);
 
     const pool = await utils.deployContract(web3, poolCompiled.abi, poolCompiled.bytecode, [], deploymentConfig);
-    
+
     // initialize PoolFactory
-    const poolFactoryInitParams =  [
-        pool, 
+    const poolFactoryInitParams = [
+        pool,
         verification.options.address,
         strategyRegistry.options.address,
         admin,
@@ -115,6 +115,8 @@ const deploy = async (web3) => {
     ];
     await poolFactory.methods.initialize.apply(null, poolFactoryInitParams).send(deploymentConfig);
 
+    const poolToken = await utils.deployContract(web3, poolTokenCompiled.abi, poolTokenCompiled.bytecode, [], deploymentConfig);
+
     const addresses = {
         "strategyRegistry": strategyRegistry.options.address,
         "savingsAccount": savingsAccount.options.address,
@@ -127,19 +129,10 @@ const deploy = async (web3) => {
         "repayments": repayments.options.address,
         "extension": extension.options.address,
         "pool": pool,
-        "creditLines": creditLines.options.address
+        "creditLines": creditLines.options.address,
+        "poolToken": poolToken
     }
     console.table(addresses);
-
-    const data = JSON.stringify(addresses);
-
-    // write JSON string to a file
-    fs.writeFile('./config/address.json', data, (err) => {
-        if (err) {
-            throw err;
-        }
-        console.log("JSON data is saved.");
-    });
 }
 
 addAccounts(web3, keystore).then(deploy);
