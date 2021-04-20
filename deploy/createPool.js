@@ -9,8 +9,8 @@ const poolFactoryCompiled = require("../build/contracts/PoolFactory.json");
 const tokenCompiled = require("../build/contracts/Token.json");
 const strategyRegistryCompiled = require("../build/contracts/StrategyRegistry.json");
 
-const config = allConfigs[allConfigs.network];
-const address = deployedAddresses[deployedAddresses.network];
+const config = allConfigs[allConfigs.network]
+const address = config['deployedAddress']
 
 let web3 = new Web3(config.blockchain.url);
 const utils = require("./utils");
@@ -36,7 +36,8 @@ const borrowerTransactionConfig = {
   from: borrower,
   gas: config.tx.gas,
   gasPrice: config.tx.gasPrice,
-};
+  value: config.OpenBorrowPool.collateralAmount
+}
 
 const borrowerDetails =
   "0x0100000000000000000000000000000000000000000000000000000000000000";
@@ -107,7 +108,8 @@ const createPool = async (web3) => {
       config.OpenBorrowPool.noOfRepaymentIntervals,
       config.OpenBorrowPool.investedTo,
       config.OpenBorrowPool.collateralAmount,
-      config.OpenBorrowPool.transferFromSavingsAccount
+      config.OpenBorrowPool.transferFromSavingsAccount,
+      web3.utils.asciiToHex(config.OpenBorrowPool.salt),
     )
     .send(borrowerTransactionConfig)
     .then(console.log);

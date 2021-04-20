@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.0;
 
+import "hardhat/console.sol";
+
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -268,10 +270,12 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             }
         } else {
             uint256 _liquidityshare =
-                IYield(_poolSavingsStrategy).getTokensForShares(
-                    _amount,
-                    _asset
-                );
+                _poolSavingsStrategy == address(0)
+                    ? _amount
+                    : IYield(_poolSavingsStrategy).getTokensForShares(
+                        _amount,
+                        _asset
+                    );
             if (_toSavingsAccount) {
                 _sharesReceived = _savingsAccount.transferFrom(
                     _asset,
@@ -359,16 +363,17 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         }
 
         poolVars.loanStatus = LoanStatus.ACTIVE;
-
         uint256 _currentCollateralRatio = getCurrentCollateralRatio();
+
         IPoolFactory _poolFactory = IPoolFactory(PoolFactory);
         require(
-            _currentCollateralRatio >
+            _currentCollateralRatio >=
                 poolConstants.idealCollateralRatio.sub(
                     _poolFactory.collateralVolatilityThreshold()
                 ),
             "13"
         );
+
         uint256 _noOfRepaymentIntervals = poolConstants.noOfRepaymentIntervals;
         uint256 _repaymentInterval = poolConstants.repaymentInterval;
         IRepayment(_poolFactory.repaymentImpl()).initializeRepayment(
@@ -394,14 +399,18 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         uint256 _collateralShares =
             poolVars.baseLiquidityShares.add(poolVars.extraLiquidityShares);
 
-        uint256 _sharesReceived =
-            ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount())
+        uint256 _sharesReceived;
+        if (_collateralShares != 0) {
+            _sharesReceived = ISavingsAccount(
+                IPoolFactory(PoolFactory).savingsAccount()
+            )
                 .transfer(
                 poolConstants.collateralAsset,
                 msg.sender,
                 poolConstants.poolSavingsStrategy,
                 _collateralShares
             );
+        }
         emit CollateralWithdrawn(msg.sender, _sharesReceived);
         delete poolVars.baseLiquidityShares;
         delete poolVars.extraLiquidityShares;
@@ -644,9 +653,8 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     function calculateCollateralRatio(
         uint256 _balance,
         uint256 _liquidityShares
-    ) public returns (uint256) {
+    ) public returns (uint256 _ratio) {
         uint256 _interest = interestTillNow(_balance);
-
         address _collateralAsset = poolConstants.collateralAsset;
 
         uint256 _ratioOfPrices =
@@ -654,24 +662,24 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
                 .getLatestPrice(_collateralAsset, poolConstants.borrowAsset);
 
         uint256 _currentCollateralTokens =
-            IYield(poolConstants.poolSavingsStrategy).getTokensForShares(
-                _liquidityShares,
-                _collateralAsset
-            );
+            poolConstants.poolSavingsStrategy == address(0)
+                ? _liquidityShares
+                : IYield(poolConstants.poolSavingsStrategy).getTokensForShares(
+                    _liquidityShares,
+                    _collateralAsset
+                );
 
-        uint256 _ratio =
-            (_currentCollateralTokens.mul(_ratioOfPrices).div(100000000)).div(
-                _balance.add(_interest)
-            );
-
-        return (_ratio);
+        _ratio = (_currentCollateralTokens.mul(_ratioOfPrices).div(100000000))
+            .div(_balance.add(_interest));
     }
 
-    function getCurrentCollateralRatio() public returns (uint256) {
+    function getCurrentCollateralRatio() public returns (uint256 _ratio) {
         uint256 _liquidityShares =
             poolVars.baseLiquidityShares.add(poolVars.extraLiquidityShares);
-        return (
-            calculateCollateralRatio(poolToken.totalSupply(), _liquidityShares)
+
+        _ratio = calculateCollateralRatio(
+            poolToken.totalSupply(),
+            _liquidityShares
         );
     }
 
@@ -687,6 +695,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
                 )
             )
                 .add(lenders[_lender].extraLiquidityShares);
+
         return (calculateCollateralRatio(_balanceOfLender, _liquidityShares));
     }
 
@@ -711,10 +720,12 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             poolVars.baseLiquidityShares.add(poolVars.extraLiquidityShares);
         address _poolSavingsStrategy = poolConstants.poolSavingsStrategy;
         uint256 _collateralTokens =
-            IYield(_poolSavingsStrategy).getTokensForShares(
-                _collateralLiquidityShare,
-                _collateralAsset
-            );
+            _poolSavingsStrategy == address(0)
+                ? _collateralLiquidityShare
+                : IYield(_poolSavingsStrategy).getTokensForShares(
+                    _collateralLiquidityShare,
+                    _collateralAsset
+                );
 
         uint256 _poolBorrowTokens =
             correspondingBorrowTokens(_collateralTokens, _poolFactory);
@@ -833,10 +844,12 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         }
 
         uint256 _lenderCollateralShare =
-            IYield(_poolSavingsStrategy).getTokensForShares(
-                _lenderCollateralLPShare,
-                _collateralAsset
-            );
+            _poolSavingsStrategy == address(0)
+                ? _lenderCollateralLPShare
+                : IYield(_poolSavingsStrategy).getTokensForShares(
+                    _lenderCollateralLPShare,
+                    _collateralAsset
+                );
         {
             uint256 _lenderLiquidationTokens =
                 correspondingBorrowTokens(_lenderCollateralShare, _poolFactory);

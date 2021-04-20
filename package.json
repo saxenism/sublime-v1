@@ -7,14 +7,9 @@
     "test": "test"
   },
   "scripts": {
-<<<<<<< HEAD
-    "test": "npx hardhat test",
     "pool-test": "truffle test ./test/pool/*.js",
     "compile": "truffle compile",
-=======
     "test": "node deploy/deploy-test.js && npx hardhat --network ganache test",
-    "compile": "npx truffle compile",
->>>>>>> master
     "coverage": "truffle run coverage",
     "sol2uml": "sol2uml ./contracts/ -f png",
     "prettier": "prettier --write '**/*.{ts,js}'"
@@ -55,7 +50,7 @@
     "hardhat": "^2.1.1",
     "hardhat-gas-reporter": "^1.0.4",
     "prettier": "^2.2.1",
-    "solidity-coverage": "^0.7.14"
+    "solidity-coverage": "^0.7.16"
   },
   "dependencies": {
     "@chainlink/contracts": "^0.1.6",

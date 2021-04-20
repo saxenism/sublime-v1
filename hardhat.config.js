@@ -1,7 +1,8 @@
-require("@nomiclabs/hardhat-ethers");
-require("@nomiclabs/hardhat-waffle");
-require("@nomiclabs/hardhat-ganache");
-require("@openzeppelin/hardhat-upgrades");
+require('@nomiclabs/hardhat-ethers')
+require('@nomiclabs/hardhat-waffle')
+require('@nomiclabs/hardhat-ganache')
+require('@openzeppelin/hardhat-upgrades')
+require("solidity-coverage");
 
 const config = require("./config/config.json");
 const mnemonic = config["ganache"]["blockchain"]["mnemonic"];
