@@ -77,7 +77,7 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable {
             _wallet.transfer(received);
         } else {
             received = _withdrawERC(_asset, investedTo, amount);
-            IERC20(_asset).transfer(_wallet, received);
+            IERC20(_asset).safeTransfer(_wallet, received);
         }
     }
 
@@ -133,7 +133,7 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable {
             savingsAccount.transfer(received);
         } else {
             received = _withdrawERC(asset, investedTo, amount);
-            IERC20(asset).transfer(savingsAccount, received);
+            IERC20(asset).safeTransfer(savingsAccount, received);
         }
 
         emit UnlockedTokens(asset, received);
@@ -146,7 +146,7 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable {
      * @return amount amount of underlying tokens
      **/
     function getTokensForShares(uint256 shares, address asset)
-        external
+        public
         override
         returns (uint256 amount)
     {
@@ -157,6 +157,14 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable {
             .balanceOfUnderlying(address(this))
             .mul(shares)
             .div(IERC20(cToken).balanceOf(address(this)));
+    }
+
+    function getSharesForTokens(uint256 amount, address asset)
+        external
+        override
+        returns (uint256 shares)
+    {
+        shares = (amount.mul(1e18)).div(getTokensForShares(1e18, asset));
     }
 
     function _depositETH(address cToken, uint256 amount)
@@ -182,8 +190,8 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable {
 
         //mint cToken
         IERC20(asset).approve(cToken, amount);
-        require(ICToken(cToken).mint(amount) == 0, "Error in redeeming tokens");
-        
+        require(ICToken(cToken).mint(amount) == 0, "Error in minting tokens");
+
         sharesReceived = IERC20(cToken).balanceOf(address(this)).sub(
             initialCTokenBalance
         );

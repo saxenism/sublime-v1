@@ -76,7 +76,7 @@ contract YearnYield is IYield, Initializable, OwnableUpgradeable {
             _wallet.transfer(received);
         } else {
             received = _withdrawERC(_asset, investedTo, amount);
-            IERC20(_asset).transfer(_wallet, received);
+            IERC20(_asset).safeTransfer(_wallet, received);
         }
     }
 
@@ -133,7 +133,7 @@ contract YearnYield is IYield, Initializable, OwnableUpgradeable {
             savingsAccount.transfer(received);
         } else {
             received = _withdrawERC(asset, investedTo, amount);
-            IERC20(asset).transfer(savingsAccount, received);
+            IERC20(asset).safeTransfer(savingsAccount, received);
         }
 
         emit UnlockedTokens(asset, received);
@@ -145,7 +145,7 @@ contract YearnYield is IYield, Initializable, OwnableUpgradeable {
      * @return amount amount of underlying tokens
      **/
     function getTokensForShares(uint256 shares, address asset)
-        external
+        public
         view
         override
         returns (uint256 amount)
@@ -155,6 +155,15 @@ contract YearnYield is IYield, Initializable, OwnableUpgradeable {
             .getPricePerFullShare()
             .mul(shares)
             .div(1e18);
+    }
+
+    function getSharesForTokens(uint256 amount, address asset)
+        external
+        view
+        override
+        returns (uint256 shares)
+    {
+        shares = (amount.mul(1e18)).div(getTokensForShares(1e18, asset));
     }
 
     function _depositETH(address vault, uint256 amount)

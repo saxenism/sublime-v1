@@ -7,9 +7,14 @@
     "test": "test"
   },
   "scripts": {
+<<<<<<< HEAD
     "test": "npx hardhat test",
     "pool-test": "truffle test ./test/pool/*.js",
     "compile": "truffle compile",
+=======
+    "test": "node deploy/deploy-test.js && npx hardhat --network ganache test",
+    "compile": "npx truffle compile",
+>>>>>>> master
     "coverage": "truffle run coverage",
     "sol2uml": "sol2uml ./contracts/ -f png",
     "prettier": "prettier --write '**/*.{ts,js}'"

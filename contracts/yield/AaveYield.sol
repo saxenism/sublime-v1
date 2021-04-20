@@ -136,7 +136,7 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
             _wallet.transfer(received);
         } else {
             received = _withdrawERC(_asset, amount);
-            IERC20(_asset).transfer(_wallet, received);
+            IERC20(_asset).safeTransfer(_wallet, received);
         }
     }
 
@@ -191,7 +191,7 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
             savingsAccount.transfer(received);
         } else {
             received = _withdrawERC(asset, amount);
-            IERC20(asset).transfer(savingsAccount, received);
+            IERC20(asset).safeTransfer(savingsAccount, received);
         }
 
         emit UnlockedTokens(asset, received);
@@ -204,7 +204,7 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
      * @return amount amount of underlying tokens
      **/
     function getTokensForShares(uint256 shares, address asset)
-        external
+        public
         view
         override
         returns (uint256 amount)
@@ -220,6 +220,15 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
             .mul(liquidityIndex)
             .mul(shares)
             .div(IERC20(aToken).balanceOf(address(this)));
+    }
+
+    function getSharesForTokens(uint256 amount, address asset)
+        external
+        view
+        override
+        returns (uint256 shares)
+    {
+        shares = (amount.mul(1e18)).div(getTokensForShares(1e18, asset));
     }
 
     function _depositETH(uint256 amount)

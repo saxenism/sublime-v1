@@ -6,15 +6,25 @@ require("@openzeppelin/hardhat-upgrades");
 const config = require("./config/config.json");
 const mnemonic = config["ganache"]["blockchain"]["mnemonic"];
 
+task('accounts', 'Prints the list of accounts', async () => {
+  const accounts = await ethers.getSigners()
+
+  for (const account of accounts) {
+    console.log(await account.getAddress())
+  }
+})
+
 module.exports = {
   defaultNetwork: "hardhat",
   networks: {
     ganache: {
       url: "http://127.0.0.1:8545",
-      gasLimit: 12000000,
+      gasLimit: 6000000000,
       defaultBalanceEther: 100,
       deterministic: true,
       mnemonic,
+      throwOnTransactionFailures: true,
+      fork: 'http://127.0.0.1:8545',
     },
     hardhat: {
       forking: {
@@ -24,6 +34,12 @@ module.exports = {
       },
       gasLimit: 12000000,
       gasPrice: 0,
+      accounts: {
+        count: 20,
+        mnemonic,
+        accountsBalance: '10000000000000000000000',
+      },
+      throwOnTransactionFailures: true,
     },
   },
   solidity: {
@@ -41,4 +57,10 @@ module.exports = {
   mocha: {
     timeout: 20000000,
   },
-};
+  paths: {
+    sources: './contracts',
+    tests: './test',
+    cache: './cache',
+    artifacts: './artifacts',
+  },
+}
