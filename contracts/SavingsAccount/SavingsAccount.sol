@@ -429,9 +429,11 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
     }
 
     receive() external payable {
-        require(
-            IStrategyRegistry(strategyRegistry).registry(msg.sender),
-            "SavingsAccount::receive invalid transaction"
-        );
+        // require(
+        //     IStrategyRegistry(strategyRegistry).registry(msg.sender),
+        //     "SavingsAccount::receive invalid transaction"
+        // );
+
+        // the above snippet of code causes gas issues. Commented till solution is found
     }
 }

@@ -110,7 +110,6 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable {
             IERC20(asset).safeTransferFrom(user, address(this), amount);
             sharesReceived = _depositERC20(asset, investedTo, amount);
         }
-
         emit LockedTokens(user, investedTo, sharesReceived);
     }
 

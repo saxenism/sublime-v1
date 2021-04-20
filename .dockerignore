@@ -4,20 +4,11 @@ coverage/*
 node_modules/*
 .DS_Store
 
-package-lock.json
-
 coverage/
 coverage.json
-
-keystore/*
-keystore.json
 
 cache/*
 cache
 
 artifacts/*
 artifacts
-
-.openzeppelin
-
-config/address.json
