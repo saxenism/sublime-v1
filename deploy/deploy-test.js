@@ -290,11 +290,18 @@ const deploy = async () => {
   const data = JSON.stringify(addresses)
 
   // write JSON string to a file
-  fs.writeFile('./config/address.json', data, (err) => {
-    if (err) {
+  fs.readFile('./config/address.json', (err, data) => {
+    if(err) {
       throw err
     }
-    console.log('JSON data is saved.')
+    let addressInfo = JSON.parse(data);
+    addressInfo['ganache'] = addresses;
+    fs.writeFile('./config/address.json', JSON.stringify(addressInfo, null, 4), (err) => {
+      if (err) {
+        throw err
+      }
+      console.log('JSON data is saved.')
+    })
   })
 }
 

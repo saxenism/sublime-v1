@@ -1,4 +1,4 @@
-const { ethers, network } = require('hardhat')
+const { ethers, network } = require("hardhat")
 const chai = require('chai')
 const { solidity } = require('ethereum-waffle')
 
@@ -7,6 +7,7 @@ const { expect } = chai
 const Deploy = require("./deploy.helper")
 
 const { encodeUserData } = require('./utils/utils')
+const { getPoolAddress } = require("./utils/getAddress");
 const timeTravel = require('./utils/time')
 let config = require('../config/config.json')
 
@@ -19,22 +20,22 @@ const poolTokenCompiled = require('../build/contracts/PoolToken.json')
 
 describe('Pool', () => {
   before(async () => {
-    const accounts = await ethers.getSigners()
-      ;[
-        this.proxyAdmin,
-        this.admin,
-        this.deployer,
-        this.verifier,
-        this.borrower,
-        this.lender,
-        this.address1,
-        this.address2,
-      ] = accounts
-
+    const accounts = await ethers.getSigners();
+    [
+      this.proxyAdmin,
+      this.admin,
+      this.deployer,
+      this.verifier,
+      this.borrower,
+      this.lender,
+      this.address1,
+      this.address2,
+    ] = accounts;
     this.salt = encodeUserData(config.OpenBorrowPool.salt)
 
     this.deploy = new Deploy(this.admin, this.deployer, this.verifier);
     const contracts = await this.deploy.init()
+    this.contracts = contracts;
     this.poolFactory = await contracts['poolFactory'].connect(this.admin)
     this.token = await contracts['token'].connect(this.admin)
 
@@ -46,12 +47,10 @@ describe('Pool', () => {
 
   describe('createPool', async () => {
     it('should create pool', async () => {
-      //TODO: correct create2 address prediction
-      const newPool = '0x7F69150Ce04438E44Df70A172D8fBbcFE2e827F3'
-      const newPoolTokenAddress = '0xCBA0851DcDd6218eaDAAB8fD6ea91626F64D0535'
+      const newPool = getPoolAddress('ganache', this.borrower.address, this.token.address, ethers.constants.AddressZero, ethers.constants.AddressZero, this.poolFactory.address, this.salt, this.contracts['pool'].address);
+      const newPoolTokenAddress = '0xcD540B9A37A6db853703b78A6efC85f2696acdDf'
 
-      await expect(
-        this.poolFactory
+      const poolCreateTx = this.poolFactory
           .connect(this.borrower)
           .createPool(
             config.OpenBorrowPool.poolSize,
@@ -67,8 +66,9 @@ describe('Pool', () => {
             config.OpenBorrowPool.transferFromSavingsAccount,
             this.salt,
             { value: config.OpenBorrowPool.collateralAmount },
-          ),
-      )
+          );
+
+      await expect(poolCreateTx)
         .to.emit(this.poolFactory, 'PoolCreated')
         .withArgs(newPool, this.borrower.address, newPoolTokenAddress)
 
