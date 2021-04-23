@@ -1,5 +1,5 @@
 const { ethers } = require('ethers');
-const { encodeUserData, getSalt, getInitCodehash } = require("./utils");
+const { getSalt, getInitCodehash } = require("./utils");
 
 const poolCompiled = require("../../build/contracts/Pool.json");
 const proxyCompiled = require("../../artifacts/contracts/Proxy.sol/SublimeProxy.json");
@@ -28,14 +28,6 @@ const getPoolAddress = (network, borrower, token1, token2, strategy, poolFactory
         config.pool.matchCollateralRatioInterval,
         config.pool.collectionPeriod,
     ]);
-    console.log(poolFactory, getSalt(ethers, borrower, salt),
-    getInitCodehash(
-        ethers,
-        proxyCompiled.bytecode,
-        poolLogic,
-        poolData,
-        '0x0000000000000000000000000000000000000001',
-    ));
     
     const poolAddress = ethers.utils.getCreate2Address(
         poolFactory,
@@ -48,7 +40,6 @@ const getPoolAddress = (network, borrower, token1, token2, strategy, poolFactory
             '0x0000000000000000000000000000000000000001',
         ),
     );
-    console.log("poolAddress", poolAddress)
     return poolAddress;
 }
 
