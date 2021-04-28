@@ -11,22 +11,22 @@ const interface = new ethers.utils.Interface(poolCompiled.abi)
 const initializeFragement = interface.getFunction('initialize')
 
 const getPoolAddress = (network, borrower, token1, token2, strategy, poolFactory, salt, poolLogic) => {
-    config = config[network];
+    let localConfig = config[network];
     const poolData = interface.encodeFunctionData(initializeFragement, [
-        config.OpenBorrowPool.poolSize,
-        config.OpenBorrowPool.minBorrowAmountFraction,
+        localConfig.OpenBorrowPool.poolSize,
+        localConfig.OpenBorrowPool.minBorrowAmountFraction,
         borrower,
         token1,
         token2,
-        config.OpenBorrowPool.collateralRatio,
-        config.OpenBorrowPool.borrowRate,
-        config.OpenBorrowPool.repaymentInterval,
-        config.OpenBorrowPool.noOfRepaymentIntervals,
+        localConfig.OpenBorrowPool.collateralRatio,
+        localConfig.OpenBorrowPool.borrowRate,
+        localConfig.OpenBorrowPool.repaymentInterval,
+        localConfig.OpenBorrowPool.noOfRepaymentIntervals,
         strategy,
-        config.OpenBorrowPool.collateralAmount,
-        config.OpenBorrowPool.transferFromSavingsAccount,
-        config.pool.matchCollateralRatioInterval,
-        config.pool.collectionPeriod,
+        localConfig.OpenBorrowPool.collateralAmount,
+        localConfig.OpenBorrowPool.transferFromSavingsAccount,
+        localConfig.pool.matchCollateralRatioInterval,
+        localConfig.pool.collectionPeriod,
     ]);
     
     const poolAddress = ethers.utils.getCreate2Address(

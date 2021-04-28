@@ -76,6 +76,51 @@ describe('Pool', () => {
         .true
     })
 
+    it('should create pool with ERC20 as collateral', async () => {
+      const deploy = new Deploy(this.admin, this.deployer, this.verifier);
+      const contracts = await deploy.init(true)
+      contracts.poolFactory = await contracts['poolFactory'].connect(this.admin)
+      contracts.token = await contracts['token'].connect(this.admin)
+      contracts.token1 = await contracts['token1'].connect(this.admin)
+      const salt = encodeUserData(config.OpenBorrowPool.salt+"159238")
+      await deploy.verifyBorrower(
+        this.borrower.address,
+        encodeUserData('borrower'),
+      )
+
+      const newPool = getPoolAddress('ganache', this.borrower.address, contracts.token.address, contracts.token1.address, ethers.constants.AddressZero, contracts.poolFactory.address, salt, contracts['pool'].address);
+      const newPoolTokenAddress = '0xE66451190438B5f3848283Ce58B27E61b24AB3fd'
+      
+      await contracts.token1.transfer(this.borrower.address, parseEther("100000"));
+      await contracts.token1.connect(this.borrower).approve(newPool, parseEther("100000"))
+
+      const poolCreateTx = contracts.poolFactory
+          .connect(this.borrower)
+          .createPool(
+            config.OpenBorrowPool.poolSize,
+            config.OpenBorrowPool.minBorrowAmountFraction,
+            contracts.token.address,
+            contracts.token1.address,
+            config.OpenBorrowPool.collateralRatio,
+            config.OpenBorrowPool.borrowRate,
+            config.OpenBorrowPool.repaymentInterval,
+            config.OpenBorrowPool.noOfRepaymentIntervals,
+            ethers.constants.AddressZero,
+            config.OpenBorrowPool.collateralAmount,
+            config.OpenBorrowPool.transferFromSavingsAccount,
+            salt,
+            { value: config.OpenBorrowPool.collateralAmount },
+          );
+      // const tx = await poolCreateTx;
+      // console.log((await tx.wait()).events[0].args.bytecode)
+      await expect(poolCreateTx)
+        .to.emit(contracts.poolFactory, 'PoolCreated')
+        .withArgs(newPool, this.borrower.address, newPoolTokenAddress)
+
+      expect(await contracts.poolFactory.openBorrowPoolRegistry(newPool)).to.be
+        .true
+    })
+
     it('should revert if not deployed by borrower', async () => {
       await expect(
         this.poolFactory.createPool(

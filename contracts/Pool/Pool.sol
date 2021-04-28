@@ -184,9 +184,9 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         uint256 price =
             IPriceOracle(IPoolFactory(PoolFactory).priceOracle())
                 .getLatestPrice(
-                poolConstants.borrowAsset,
-                poolConstants.collateralAsset
-            );
+                    poolConstants.borrowAsset,
+                    poolConstants.collateralAsset
+                );
         require(
             _amount >=
                 poolConstants

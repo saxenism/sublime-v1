@@ -32,21 +32,21 @@
         "USDT": "0x8d40f9B7fd9AF24AAf8F8871af7026AeCCFB2b1e"
     },
     "ganache": {
-        "strategyRegistry": "0x5C6749088f3Ed026ed0cd00BEBf7CD0cdAE59728",
-        "savingsAccount": "0xaD3e76f033481AB78479d9FA659472D289D53500",
-        "aaveYield": "0x7C0Af3731a831bE8824B03be42379a1C3aE5a9c0",
-        "compoundYield": "0x554039f78B6C5333b03B4690f86c14cD14EF374F",
-        "yearnYield": "0x90C18a93e7dac023378034b5bA8Ad47a426F7B9C",
-        "priceOracle": "0x3729FC38EDeAaEf7e36D6e81f358566ecAe7dfec",
-        "verification": "0x29EC4853F6ce2d44c48DaCddF2b683aB3C8530C5",
-        "poolFactory": "0xF112FA7aB15596f727543678E1da5eCeaaAa0635",
-        "repayments": "0xad57734DEd70eb990002e6aEed4F291c8EF7790B",
-        "extension": "0xC20deFfe8d728823B525304D908f9B7c169C5977",
-        "pool": "0x347e53D5842f48CcEc5a96161d40930E6CA13Da1",
-        "creditLines": "0x5dF8FB972836BD3053917f8754099528E69D5dc6",
-        "token": "0x83E5744b94A027821c736B0C9884fA108B66D4E6",
-        "oracle": "0xb90C20d88a5e8aD8Dc6Afb60658363dd1b3508f3",
-        "poolToken": "0xAc83D8282A38e9983B890a2545354D37A5F503EF"
+        "strategyRegistry": "0x07f55744000aAA91917e9A13a6cedFd4aEbe8900",
+        "savingsAccount": "0x1321D20b6eCA4DD3E8Be8afF7f22cb8a5abBC8A3",
+        "aaveYield": "0x1108352E4EA021f185C9a76C1A57573aF40b47C4",
+        "compoundYield": "0xE87379a67B6e7B7803fCbd8EaBc743ce4502c36A",
+        "yearnYield": "0xeb27e33BC21261Da08629d50BA3416477d394956",
+        "priceOracle": "0x99009762102eFea5ff9B833f959267a793031588",
+        "verification": "0x1D616AD209270A069aCB643aB6C0f1486d5dd2aF",
+        "poolFactory": "0x249AAbD80b8b219673bB470F87798632a3E045B2",
+        "repayments": "0xd193f98b652D11b4a1d6897388ae483Deee5ab61",
+        "extension": "0xeF0E9d820c99F8Ab64851D2A5F8bD9f97535006f",
+        "pool": "0xBd6347A250cF98c5959190C01Ab4235b4Cc969bB",
+        "creditLines": "0x464e4B47B404950b9f72a0e7efEb8d7F9EdCf650",
+        "token": "0xF9a4Cd1F5A6E92C36bbb365da6152bCbAfB36Fe4",
+        "oracle": "0xAFBc7157ff470C72C3720d27FEA930e7BC96c881",
+        "poolToken": "0x83677867cD6Cfe6210F8cbc58e4bee0add525D31"
     },
     "network": "kovan"
 }
