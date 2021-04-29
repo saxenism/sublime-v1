@@ -181,7 +181,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         uint256 _amount,
         bool _transferFromSavingsAccount
     ) internal {
-        uint256 price =
+        (uint256 price, uint256 _decimals) =
             IPriceOracle(IPoolFactory(PoolFactory).priceOracle())
                 .getLatestPrice(
                     poolConstants.borrowAsset,
@@ -192,7 +192,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
                 poolConstants
                     .idealCollateralRatio
                     .mul(poolConstants.borrowAmountRequested.mul(price))
-                    .div(1e16),
+                    .div(1e8).div(10**_decimals),
             "36"
         );
 
@@ -657,7 +657,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         uint256 _interest = interestTillNow(_balance);
         address _collateralAsset = poolConstants.collateralAsset;
 
-        uint256 _ratioOfPrices =
+        (uint256 _ratioOfPrices, uint256 _decimals) =
             IPriceOracle(IPoolFactory(PoolFactory).priceOracle())
                 .getLatestPrice(_collateralAsset, poolConstants.borrowAsset);
 
@@ -669,7 +669,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
                     _collateralAsset
                 );
 
-        _ratio = (_currentCollateralTokens.mul(_ratioOfPrices).div(100000000))
+        _ratio = (_currentCollateralTokens.mul(_ratioOfPrices).div(10**_decimals))
             .div(_balance.add(_interest));
     }
 
@@ -894,21 +894,20 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         address _poolFactory
     ) public view returns (uint256) {
         IPoolFactory _PoolFactory = IPoolFactory(_poolFactory);
-        return
-            (
-                _collateralTokens
-                    .mul(
-                    IPriceOracle(_PoolFactory.priceOracle()).getLatestPrice(
-                        poolConstants.collateralAsset,
-                        poolConstants.borrowAsset
-                    )
+        (uint256 _ratioOfPrices, uint256 _decimals) = IPriceOracle(
+            _PoolFactory.priceOracle()
+        ).getLatestPrice(
+            poolConstants.collateralAsset,
+            poolConstants.borrowAsset
+        );
+        return _collateralTokens.mul(
+                    _ratioOfPrices
                 )
-                    .div(10**8)
-            )
                 .mul(
-                uint256(10**8).sub(_PoolFactory.liquidatorRewardFraction())
-            )
-                .div(10**8);
+                    uint256(10**8).sub(_PoolFactory.liquidatorRewardFraction())
+                )
+                .div(10**8)
+                .div(10**_decimals);
     }
 
     function checkRepayment() public returns (LoanStatus) {

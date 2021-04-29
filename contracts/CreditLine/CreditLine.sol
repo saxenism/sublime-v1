@@ -513,7 +513,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
             "CreditLine: Amount exceeds borrow limit."
         );
 
-        uint256 _ratioOfPrices =
+        (uint256 _ratioOfPrices, uint256 _decimals) =
             IPriceOracle(IPoolFactory(PoolFactory).priceOracle())
                 .getLatestPrice(
                 creditLineInfo[creditLineHash].collateralAsset,
@@ -525,7 +525,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         uint256 collateralRatioIfAmountIsWithdrawn =
             _ratioOfPrices.mul(_totalCollateralToken).div(
                 _currentDebt.add(borrowAmount)
-            );
+            ).div(10**_decimals);
         require(
             collateralRatioIfAmountIsWithdrawn >
                 creditLineInfo[creditLineHash].idealCollateralRatio,
@@ -711,7 +711,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         ifCreditLineExists(creditLineHash)
         returns (uint256)
     {
-        uint256 _ratioOfPrices =
+        (uint256 _ratioOfPrices, uint256 _decimals) =
             IPriceOracle(IPoolFactory(PoolFactory).priceOracle())
                 .getLatestPrice(
                 creditLineInfo[creditLineHash].collateralAsset,
@@ -723,7 +723,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
             calculateTotalCollateralTokens(creditLineHash)
                 .mul(_ratioOfPrices)
                 .div(currentDebt)
-                .div(10**8);
+                .div(10**_decimals);
         return currentCollateralRatio;
     }
 
@@ -755,7 +755,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         uint256 amount
     ) public onlyCreditLineBorrower(creditLineHash) {
         //check for ideal ratio
-        uint256 _ratioOfPrices =
+        (uint256 _ratioOfPrices, uint256 _decimals) =
             IPriceOracle(IPoolFactory(PoolFactory).priceOracle())
                 .getLatestPrice(
                 creditLineInfo[creditLineHash].collateralAsset,
@@ -771,7 +771,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
                     currentDebt
                 )
             )
-                .div(10**8);
+                .div(10**_decimals);
         require(
             collateralRatioIfAmountIsWithdrawn >=
                 creditLineInfo[creditLineHash].idealCollateralRatio,
@@ -861,12 +861,12 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
                     msg.sender
                 );
             } else {
-                uint256 _ratioOfPrices =
+                (uint256 _ratioOfPrices, uint256 _decimals) =
                     IPriceOracle(IPoolFactory(PoolFactory).priceOracle())
                         .getLatestPrice(_borrowAsset, _collateralAsset);
 
                 uint256 _borrowToken =
-                    (_totalCollateralToken.mul(_ratioOfPrices).div(10**8));
+                    (_totalCollateralToken.mul(_ratioOfPrices).div(10**_decimals));
                 IERC20(_borrowAsset).safeTransferFrom(
                     msg.sender,
                     _lender,

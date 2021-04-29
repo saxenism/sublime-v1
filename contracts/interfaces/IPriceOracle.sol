@@ -5,6 +5,6 @@ interface IPriceOracle {
     function getLatestPrice(address num, address den)
         external
         view
-        returns (uint256);
+        returns (uint256, uint256);
     function doesFeedExist(address btoken, address ctoken) external view returns(bool);
 }
