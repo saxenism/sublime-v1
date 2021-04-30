@@ -6,7 +6,7 @@ const {
   Contracts: { cBAT, DAI, LINK, BAT },
 } = require("../../existingContracts/compound.json");
 
-const ICToken = require("../../build/contracts/Token.json");
+const ICToken = require("../../build/contracts/mocks/Token.sol/Token.json");
 // console.log({ICToken: ICToken.abi});
 
 const ETH_Yearn_Protocol_Address = "0xe1237aa7f535b0cc33fd973d66cbf830354d16c7";

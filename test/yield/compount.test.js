@@ -3,7 +3,7 @@ const { expect } = require("chai");
 
 const BigNumber = ethers.BigNumber;
 
-const ICToken = require("../../build/contracts/Token.json");
+const ICToken = require("../../build/contracts/mocks/Token.sol/Token.json");
 
 const {
   Contracts: { BAT, cBAT },

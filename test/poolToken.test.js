@@ -14,8 +14,8 @@ const { getCreate2Address } = require('@ethersproject/address')
 const { parseEther } = require('@ethersproject/units')
 config = config['ganache']
 
-const poolCompiled = require('../build/contracts/Pool.json')
-const poolTokenCompiled = require('../build/contracts/PoolToken.json')
+const poolCompiled = require('../build/contracts/Pool/Pool.sol/Pool.json')
+const poolTokenCompiled = require('../build/contracts/Pool/PoolToken.sol/PoolToken.json')
 
 describe('PoolToken', () => {
   before(async () => {

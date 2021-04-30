@@ -4,8 +4,8 @@ const allConfigs = require('../config/config.json')
 const config = allConfigs['ganache']
 const { encodeSignature, encodeUserData } = require('./utils/utils')
 
-const poolCompiled = require('../build/contracts/Pool.json')
-const poolTokenCompiled = require('../build/contracts/PoolToken.json')
+const poolCompiled = require('../build/contracts/Pool/Pool.sol/Pool.json')
+const poolTokenCompiled = require('../build/contracts/Pool/PoolToken.sol/PoolToken.json')
 
 class Deploy {
   constructor(admin, deployer, verifier) {

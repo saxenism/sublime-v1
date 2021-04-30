@@ -1,8 +1,8 @@
 const { ethers } = require('ethers');
 const { getSalt, getInitCodehash } = require("./utils");
 
-const poolCompiled = require("../../build/contracts/Pool.json");
-const proxyCompiled = require("../../artifacts/contracts/Proxy.sol/SublimeProxy.json");
+const poolCompiled = require("../../build/contracts/Pool/Pool.sol/Pool.json");
+const proxyCompiled = require("../../build/contracts/Proxy.sol/SublimeProxy.json");
 
 let config = require("../../config/config.json");
 

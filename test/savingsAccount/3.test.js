@@ -6,7 +6,7 @@ const {
   Contracts: { cETH, DAI, cDAI },
 } = require("../../existingContracts/compound.json");
 
-const ICToken = require("../../build/contracts/Token.json");
+const ICToken = require("../../build/contracts/mocks/Token.sol/Token.json");
 const DAI_Yearn_Protocol_Address = "0xacd43e627e64355f1861cec6d3a6688b31a6f952";
 
 const zeroAddress = "0x0000000000000000000000000000000000000000";
