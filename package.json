@@ -47,7 +47,7 @@
     "ethers": "^5.0.32",
     "ethlint": "^1.2.5",
     "ganache": "^6.4.4",
-    "hardhat": "^2.1.1",
+    "hardhat": "^2.2.1",
     "hardhat-gas-reporter": "^1.0.4",
     "prettier": "^2.2.1",
     "solidity-coverage": "^0.7.16"
