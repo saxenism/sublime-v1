@@ -14,6 +14,11 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
+    /*
+    * @notice Used to define limits for the Open Borrow Pool parameters
+    * @param min the minimum threshold for the parameter
+    * @param max the maximum threshold for the parameter
+    */
     struct Limits {
         // TODO: Optimize to uint128 or even less
         uint256 min;
@@ -40,27 +45,101 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     uint256 public override votingPassRatio;
     uint256 public override gracePeriodFraction;
 
+    /*
+    * @notice Used to mark assets supported for borrowing
+    */
     mapping(address => bool) isBorrowToken;
+
+    /*
+    * @notice Used to mark supported collateral assets
+    */
     mapping(address => bool) isCollateralToken;
 
+    /*
+    * @notice Used to keep track of valid pool addresses
+    */
     mapping(address => bool) public override openBorrowPoolRegistry;
 
+
+    /*
+    * @notice Used to set the min/max borrow amount for Open Borrow Pools
+    */
     Limits poolSizeLimit;
+
+    /*
+    * @notice Used to set the min/max collateral ratio for Open Borrow Pools
+    */
     Limits collateralRatioLimit;
+
+    /*
+    * @notice Used to set the min/max borrow rates (interest rate provided by borrower) for Open Borrow Pools
+    */
     Limits borrowRateLimit;
+
+    /*
+    * @notice used to set the min/max repayment interval for Open Borrow Pools
+    */
     Limits repaymentIntervalLimit;
+
+    /*
+    * @notice used to set the min/max number of repayment intervals for Open Borrow Pools
+    */
     Limits noOfRepaymentIntervalsLimit;
 
+    /*
+    * @notice emitted when a Open Borrow Pool is created
+    * @param pool the address of the Open Borrow Pool
+    * @param borrower the address of the borrower who created the pool
+    * @param poolToken the address of the corresponding pool token for the Open Borrow Pool
+    */
     event PoolCreated(address pool, address borrower, address poolToken);
+
+    
     event PoolInitSelectorUpdated(bytes4 updatedSelector);
     event PoolTokenInitFuncSelector(bytes4 updatedSelector);
+
+    /*
+    * @notice emitted when the Pool.sol logic is updated
+    * @param updatedPoolLogic the address of the new Pool logic contract
+    */
     event PoolLogicUpdated(address updatedPoolLogic);
+
+    /*
+    * @notice emitted when the user registry is updated
+    * @param updatedBorrowerRegistry address of the contract storing the user registry
+    */
     event UserRegistryUpdated(address updatedBorrowerRegistry);
+
+    /*
+    * @notice emitted when the strategy registry is updated
+    * @param updatedStrategyRegistry address of the contract storing the updated strategy registry
+    */
     event StrategyRegistryUpdated(address updatedStrategyRegistry);
+
+    /*
+    * @notice emitted when the Repayments.sol logic is updated
+    * @param updatedRepaymentImpl the address of the new implementation of the Repayments logic
+    */
     event RepaymentImplUpdated(address updatedRepaymentImpl);
+
+    /*
+    * @notice emitted when the PoolToken.sol logic is updated
+    * @param updatedPoolTokenImpl address of the new implementation of the PoolToken logic
+    */
     event PoolTokenImplUpdated(address updatedPoolTokenImpl);
+
+    /*
+    * @notice emitted when the PriceOracle.sol is updated
+    * @param updatedPriceOracle address of the new implementation of the PriceOracle
+    */
     event PriceOracleUpdated(address updatedPriceOracle);
+
+    /*
+    * @notice emitted when the collection period parameter for Open Borrow Pools is updated
+    * @param updatedCollectionPeriod the new value of the collection period for Open Borrow Pools
+    */
     event CollectionPeriodUpdated(uint256 updatedCollectionPeriod);
+
     event MatchCollateralRatioIntervalUpdated(
         uint256 updatedMatchCollateralRatioInterval
     );
