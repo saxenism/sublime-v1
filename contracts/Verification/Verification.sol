@@ -5,11 +5,12 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 contract Verification is Initializable, OwnableUpgradeable {
 
-    mapping(address => bytes32) public registeredUsers;
+    mapping(address => bytes32) public verifiedUsers;
 
-    event UserRegistered(address user, bytes32 offChainDetails);
+
+    event UserVerified(address user, bytes32 offChainDetails);
     event UserDetailsUpdated(address user, bytes32 offChainDetails);
-    event UserUnregistered(address user);
+    event UserUnverified(address user);
 
     event CollateralAdded(bytes32 poolHash, uint256 amount);
     event AmountBorrowed(
@@ -25,10 +26,10 @@ contract Verification is Initializable, OwnableUpgradeable {
         uint256 amount
     );
 
-    modifier ifUserRegistered(address _user) {
+    modifier ifUserVerified(address _user) {
         require(
-            registeredUsers[_user] != bytes32(0),
-            "Verification: User must be registered"
+            verifiedUsers[_user] != bytes32(0),
+            "Verification: User must be verified"
         );
         _;
     }
@@ -45,44 +46,44 @@ contract Verification is Initializable, OwnableUpgradeable {
      * @param _offChainDetails It can be a hash of any Identity details provided by an entity during on boarding.
             ex- twitter handle etc.
     */
-    function registerUser(address _user, bytes32 _offChainDetails)
+    function verifyUser(address _user, bytes32 _offChainDetails)
         external
         onlyOwner
     {
-        require(registeredUsers[_user] == bytes32(0), "Verification: User already registered");
+        require(verifiedUsers[_user] == bytes32(0), "Verification: User already verified");
         require(_user != address(0), "Verification: Invalid entity address");
         require(
             _offChainDetails != bytes32(0),
             "Verification: Offchain details should not be empty"
         );
-        registeredUsers[_user] = _offChainDetails;
-        emit UserRegistered(_user, _offChainDetails);
+        verifedUsers[_user] = _offChainDetails;
+        emit UserVerified(_user, _offChainDetails);
     }
 
     function updateUserDetails(address _user, bytes32 _offChainDetails)
         external
         onlyOwner
-        ifUserRegistered(_user)
+        ifUserVerified(_user)
     {
         require(
             _offChainDetails != bytes32(0),
             "Verification: Offchain details should not be empty"
         );
 
-        registeredUsers[_user] = _offChainDetails;
+        verifiedUsers[_user] = _offChainDetails;
         emit UserDetailsUpdated(_user, _offChainDetails);
     }
 
-    function unregisterUser(address _user) 
+    function unverifyUser(address _user) 
         external 
         onlyOwner
-        ifUserRegistered(_user)
+        ifUserverified(_user)
     {
-        delete registeredUsers[_user];
-        emit UserUnregistered(_user);
+        delete verifiedUsers[_user];
+        emit UserUnverified(_user);
     }
 
     function isUser(address _user) public view returns(bool) {
-        return (registeredUsers[_user] != bytes32(0));
+        return (verifiedUsers[_user] != bytes32(0));
     }
 }
