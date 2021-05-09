@@ -1,23 +1,23 @@
 const Web3 = require("web3");
 const fs = require("fs");
 const allConfigs = require("../config/config.json");
-const keystore = require("../keystore/keystore.json");
+const keystore = require("../../keystore/keystore.json");
 
-const proxyCompiled = require("../build/contracts/SublimeProxy.json");
+const proxyCompiled = require("../artifacts/contracts/Proxy.sol/SublimeProxy.json");
 
-const aaveYieldCompiled = require("../build/contracts/AaveYield.json");
-const compoundYieldCompiled = require("../build/contracts/CompoundYield.json");
-const yearnYieldCompiled = require("../build/contracts/YearnYield.json");
-const strategyRegistryCompiled = require("../build/contracts/StrategyRegistry.json");
-const savingsAccountCompiled = require("../build/contracts/SavingsAccount.json");
-const priceOracleCompiled = require("../build/contracts/PriceOracle.json");
-const verificationCompiled = require("../build/contracts/Verification.json");
-const repaymentsCompiled = require("../build/contracts/Repayments.json");
-const extensionCompiled = require("../build/contracts/Extension.json");
-const poolFactoryCompiled = require("../build/contracts/PoolFactory.json");
-const creditLinesCompiled = require("../build/contracts/CreditLine.json");
-const poolCompiled = require("../build/contracts/Pool.json");
-const poolTokenCompiled = require("../build/contracts/PoolToken.json");
+const aaveYieldCompiled = require("../build/contracts/yield/AaveYield.sol/AaveYield.json");
+const compoundYieldCompiled = require("../build/contracts/yield/CompoundYield.sol/CompoundYield.json");
+const yearnYieldCompiled = require("../build/contracts/yield/YearnYield.sol/YearnYield.json");
+const strategyRegistryCompiled = require("../build/contracts/yield/StrategyRegistry.sol/StrategyRegistry.json");
+const savingsAccountCompiled = require("../build/contracts/SavingsAccount/SavingsAccount.sol/SavingsAccount.json");
+const priceOracleCompiled = require("../build/contracts/PriceOracle.sol/PriceOracle.json");
+const verificationCompiled = require("../build/contracts/Verification/Verification.sol/Verification.json");
+const repaymentsCompiled = require("../build/contracts/Repayments/Repayments.sol/Repayments.json");
+const extensionCompiled = require("../build/contracts/Pool/Extension.sol/Extension.json");
+const poolFactoryCompiled = require("../build/contracts/Pool/PoolFactory.sol/PoolFactory.json");
+const creditLinesCompiled = require("../build/contracts/CreditLine/CreditLine.sol/CreditLine.json");
+const poolCompiled = require("../build/contracts/Pool/Pool.sol/Pool.json");
+const poolTokenCompiled = require("../build/contracts/Pool/PoolToken.sol/PoolToken.json");
 
 const utils = require("./utils");
 
