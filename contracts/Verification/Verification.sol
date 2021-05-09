@@ -5,7 +5,8 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 contract Verification is Initializable, OwnableUpgradeable {
 
-    mapping(address => bytes32) public verifiedUsers;
+    mapping(address => bytes32) public verifiedUsers; // stores address to primary identifier
+    mapping(address => mapping(bytes32 => bytes32)) public userDataMapping; //stores address to verification mode to identifier mapping
 
 
     event UserVerified(address user, bytes32 offChainDetails);
@@ -56,7 +57,7 @@ contract Verification is Initializable, OwnableUpgradeable {
             _offChainDetails != bytes32(0),
             "Verification: Offchain details should not be empty"
         );
-        verifedUsers[_user] = _offChainDetails;
+        verifiedUsers[_user] = _offChainDetails;
         emit UserVerified(_user, _offChainDetails);
     }
 
@@ -77,7 +78,7 @@ contract Verification is Initializable, OwnableUpgradeable {
     function unverifyUser(address _user) 
         external 
         onlyOwner
-        ifUserverified(_user)
+        ifUserVerified(_user)
     {
         delete verifiedUsers[_user];
         emit UserUnverified(_user);
