@@ -15,7 +15,7 @@ const ETH_Yearn_Protocol_Address = "0xe1237aa7f535b0cc33fd973d66cbf830354d16c7";
 const AaveWithdrawAccount = "0x11111111deadbeefdeadbeefdeadbeefdeadbeef";
 const Binance7 = "0xbe0eb53f46cd790cd13851d5eff43d12404d33e8";
 
-describe.only("Aave Yield", () => {
+describe("Aave Yield", () => {
   before(async () => {
     [
       this.deployer,

@@ -13,7 +13,7 @@ const depositValueToTest = BigNumber.from("1000000000000000000"); //10^18 Tokens
 
 const Binance7 = "0xbe0eb53f46cd790cd13851d5eff43d12404d33e8";
 
-describe.only("Compound Yield", () => {
+describe("Compound Yield", () => {
   before(async () => {
     [
       this.deployer,
