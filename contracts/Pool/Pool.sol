@@ -121,6 +121,11 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         _;
     }
 
+    modifier OnlyRepaymentImpl {
+        require(msg.sender == IPoolFactory(PoolFactory).repaymentImpl(), "25");
+        _;
+    }
+
     function initialize(
         uint256 _borrowAmountRequested,
         uint256 _minborrowAmount,
@@ -510,7 +515,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         emit OpenBorrowPoolTerminated();
     }
 
-    function closeLoan() external override payable OnlyBorrower(msg.sender) {
+    function closeLoan() external override payable OnlyRepaymentImpl {
         require(poolVars.loanStatus == LoanStatus.ACTIVE, "22");
         require(poolVars.nextDuePeriod == 0, "23");
         uint256 _principleToPayback = poolToken.totalSupply();
