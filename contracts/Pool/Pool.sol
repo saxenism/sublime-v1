@@ -938,13 +938,13 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             );
     }
 
-    function interestPerSecond(uint256 _principle)
+    function interestPerSecond(uint256 _principal)
         public
         view
         returns (uint256)
     {
         uint256 _interest =
-            ((_principle).mul(poolConstants.borrowRate)).div(365 days);
+            ((_principal).mul(poolConstants.borrowRate)).div(365 days);
         return _interest;
     }
 

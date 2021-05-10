@@ -33,5 +33,5 @@ interface IPool {
     function getBalanceDetails(address _lender) external view returns(uint256, uint256);
     function getTotalSupply() external view returns (uint256);
 
-    function closeLoan() external payable;
+    function closeLoan() external;
 }
