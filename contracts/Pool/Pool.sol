@@ -515,23 +515,12 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         emit OpenBorrowPoolTerminated();
     }
 
-    function closeLoan() external override payable OnlyRepaymentImpl {
-        require(poolVars.loanStatus == LoanStatus.ACTIVE, "22");
-        require(poolVars.nextDuePeriod == 0, "23");
-        uint256 _principleToPayback = poolToken.totalSupply();
-        address _borrowAsset = poolConstants.borrowAsset;
-        if (_borrowAsset == address(0)) {
-            require(msg.value == _principleToPayback, "37");
-        } else {
-            IERC20(_borrowAsset).safeTransferFrom(
-                msg.sender,
-                address(this),
-                _principleToPayback
-            );
-        }
+    function closeLoan() external override OnlyRepaymentImpl {
 
         poolVars.loanStatus = LoanStatus.CLOSED;
+
         IExtension(IPoolFactory(PoolFactory).extension()).closePoolExtension();
+
         withdrawAllCollateral();
         poolToken.pause();
         emit OpenBorrowPoolClosed();
