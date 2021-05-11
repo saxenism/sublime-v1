@@ -59,6 +59,8 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
     }
 
     // TODO - Number of strategies user can invest in is limited. Make this set specific to user rather than global.
+    event StrategyRegistryUpdated();
+
 
     function updateStrategyRegistry(address _strategyRegistry)
         external
@@ -70,6 +72,8 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         );
 
         strategyRegistry = _strategyRegistry;
+
+        emit StrategyRegistryUpdated();
     }
 
     function depositTo(

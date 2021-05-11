@@ -1051,6 +1051,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     {
         uint256 _nextDuePeriod = poolVars.nextDuePeriod.add(1);
         poolVars.nextDuePeriod = _nextDuePeriod;
+
         return _nextDuePeriod;
     }
 
