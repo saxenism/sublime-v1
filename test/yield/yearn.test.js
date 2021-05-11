@@ -14,7 +14,7 @@ const depositValueToTest = BigNumber.from("1000000000000000000"); //10^18 Tokens
 const Binance7 = "0xbe0eb53f46cd790cd13851d5eff43d12404d33e8";
 const DAI_Yearn_Protocol_Address = "0xacd43e627e64355f1861cec6d3a6688b31a6f952";
 
-describe.only("Yearn Yield", () => {
+describe("Yearn Yield", () => {
   before(async () => {
     [
       this.deployer,

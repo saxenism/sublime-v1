@@ -150,6 +150,21 @@ class Deploy {
       this.oracle.address,
     )
 
+    await this.addPriceFeed(
+      collateralToken,
+      collateralToken,
+      this.oracle.address,
+      this.oracle.address,
+    )
+    
+    await this.addPriceFeed(
+      borrowToken,
+      borrowToken,
+      this.oracle.address,
+      this.oracle.address,
+    )
+
+
     await this.poolFactory.connect(this.admin).setImplementations(this.pool.address, this.repayments.address, this.poolToken.address)
   }
 
@@ -174,7 +189,7 @@ class Deploy {
     //check if registered
     const isRegistered = await this.verification.isUser(borrower);
     if (isRegistered) return;
-    await this.verification.connect(this.verifier).registerUser(borrower, borrowerDetails)
+    await this.verification.connect(this.verifier).verifyUser(borrower, borrowerDetails)
   }
 
   async deployPool(poolFactory, borrower, borrowToken, collateralToken) {
@@ -187,6 +202,17 @@ class Deploy {
       etherAmount = 0;
     }
 
+    var result = [];
+    var characters =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    var charactersLength = characters.length;
+    for (var i = 0; i < 5; i++) {
+      result.push(
+        characters.charAt(Math.floor(Math.random() * charactersLength))
+      );
+    }
+    var salt = result.join("");
+  
     //create pool
     await poolFactory
       .connect(borrower)
@@ -202,7 +228,7 @@ class Deploy {
         config.OpenBorrowPool.investedTo,
         config.OpenBorrowPool.collateralAmount,
         config.OpenBorrowPool.transferFromSavingsAccount,
-        encodeUserData(config.OpenBorrowPool.salt),
+        encodeUserData(salt),
         { value: etherAmount }
       )
 

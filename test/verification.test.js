@@ -25,10 +25,10 @@ describe('Verification', () => {
     this.verification = contracts['verification'].connect(this.verifier)
   })
 
-  describe('registerUser', async () => {
+  describe('verifyUser', async () => {
     it('should revert if incorrect offchain details', async () => {
       await expect(
-        this.verification.registerUser(
+        this.verification.verifyUser(
           this.borrower1.address,
           encodeUserData(''),
         ),
@@ -39,7 +39,7 @@ describe('Verification', () => {
 
     it('should revert if zero address provided for user', async () => {
       await expect(
-        this.verification.registerUser(
+        this.verification.verifyUser(
           ethers.constants.AddressZero,
           encodeUserData('borrower'),
         ),
@@ -52,7 +52,7 @@ describe('Verification', () => {
       await expect(
         this.verification
           .connect(this.admin)
-          .registerUser(this.borrower1.address, encodeUserData('borrower')),
+          .verifyUser(this.borrower1.address, encodeUserData('borrower')),
       ).to.be.revertedWith(
         'VM Exception while processing transaction: revert Ownable: caller is not the owner',
       )
@@ -60,26 +60,26 @@ describe('Verification', () => {
 
     it('should register user', async () => {
       await expect(
-        this.verification.registerUser(
+        this.verification.verifyUser(
           this.borrower1.address,
           encodeUserData('borrower'),
         ),
       )
-        .to.emit(this.verification, 'UserRegistered')
+        .to.emit(this.verification, 'UserVerified')
         .withArgs(this.borrower1.address, encodeUserData('borrower'))
-
+      
       const isUser = await this.verification.isUser(this.borrower1.address)
       expect(isUser).to.equal(true)
     })
 
     it('should revert if already registered', async () => {
       await expect(
-        this.verification.registerUser(
+        this.verification.verifyUser(
           this.borrower1.address,
           encodeUserData('borrower'),
         ),
       ).to.be.revertedWith(
-        'VM Exception while processing transaction: revert Verification: User already registered',
+        'VM Exception while processing transaction: revert Verification: User already verified',
       )
     })
   })
@@ -95,7 +95,7 @@ describe('Verification', () => {
         .to.emit(this.verification, 'UserDetailsUpdated')
         .withArgs(this.borrower1.address, encodeUserData('borrower1'))
 
-      const userDetails = await this.verification.registeredUsers(
+      const userDetails = await this.verification.verifiedUsers(
         this.borrower1.address,
       )
       expect(userDetails).to.equal(encodeUserData('borrower1'))
@@ -119,7 +119,7 @@ describe('Verification', () => {
           encodeUserData('borrower'),
         ),
       ).to.be.revertedWith(
-        'VM Exception while processing transaction: revert Verification: User must be registered',
+        'VM Exception while processing transaction: revert Verification: User must be verified',
       )
     })
 
@@ -147,12 +147,12 @@ describe('Verification', () => {
     })
   })
 
-  describe('unregisterUser', async () => {
+  describe('unverifyUser', async () => {
     it('should revert if user not registered', async () => {
       await expect(
-        this.verification.unregisterUser(this.borrower2.address),
+        this.verification.unverifyUser(this.borrower2.address),
       ).to.be.revertedWith(
-        'VM Exception while processing transaction: revert Verification: User must be registered',
+        'VM Exception while processing transaction: revert Verification: User must be verified',
       )
     })
 
@@ -160,18 +160,18 @@ describe('Verification', () => {
       await expect(
         this.verification
           .connect(this.admin)
-          .unregisterUser(this.borrower1.address),
+          .unverifyUser(this.borrower1.address),
       ).to.be.revertedWith(
         'VM Exception while processing transaction: revert Ownable: caller is not the owner',
       )
     })
 
     it('should unregister user', async () => {
-      await expect(this.verification.unregisterUser(this.borrower1.address))
-        .to.emit(this.verification, 'UserUnregistered')
+      await expect(this.verification.unverifyUser(this.borrower1.address))
+        .to.emit(this.verification, 'UserUnverified')
         .withArgs(this.borrower1.address)
 
-      const userDetails = await this.verification.registeredUsers(
+      const userDetails = await this.verification.verifiedUsers(
         this.borrower1.address,
       )
       expect(userDetails).to.equal(encodeUserData(''))
