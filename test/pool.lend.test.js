@@ -207,26 +207,10 @@ describe.only("Pool", () => {
           poolTokenCompiled.abi,
           this.admin
         );
-        const SavingsAccount = await ethers.getContractFactory("SavingsAccount");
-        this.savingsAccount = await SavingsAccount.connect(
-          this.proxyAdmin
-        ).deploy();
-
-        this.StrategyRegistry = await ethers.getContractFactory(
-          "StrategyRegistry"
-        );
-        this.strategyRegistry = await this.StrategyRegistry.connect(
-          this.proxyAdmin
-        ).deploy();
-
-        await this.savingsAccount.initialize(
-          this.admin.address,
-          this.strategyRegistry.address,
-          this.mockCreditLineAddress.address
-        );
+       
 
         const depositValueToTest = parseEther("1");
-        await this.savingsAccount
+        await this.deploy.savingsAccount
           .connect(this.lender)
           .depositTo(
             depositValueToTest,
@@ -235,31 +219,82 @@ describe.only("Pool", () => {
             this.lender.address,
             { value: depositValueToTest }
           );
-        await this.savingsAccount
+        
+        
+        await this.deploy.savingsAccount
           .connect(this.lender)
           .approve(
             ethers.constants.AddressZero,
             this.pool.address,
-            parseEther("0.001")
+            parseEther("0.1")
           );
+        
+        
+        
       });
       it("should lend using Saving Account", async () => {
         // let iBalance = await this.address1.getBalance();
-        const amountLent = parseEther("0.0001");
-        let initialBalance = await this.savingsAccount.userLockedBalance(
+        const amountLent = parseEther("0.000000001");
+        let initialBalance = await this.deploy.savingsAccount.userLockedBalance(
           this.lender.address,
           ethers.constants.AddressZero,
           ethers.constants.AddressZero
         );
+        console.log(initialBalance.toString())
+        console.log((await this.deploy.savingsAccount.allowance(
+            this.lender.address,
+            ethers.constants.AddressZero,
+            this.pool.address
+          )).toString());
         await this.pool
           .connect(this.lender)
-          .lend(this.lender.address, amountLent, true);
-        let finalBalance = await this.savingsAccount.userLockedBalance(
+          .lend(this.lender.address, amountLent, true,{
+              value:parseEther("0.000000001")
+        });
+        let finalBalance = await this.deploy.savingsAccount.userLockedBalance(
           this.lender.address,
           ethers.constants.AddressZero,
           ethers.constants.AddressZero
         );
-        expect(initialBalance.sub(finalBalance)).equal(amountLent);
+        expect(initialBalance.sub(finalBalance)).to.equal(amountLent);
+      });
+    });
+
+    describe("when lender withdraw liquidity", async () => {
+      before(async () => {
+        const { pool, poolToken } = await this.deploy.deployPool(
+          this.poolFactory,
+          this.borrower,
+          ethers.constants.AddressZero,
+          ethers.constants.AddressZero
+        );
+
+        this.pool = new ethers.Contract(pool, poolCompiled.abi, this.borrower);
+
+        this.poolToken = await new ethers.Contract(
+          poolToken,
+          poolTokenCompiled.abi,
+          this.admin
+        );
+        const amountLent = parseEther("0.0001");
+        const transaction = {
+          value: amountLent,
+        };
+        await this.pool
+          .connect(this.lender)
+          .lend(this.lender.address, amountLent, false, transaction);
+
+        await this.pool.connect(this.borrower).cancelOpenBorrowPool();
+      });
+      it("lender withdraw lended liquidity", async () => {
+        let iBalance = await this.lender.getBalance();
+        await this.pool
+          .connect(this.lender)
+          .withdrawLiquidity();
+        let fBalance = await this.lender.getBalance();
+        expect(amountLent).to.equal(
+          fBalance.sub(iBalance)
+        );
       });
     });
     describe("when tokens are lent on behalf of other user.", async () => {
