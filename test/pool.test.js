@@ -324,7 +324,8 @@ describe('Pool', () => {
       })
 
       describe('closeLoan', async () => {
-        before(async () => {
+        let principle = 0;
+        beforeEach(async () => {
           await this.token
             .connect(this.lender)
             .approve(this.pool.address, parseEther('1'))
@@ -332,6 +333,7 @@ describe('Pool', () => {
           await this.pool
             .connect(this.lender)
             .lend(this.lender.address, parseEther('1'), false)
+          principle += 1;
 
           await timeTravel(network, config.pool.collectionPeriod + 100);
           await expect(
@@ -339,15 +341,21 @@ describe('Pool', () => {
           )
             .to.emit(this.pool, 'AmountBorrowed')
             .withArgs(config.OpenBorrowPool.poolSize)
-
         })
 
         it('should revert if not called by borrower', async () => {
           await expect(
-            this.pool.closeLoan(),
+            this.pool.connect(this.address1).closeLoan(),
           ).to.be.revertedWith(
             'VM Exception while processing transaction: revert 1',
           )
+        })
+
+
+        it('should close loan', async () => {
+          await this.pool.connect(this.borrower).closeLoan({
+            value: parseEther(1)
+          })
         })
 
         it('should revert if loan status is not ACTIVE', async () => {
@@ -356,10 +364,6 @@ describe('Pool', () => {
           ).to.be.revertedWith(
             'VM Exception while processing transaction: revert 1',
           )
-        })
-
-        it('should close loan', async () => {
-          await this.pool.connect(this.borrower).closeLoan()
         })
 
         describe('withdrawLiquidity', async () => {

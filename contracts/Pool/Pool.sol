@@ -352,7 +352,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         LoanStatus _poolStatus = poolVars.loanStatus;
         require(
             _poolStatus == LoanStatus.COLLECTION &&
-                poolConstants.loanStartTime < block.timestamp,
+            poolConstants.loanStartTime < block.timestamp,
             "12"
         );
 
@@ -639,7 +639,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             );
 
         uint256 _interestAccruedThisPeriod =
-            ((block.timestamp).sub(_repaymentPeriodCovered)).mul(
+            ((block.timestamp).sub(poolConstants.loanStartTime).sub(_repaymentPeriodCovered.mul(poolConstants.repaymentInterval))).mul(
                 _interestPerPeriod
             );
 

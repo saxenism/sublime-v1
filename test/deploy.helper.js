@@ -14,15 +14,10 @@ class Deploy {
     this.verifier = verifier
   }
 
-  async init(isTokenCollateral) {
+  async init() {
     //deploy contracts (non proxy for tests)
     this.token = await this.deploy("Token", 'USDT Token', 'USDT', '10000000000000000000000000')
-    this.token1 = {
-      address: ethers.constants.AddressZero
-    }
-    if(isTokenCollateral) {
-      this.token1 = await this.deploy("Token", 'Wrapped ETH', 'WETH', '10000000000000000000000000')
-    }
+    this.token1 = await this.deploy("Token", 'Wrapped ETH', 'WETH', '10000000000000000000000000')
 
     this.aaveYield = await this.deploy("AaveYield")
     this.compoundYield = await this.deploy("CompoundYield")
@@ -91,16 +86,15 @@ class Deploy {
     //setup yields
     await this.setupYields(this.strategyRegistry, [ethers.constants.AddressZero, this.aaveYield.address, this.yearnYield.address, this.compoundYield.address])
     await this.setupPoolFactory(this.token.address, this.token1.address);
+    await this.setupPoolFactory(this.token.address, ethers.constants.AddressZero);
 
     //transfer token ownership to admin
     await this.token.transferOwnership(this.admin.address)
     let balance = await this.token.balanceOf(this.token.signer.address)
     await this.token.transfer(this.admin.address, balance)
-    if(this.token1.address != ethers.constants.AddressZero) {
-      await this.token1.transferOwnership(this.admin.address)
-      let balance1 = await this.token1.balanceOf(this.token1.signer.address)
-      await this.token1.transfer(this.admin.address, balance1)
-    }
+    await this.token1.transferOwnership(this.admin.address)
+    let balance1 = await this.token1.balanceOf(this.token1.signer.address)
+    await this.token1.transfer(this.admin.address, balance1)
 
     return {
       token: this.token,
@@ -202,7 +196,7 @@ class Deploy {
         config.OpenBorrowPool.investedTo,
         config.OpenBorrowPool.collateralAmount,
         config.OpenBorrowPool.transferFromSavingsAccount,
-        encodeUserData(config.OpenBorrowPool.salt),
+        encodeUserData(config.OpenBorrowPool.salt+parseInt(Math.random()*1000)),
         { value: etherAmount }
       )
 

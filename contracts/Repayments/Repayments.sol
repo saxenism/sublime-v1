@@ -68,7 +68,7 @@ contract Repayments is RepaymentStorage, IRepayment {
         repaymentDetails[msg.sender].savingsAccount = savingsAccount;
     }
 
-    function calculateRepayAmount(address poolID)
+    function calculateRepayAmount(address poolID, uint256 principle)
         public
         view
         override
@@ -103,7 +103,6 @@ contract Repayments is RepaymentStorage, IRepayment {
         payable
         isPoolInitialized
     {
-        //repayAmount() in Pool.sol is already performing pool status check - confirm this
 
         uint256 _loanStatus = IPool(poolID).getLoanStatus();
         require(
@@ -111,17 +110,18 @@ contract Repayments is RepaymentStorage, IRepayment {
             "Repayments:repayAmount Pool should be active."
         );
 
-        // assuming repaymentInterval is in seconds
-
-        uint256 interestPerSecond;
-        uint256 interestDueTillPeriodEnd;
         uint256 activePrincipal = IPool(poolID).getTotalSupply();
 
-        interestPerSecond = activePrincipal
+        uint256 interestPerSecondScaled = activePrincipal
             .mul(repaymentDetails[poolID].borrowRate)
             .div(yearInSeconds);
 
-        interestDueTillPeriodEnd = calculateRepayAmount(poolID);
+        uint256 interestDueTillPeriodEndScaled =
+            interestPerSecondScaled.mul(
+                (repaymentDetails[poolID].repaymentInterval).sub(
+                    repaymentDetails[poolID].repaymentPeriodCovered
+                )
+            );
 
         address asset = repaymentDetails[poolID].repayAsset;
 
@@ -155,11 +155,11 @@ contract Repayments is RepaymentStorage, IRepayment {
                     .add(amount);
             }
             require(
-                amount <= interestDueTillPeriodEnd,
+                amount <= interestDueTillPeriodEndScaled,
                 "Repayments - amount is greater than interest due this period."
             );
 
-            uint256 periodCovered = amount.div(interestPerSecond);
+            uint256 periodCovered = amount.div(interestPerSecondScaled);
 
             if (
                 repaymentDetails[poolID].repaymentPeriodCovered.add(
