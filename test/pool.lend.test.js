@@ -279,4 +279,45 @@ describe.only('Pool', () => {
           
         })
     })
+    describe('when tokens are lent on behalf of other user.', async () => {
+        before(async () => {
+            const { pool, poolToken } = await this.deploy.deployPool(
+                this.poolFactory,
+                this.borrower,
+                ethers.constants.AddressZero,
+                ethers.constants.AddressZero
+            );
+    
+            this.pool = new ethers.Contract(
+                pool,
+                poolCompiled.abi,
+                this.borrower,
+            )
+            await this.token
+                .connect(this.admin)
+                .mint(this.lender.address, parseEther('10'))
+    
+            this.poolToken = await new ethers.Contract(
+                poolToken,
+                poolTokenCompiled.abi,
+                this.admin,
+            )
+        })
+        it('ETC on behalf of other user.', async () => {
+            const amountLent = parseEther('0.2')
+            const transaction = {
+                value: amountLent,
+            }
+            let iBalance = await this.lender.getBalance();
+            await this.pool
+            .connect(this.lender)
+            .lend(this.address1.address, amountLent, false,transaction)
+            
+            let fBalance = await this.lender.getBalance();
+            expect(await this.poolToken.balanceOf(this.address1.address)).to.equal(
+                iBalance.sub(fBalance),
+            )        
+        })
+    })
+
 })
