@@ -293,9 +293,9 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         }
 
         token = asset;
-        if (withdrawShares) token = IYield(strategy).liquidityToken(asset);
+        if (withdrawShares && strategy != address(0)) token = IYield(strategy).liquidityToken(asset);
 
-        if (token == address(0)) {
+        if (token == address(0) ) {
             withdrawTo.transfer(amountReceived);
         } else {
             IERC20(token).safeTransfer(withdrawTo, amountReceived);

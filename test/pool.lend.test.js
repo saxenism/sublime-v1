@@ -199,7 +199,6 @@ describe.only("Pool", () => {
           ethers.constants.AddressZero,
           ethers.constants.AddressZero
         );
-
         this.pool = new ethers.Contract(pool, poolCompiled.abi, this.borrower);
 
         this.poolToken = await new ethers.Contract(
@@ -208,7 +207,6 @@ describe.only("Pool", () => {
           this.admin
         );
        
-
         const depositValueToTest = parseEther("1");
         await this.deploy.savingsAccount
           .connect(this.lender)
@@ -219,37 +217,26 @@ describe.only("Pool", () => {
             this.lender.address,
             { value: depositValueToTest }
           );
-        
-        
+
         await this.deploy.savingsAccount
           .connect(this.lender)
           .approve(
             ethers.constants.AddressZero,
             this.pool.address,
-            parseEther("0.1")
+            parseEther("0.01")
           );
-        
-        
-        
       });
       it("should lend using Saving Account", async () => {
-        // let iBalance = await this.address1.getBalance();
-        const amountLent = parseEther("0.000000001");
+        const amountLent = parseEther("0.001");
         let initialBalance = await this.deploy.savingsAccount.userLockedBalance(
           this.lender.address,
           ethers.constants.AddressZero,
           ethers.constants.AddressZero
         );
-        console.log(initialBalance.toString())
-        console.log((await this.deploy.savingsAccount.allowance(
-            this.lender.address,
-            ethers.constants.AddressZero,
-            this.pool.address
-          )).toString());
         await this.pool
           .connect(this.lender)
           .lend(this.lender.address, amountLent, true,{
-              value:parseEther("0.000000001")
+              value:amountLent
         });
         let finalBalance = await this.deploy.savingsAccount.userLockedBalance(
           this.lender.address,
@@ -286,7 +273,8 @@ describe.only("Pool", () => {
 
         await this.pool.connect(this.borrower).cancelOpenBorrowPool();
       });
-      it("lender withdraw lended liquidity", async () => {
+      it("lender withdraw lent liquidity", async () => {
+        // This test is failing because the pool transfers get paused when the pool is cancelled.
         let iBalance = await this.lender.getBalance();
         await this.pool
           .connect(this.lender)
