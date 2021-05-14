@@ -142,7 +142,7 @@
             "collectionPeriod": 900,
             "matchCollateralRatioInterval": 120,
             "marginCallDuration": 120,
-            "collateralVolatilityThreshold": 10000000,
+            "collateralVolatilityThreshold": 2000000,
             "gracePeriodPenaltyFraction": 5000000,
             "liquidatorRewardFraction": 5000000
         },
@@ -151,7 +151,7 @@
             "minBorrowAmountFraction": 50000000,
             "borrowTokenType": "0x0000000000000000000000000000000000000000",
             "collateralTokenType": "0x17e91224c30c5b0B13ba2ef1E84FE880Cb902352",
-            "collateralRatio": 10000000,
+            "collateralRatio": 60000000,
             "borrowRate": "6000000",
             "repaymentInterval": "86400",
             "noOfRepaymentIntervals": 15,

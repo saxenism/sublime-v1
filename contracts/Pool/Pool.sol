@@ -361,10 +361,8 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         if (_tokensLent < poolConstants.minborrowAmount) {
             _cancelPool();
         }
-
         poolVars.loanStatus = LoanStatus.ACTIVE;
         uint256 _currentCollateralRatio = getCurrentCollateralRatio();
-
         IPoolFactory _poolFactory = IPoolFactory(PoolFactory);
         require(
             _currentCollateralRatio >=
@@ -373,7 +371,6 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
                 ),
             "13"
         );
-
         uint256 _noOfRepaymentIntervals = poolConstants.noOfRepaymentIntervals;
         uint256 _repaymentInterval = poolConstants.repaymentInterval;
         IRepayment(_poolFactory.repaymentImpl()).initializeRepayment(
@@ -390,7 +387,6 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             poolConstants.borrower,
             _tokensLent
         );
-
         delete poolConstants.loanWithdrawalDeadline;
         emit AmountBorrowed(_tokensLent);
     }
@@ -637,12 +633,10 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             IRepayment(_poolFactory.repaymentImpl()).getInterestCalculationVars(
                 address(this)
             );
-
         uint256 _interestAccruedThisPeriod =
-            ((block.timestamp).sub(_repaymentPeriodCovered)).mul(
+            ((block.timestamp.sub(poolConstants.loanStartTime)).sub(_repaymentPeriodCovered)).mul(
                 _interestPerPeriod
-            );
-
+            ).div(poolConstants.repaymentInterval);
         uint256 _totalInterest =
             (_interestAccruedThisPeriod.add(_repaymentOverdue))
                 .mul(_balance)
@@ -656,11 +650,9 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     ) public returns (uint256 _ratio) {
         uint256 _interest = interestTillNow(_balance);
         address _collateralAsset = poolConstants.collateralAsset;
-
         (uint256 _ratioOfPrices, uint256 _decimals) =
             IPriceOracle(IPoolFactory(PoolFactory).priceOracle())
                 .getLatestPrice(_collateralAsset, poolConstants.borrowAsset);
-
         uint256 _currentCollateralTokens =
             poolConstants.poolSavingsStrategy == address(0)
                 ? _liquidityShares
@@ -668,15 +660,13 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
                     _liquidityShares,
                     _collateralAsset
                 );
-
-        _ratio = (_currentCollateralTokens.mul(_ratioOfPrices).div(10**_decimals))
+        _ratio = (_currentCollateralTokens.mul(_ratioOfPrices).div(10**_decimals).mul(10**8))
             .div(_balance.add(_interest));
     }
 
     function getCurrentCollateralRatio() public returns (uint256 _ratio) {
         uint256 _liquidityShares =
             poolVars.baseLiquidityShares.add(poolVars.extraLiquidityShares);
-
         _ratio = calculateCollateralRatio(
             poolToken.totalSupply(),
             _liquidityShares
