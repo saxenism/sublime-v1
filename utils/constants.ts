@@ -12,3 +12,6 @@ export const aaveYieldParams = {
   _protocolDataProvider: "0x057835Ad21a177dbdd3090bB1CAE03EaCF78Fc6d",
   _lendingPoolAddressesProvider: "0xb53c1a33016b2dc2ff3653530bff1848a515c8c5",
 };
+
+export const ETH_Yearn_Protocol_Address =
+  "0xe1237aa7f535b0cc33fd973d66cbf830354d16c7";
