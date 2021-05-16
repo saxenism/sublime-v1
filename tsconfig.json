@@ -17,6 +17,7 @@
       }
     },
     "include": ["./test/**/*.ts", "./utils/**/*.ts", "./deploy/**/*.ts", "./typechain/**/*.ts"],
+    "exclude": ["./existingContracts/*"],
     "files": [
       "hardhat.config.ts",
     ]

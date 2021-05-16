@@ -1,17 +1,18 @@
 import { Signer } from "ethers";
-import { BigNumberish } from "@ethersproject/bignumber";
 
 import { SavingsAccount } from "../../typechain/SavingsAccount";
 import { StrategyRegistry } from "../../typechain/StrategyRegistry";
 import { AaveYield } from "../../typechain/AaveYield";
 import { CompoundYield } from "../../typechain/CompoundYield";
 import { YearnYield } from "../../typechain/YearnYield";
+import { PoolToken } from "../../typechain/PoolToken";
 
 import { SavingsAccount__factory } from "../../typechain/factories/SavingsAccount__factory";
 import { StrategyRegistry__factory } from "../../typechain/factories/StrategyRegistry__factory";
 import { AaveYield__factory } from "../../typechain/factories/AaveYield__factory";
 import { CompoundYield__factory } from "../../typechain/factories/CompoundYield__factory";
 import { YearnYield__factory } from "../../typechain/factories/YearnYield__factory";
+import { PoolToken__factory } from "../../typechain/factories/PoolToken__factory";
 
 import { Address } from "hardhat-deploy/dist/types";
 
@@ -75,6 +76,16 @@ export default class DeployCoreContracts {
   public async getYearnYield(yearnYieldAddress: Address): Promise<YearnYield> {
     return await new YearnYield__factory(this._deployerSigner).attach(
       yearnYieldAddress
+    );
+  }
+
+  public async deployPoolToken(): Promise<PoolToken> {
+    return await new PoolToken__factory(this._deployerSigner).deploy();
+  }
+
+  public async getPoolToken(poolTokenAddress: Address): Promise<PoolToken> {
+    return await new PoolToken__factory(this._deployerSigner).attach(
+      poolTokenAddress
     );
   }
 }

@@ -15,3 +15,10 @@ export const aaveYieldParams = {
 
 export const ETH_Yearn_Protocol_Address =
   "0xe1237aa7f535b0cc33fd973d66cbf830354d16c7";
+
+export const Binance7 = "0xbe0eb53f46cd790cd13851d5eff43d12404d33e8";
+export const WhaleAccount = "0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503";
+export const DAI_Yearn_Protocol_Address =
+  "0xacd43e627e64355f1861cec6d3a6688b31a6f952";
+
+export const aLink = "0xa06bC25B5805d5F8d82847D191Cb4Af5A3e873E0";

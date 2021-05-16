@@ -7,7 +7,7 @@ import { StrategyRegistry } from "../../typechain/StrategyRegistry";
 import { getRandomFromArray } from "../../utils/helpers";
 
 describe("Test Strategy Registry", async () => {
-  var strategyRegistry: StrategyRegistry;
+  let strategyRegistry: StrategyRegistry;
 
   let mockCreditLinesAddress: SignerWithAddress;
   let proxyAdmin: SignerWithAddress;
@@ -16,7 +16,7 @@ describe("Test Strategy Registry", async () => {
   let randomStrategy: SignerWithAddress;
   before(async () => {
     [proxyAdmin, admin, mockCreditLinesAddress] = await ethers.getSigners();
-    let deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
+    const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
     strategyRegistry = await deployHelper.core.deployStrategyRegistry();
     randomStrategy = getRandomFromArray(await ethers.getSigners());
   });

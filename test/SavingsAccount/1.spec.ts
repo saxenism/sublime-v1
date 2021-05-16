@@ -9,19 +9,21 @@ import {
   ETH_Yearn_Protocol_Address,
   zeroAddress,
 } from "../../utils/constants";
+
 import DeployHelper from "../../utils/deploys";
 import { SavingsAccount } from "../../typechain/SavingsAccount";
 import { StrategyRegistry } from "../../typechain/StrategyRegistry";
 import { getRandomFromArray, incrementChain } from "../../utils/helpers";
 import { Address } from "hardhat-deploy/dist/types";
-import { AaveYield } from "@typechain/AaveYield";
-import { YearnYield } from "@typechain/YearnYield";
-import { CompoundYield } from "@typechain/CompoundYield";
+
+import { AaveYield } from "../../typechain/AaveYield";
+import { YearnYield } from "../../typechain/YearnYield";
+import { CompoundYield } from "../../typechain/CompoundYield";
 import { Contracts } from "../../existingContracts/compound.json";
 
 describe("Test Savings Account (with ETH)", async () => {
-  var savingsAccount: SavingsAccount;
-  var strategyRegistry: StrategyRegistry;
+  let savingsAccount: SavingsAccount;
+  let strategyRegistry: StrategyRegistry;
 
   let mockCreditLinesAddress: SignerWithAddress;
   let proxyAdmin: SignerWithAddress;
@@ -29,7 +31,7 @@ describe("Test Savings Account (with ETH)", async () => {
 
   before(async () => {
     [proxyAdmin, admin, mockCreditLinesAddress] = await ethers.getSigners();
-    let deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
+    const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
     savingsAccount = await deployHelper.core.deploySavingsAccount();
     strategyRegistry = await deployHelper.core.deployStrategyRegistry();
 
@@ -56,7 +58,7 @@ describe("Test Savings Account (with ETH)", async () => {
     });
 
     it("Should successfully deposit into account another account", async () => {
-      let balanceLockedBeforeTransaction: BigNumber =
+      const balanceLockedBeforeTransaction: BigNumber =
         await savingsAccount.userLockedBalance(
           randomAccount.address,
           zeroAddress,
@@ -72,7 +74,7 @@ describe("Test Savings Account (with ETH)", async () => {
           { value: depositValueToTest }
         );
 
-      let balanceLockedAfterTransaction: BigNumber =
+      const balanceLockedAfterTransaction: BigNumber =
         await savingsAccount.userLockedBalance(
           randomAccount.address,
           zeroAddress,
@@ -85,7 +87,7 @@ describe("Test Savings Account (with ETH)", async () => {
     });
 
     it("Should successfully deposit into its own accounts", async () => {
-      let balanceLockedBeforeTransaction: BigNumber =
+      const balanceLockedBeforeTransaction: BigNumber =
         await savingsAccount.userLockedBalance(
           userAccount.address,
           zeroAddress,
@@ -110,7 +112,7 @@ describe("Test Savings Account (with ETH)", async () => {
           zeroAddress
         );
 
-      let balanceLockedAfterTransaction: BigNumber =
+      const balanceLockedAfterTransaction: BigNumber =
         await savingsAccount.userLockedBalance(
           userAccount.address,
           zeroAddress,
@@ -184,7 +186,7 @@ describe("Test Savings Account (with ETH)", async () => {
         withdrawAccount = getRandomFromArray(await ethers.getSigners());
       }
 
-      let deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
+      const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
       yearnYield = await deployHelper.core.deployYearnYield();
 
       await yearnYield.initialize(admin.address, savingsAccount.address);
@@ -196,7 +198,7 @@ describe("Test Savings Account (with ETH)", async () => {
     });
 
     it("Should deposit into another account", async () => {
-      let balanceLockedBeforeTransaction: BigNumber =
+      const balanceLockedBeforeTransaction: BigNumber =
         await savingsAccount.userLockedBalance(
           randomAccount.address,
           zeroAddress,
@@ -222,7 +224,7 @@ describe("Test Savings Account (with ETH)", async () => {
           yearnYield.address
         );
 
-      let balanceLockedAfterTransaction: BigNumber =
+      const balanceLockedAfterTransaction: BigNumber =
         await savingsAccount.userLockedBalance(
           randomAccount.address,
           zeroAddress,
@@ -237,13 +239,13 @@ describe("Test Savings Account (with ETH)", async () => {
 
     context("Withdraw ETH", async () => {
       it("Withdraw half of shares received to account (withdrawShares = false)", async () => {
-        let balanceBeforeWithdraw = await network.provider.request({
+        const balanceBeforeWithdraw = await network.provider.request({
           method: "eth_getBalance",
           params: [withdrawAccount.address],
         });
 
         await incrementChain(network, 12000);
-        let sharesToWithdraw = BigNumber.from(sharesReceivedWithYearn).div(2);
+        const sharesToWithdraw = BigNumber.from(sharesReceivedWithYearn).div(2);
         //gas price is put to zero to check amount received
         await expect(
           savingsAccount
@@ -266,25 +268,25 @@ describe("Test Savings Account (with ETH)", async () => {
             yearnYield.address
           ); //@prateek: how to precompute the event args
 
-        let balanceAfterWithdraw = await network.provider.request({
+        const balanceAfterWithdraw = await network.provider.request({
           method: "eth_getBalance",
           params: [withdrawAccount.address],
         });
 
-        let amountReceived: BigNumberish = BigNumber.from(
+        const amountReceived: BigNumberish = BigNumber.from(
           balanceAfterWithdraw
         ).sub(BigNumber.from(balanceBeforeWithdraw));
         expect(sharesToWithdraw).eq(amountReceived); //@prateek to verify this
       });
 
       it("Withdraw half of shares received to account (withdrawShares = true)", async () => {
-        let balanceBeforeWithdraw = await network.provider.request({
+        const balanceBeforeWithdraw = await network.provider.request({
           method: "eth_getBalance",
           params: [withdrawAccount.address],
         });
 
         await incrementChain(network, 12000);
-        let sharesToWithdraw = BigNumber.from(sharesReceivedWithYearn)
+        const sharesToWithdraw = BigNumber.from(sharesReceivedWithYearn)
           .div(2)
           .sub(1);
         //gas price is put to zero to check amount received
@@ -309,12 +311,12 @@ describe("Test Savings Account (with ETH)", async () => {
             yearnYield.address
           );
 
-        let balanceAfterWithdraw = await network.provider.request({
+        const balanceAfterWithdraw = await network.provider.request({
           method: "eth_getBalance",
           params: [withdrawAccount.address],
         });
 
-        let amountReceived: BigNumberish = BigNumber.from(
+        const amountReceived: BigNumberish = BigNumber.from(
           balanceAfterWithdraw
         ).sub(BigNumber.from(balanceBeforeWithdraw));
         expect(
@@ -349,7 +351,7 @@ describe("Test Savings Account (with ETH)", async () => {
         withdrawAccount = getRandomFromArray(await ethers.getSigners());
       }
 
-      let deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
+      const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
       aaveYield = await deployHelper.core.deployAaveYield();
       await aaveYield
         .connect(admin)
@@ -365,7 +367,7 @@ describe("Test Savings Account (with ETH)", async () => {
     });
 
     it("Should deposit into another account", async () => {
-      let balanceLockedBeforeTransaction: BigNumber =
+      const balanceLockedBeforeTransaction: BigNumber =
         await savingsAccount.userLockedBalance(
           randomAccount.address,
           zeroAddress,
@@ -390,7 +392,7 @@ describe("Test Savings Account (with ETH)", async () => {
           aaveYield.address
         );
 
-      let balanceLockedAfterTransaction: BigNumber =
+      const balanceLockedAfterTransaction: BigNumber =
         await savingsAccount.userLockedBalance(
           randomAccount.address,
           zeroAddress,
@@ -405,13 +407,13 @@ describe("Test Savings Account (with ETH)", async () => {
 
     context("Withdraw ETH", async () => {
       it("Withdraw half of shares received to account (withdrawShares = false)", async () => {
-        let balanceBeforeWithdraw = await network.provider.request({
+        const balanceBeforeWithdraw = await network.provider.request({
           method: "eth_getBalance",
           params: [withdrawAccount.address],
         });
 
         await incrementChain(network, 12000);
-        let sharesToWithdraw = BigNumber.from(sharesReceivedWithAave).div(2);
+        const sharesToWithdraw = BigNumber.from(sharesReceivedWithAave).div(2);
         //gas price is put to zero to check amount received
         await expect(
           savingsAccount
@@ -434,25 +436,25 @@ describe("Test Savings Account (with ETH)", async () => {
             aaveYield.address
           );
 
-        let balanceAfterWithdraw = await network.provider.request({
+        const balanceAfterWithdraw = await network.provider.request({
           method: "eth_getBalance",
           params: [withdrawAccount.address],
         });
 
-        let amountReceived: BigNumberish = BigNumber.from(
+        const amountReceived: BigNumberish = BigNumber.from(
           balanceAfterWithdraw
         ).sub(BigNumber.from(balanceBeforeWithdraw));
         expect(sharesToWithdraw).eq(amountReceived);
       });
 
       it("Withdraw half of shares received to account (withdrawShares = true)", async () => {
-        let balanceBeforeWithdraw = await network.provider.request({
+        const balanceBeforeWithdraw = await network.provider.request({
           method: "eth_getBalance",
           params: [withdrawAccount.address],
         });
 
         await incrementChain(network, 12000);
-        let sharesToWithdraw = BigNumber.from(sharesReceivedWithAave).div(2);
+        const sharesToWithdraw = BigNumber.from(sharesReceivedWithAave).div(2);
         //gas price is put to zero to check amount received
         await expect(
           savingsAccount
@@ -475,12 +477,12 @@ describe("Test Savings Account (with ETH)", async () => {
             aaveYield.address
           );
 
-        let balanceAfterWithdraw = await network.provider.request({
+        const balanceAfterWithdraw = await network.provider.request({
           method: "eth_getBalance",
           params: [withdrawAccount.address],
         });
 
-        let amountReceived: BigNumberish = BigNumber.from(
+        const amountReceived: BigNumberish = BigNumber.from(
           balanceAfterWithdraw
         ).sub(BigNumber.from(balanceBeforeWithdraw));
         expect(sharesToWithdraw).eq(amountReceived);
@@ -513,7 +515,7 @@ describe("Test Savings Account (with ETH)", async () => {
         withdrawAccount = getRandomFromArray(await ethers.getSigners());
       }
 
-      let deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
+      const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
       compoundYield = await deployHelper.core.deployCompoundYield();
 
       await compoundYield.initialize(admin.address, savingsAccount.address);
@@ -523,7 +525,7 @@ describe("Test Savings Account (with ETH)", async () => {
         .updateProtocolAddresses(zeroAddress, Contracts.cETH);
     });
     it("Should deposit into another account", async () => {
-      let balanceLockedBeforeTransaction: BigNumber =
+      const balanceLockedBeforeTransaction: BigNumber =
         await savingsAccount.userLockedBalance(
           randomAccount.address,
           zeroAddress,
@@ -548,7 +550,7 @@ describe("Test Savings Account (with ETH)", async () => {
           compoundYield.address
         );
 
-      let balanceLockedAfterTransaction: BigNumber =
+      const balanceLockedAfterTransaction: BigNumber =
         await savingsAccount.userLockedBalance(
           randomAccount.address,
           zeroAddress,
@@ -563,13 +565,13 @@ describe("Test Savings Account (with ETH)", async () => {
 
     context("Withdraw ETH", async () => {
       it("Withdraw half of shares received to account (withdrawShares = false)", async () => {
-        let balanceBeforeWithdraw = await network.provider.request({
+        const balanceBeforeWithdraw = await network.provider.request({
           method: "eth_getBalance",
           params: [withdrawAccount.address],
         });
 
         await incrementChain(network, 12000);
-        let sharesToWithdraw = BigNumber.from(sharesReceivedWithCompound).div(
+        const sharesToWithdraw = BigNumber.from(sharesReceivedWithCompound).div(
           2
         );
         //gas price is put to zero to check amount received
@@ -594,25 +596,25 @@ describe("Test Savings Account (with ETH)", async () => {
             compoundYield.address
           );
 
-        let balanceAfterWithdraw = await network.provider.request({
+        const balanceAfterWithdraw = await network.provider.request({
           method: "eth_getBalance",
           params: [withdrawAccount.address],
         });
 
-        let amountReceived: BigNumberish = BigNumber.from(
+        const amountReceived: BigNumberish = BigNumber.from(
           balanceAfterWithdraw
         ).sub(BigNumber.from(balanceBeforeWithdraw));
         expect(sharesToWithdraw).eq(amountReceived);
       });
 
       it("Withdraw half of shares received to account (withdrawShares = true)", async () => {
-        let balanceBeforeWithdraw = await network.provider.request({
+        const balanceBeforeWithdraw = await network.provider.request({
           method: "eth_getBalance",
           params: [withdrawAccount.address],
         });
 
         await incrementChain(network, 12000);
-        let sharesToWithdraw = BigNumber.from(sharesReceivedWithCompound).div(
+        const sharesToWithdraw = BigNumber.from(sharesReceivedWithCompound).div(
           2
         );
         //gas price is put to zero to check amount received
@@ -637,12 +639,12 @@ describe("Test Savings Account (with ETH)", async () => {
             compoundYield.address
           );
 
-        let balanceAfterWithdraw = await network.provider.request({
+        const balanceAfterWithdraw = await network.provider.request({
           method: "eth_getBalance",
           params: [withdrawAccount.address],
         });
 
-        let amountReceived: BigNumberish = BigNumber.from(
+        const amountReceived: BigNumberish = BigNumber.from(
           balanceAfterWithdraw
         ).sub(BigNumber.from(balanceBeforeWithdraw));
         expect(sharesToWithdraw).eq(amountReceived);
