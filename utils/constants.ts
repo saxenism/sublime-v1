@@ -22,3 +22,52 @@ export const DAI_Yearn_Protocol_Address =
   "0xacd43e627e64355f1861cec6d3a6688b31a6f952";
 
 export const aLink = "0xa06bC25B5805d5F8d82847D191Cb4Af5A3e873E0";
+
+const collateralRatio = BigNumber.from(275);
+
+export const createPoolParams = {
+  _poolSize: BigNumber.from(10000000),
+  _borrowAmountRequested: depositValueToTest,
+  _minborrowAmount: BigNumber.from(1),
+  _idealCollateralRatio: collateralRatio,
+  _collateralRatio: collateralRatio,
+  _borrowRate: BigNumber.from(5),
+  _repaymentInterval: BigNumber.from(100),
+  _noOfRepaymentIntervals: BigNumber.from(25),
+  _collateralAmount: depositValueToTest.mul(collateralRatio).mul(2).div(100),
+  _loanWithdrawalDuration: BigNumber.from(15000000),
+  _collectionPeriod: BigNumber.from(5000000),
+};
+
+// address _borrowTokenType,
+// address _collateralTokenType,
+// address _poolSavingsStrategy,
+// bool _transferFromSavingsAccount,
+// bytes32 _salt
+
+export const testPoolFactoryParams = {
+  _collectionPeriod: BigNumber.from(10000),
+  _matchCollateralRatioInterval: BigNumber.from(200),
+  _marginCallDuration: BigNumber.from(300),
+  _collateralVolatilityThreshold: BigNumber.from(25),
+  _gracePeriodPenaltyFraction: BigNumber.from(25),
+  _liquidatorRewardFraction: BigNumber.from(15),
+  _poolInitFuncSelector: "0x272edaf2",
+  _poolTokenInitFuncSelector: "0x077f224a",
+};
+
+// Pool Factory inputs tro be manually added
+// bytes4 _poolInitFuncSelector,
+// bytes4 _poolTokenInitFuncSelector,
+
+// Pool inputs to be manullay added
+// address _borrower,
+// address _borrowAsset,
+// address _collateralAsset,
+// address _poolSavingsStrategy,
+// bool _transferFromSavingsAccount,
+
+export const ChainLinkAggregators = {
+  "LINK/USD": "0x2c1d072e956AFFC0D435Cb7AC38EF18d24d9127c",
+  "DAI/USD": "0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9",
+};

@@ -5,7 +5,7 @@ import { ERC20__factory } from "../../typechain/factories/ERC20__factory";
 
 import { Address } from "hardhat-deploy/dist/types";
 
-export default class DeploMockContracts {
+export default class DeployMockContracts {
   private _deployerSigner: Signer;
 
   constructor(deployerSigner: Signer) {
