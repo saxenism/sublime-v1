@@ -85,8 +85,12 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
         override
         returns (address aToken)
     {
-        (aToken, , ) = IProtocolDataProvider(protocolDataProvider)
-            .getReserveTokensAddresses(asset);
+        if (asset == address(0)) {
+            aToken = IWETHGateway(wethGateway).getAWETHAddress();
+        } else {
+            (aToken, , ) = IProtocolDataProvider(protocolDataProvider)
+                .getReserveTokensAddresses(asset);
+        }
     }
 
     function updateSavingsAccount(address payable _savingsAccount)

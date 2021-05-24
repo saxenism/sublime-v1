@@ -20,6 +20,7 @@ import { AaveYield } from "../../typechain/AaveYield";
 import { YearnYield } from "../../typechain/YearnYield";
 import { CompoundYield } from "../../typechain/CompoundYield";
 import { Contracts } from "../../existingContracts/compound.json";
+import { IWETHGateway } from "../../typechain/IWETHGateway";
 
 describe("Test Savings Account (with ETH)", async () => {
   let savingsAccount: SavingsAccount;
@@ -373,6 +374,7 @@ describe("Test Savings Account (with ETH)", async () => {
           zeroAddress,
           aaveYield.address
         );
+
       await expect(
         savingsAccount
           .connect(userAccount)
@@ -444,7 +446,19 @@ describe("Test Savings Account (with ETH)", async () => {
         const amountReceived: BigNumberish = BigNumber.from(
           balanceAfterWithdraw
         ).sub(BigNumber.from(balanceBeforeWithdraw));
+
         expect(sharesToWithdraw).eq(amountReceived);
+
+        const balanceLockedAfterTransaction: BigNumber =
+          await savingsAccount.userLockedBalance(
+            randomAccount.address,
+            zeroAddress,
+            aaveYield.address
+          );
+
+        expect(balanceLockedAfterTransaction).eq(
+          BigNumber.from(sharesReceivedWithAave).sub(sharesToWithdraw)
+        );
       });
 
       it("Withdraw half of shares received to account (withdrawShares = true)", async () => {
@@ -452,9 +466,9 @@ describe("Test Savings Account (with ETH)", async () => {
           method: "eth_getBalance",
           params: [withdrawAccount.address],
         });
-
         await incrementChain(network, 12000);
         const sharesToWithdraw = BigNumber.from(sharesReceivedWithAave).div(2);
+
         //gas price is put to zero to check amount received
         await expect(
           savingsAccount

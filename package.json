@@ -8,7 +8,8 @@
     "test": "npx hardhat test",
     "typechain": "npx hardhat typechain",
     "prettier": "prettier --write '{test,utils,scripts,types}/**/*.{ts,js,json}' && prettier --write hardhat.config.ts",
-    "flatten": "npx waffle flatten"
+    "flatten": "npx waffle flatten",
+    "lint-sol": "npx prettier --write 'contracts/**/*.sol'"
   },
   "repository": {
     "type": "git",
@@ -49,7 +50,8 @@
     "hardhat-typechain": "^0.3.5",
     "jsdoc": "^3.6.7",
     "nyc": "^15.1.0",
-    "prettier": "^2.2.1",
+    "prettier": "^2.3.0",
+    "prettier-plugin-solidity": "^1.0.0-beta.10",
     "replace-in-file": "^6.2.0",
     "solidity-coverage": "^0.7.16",
     "ts-generator": "^0.1.1",

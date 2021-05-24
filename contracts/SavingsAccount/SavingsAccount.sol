@@ -293,7 +293,10 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         }
 
         token = asset;
-        if (withdrawShares) token = IYield(strategy).liquidityToken(asset);
+        if (withdrawShares) {
+            token = IYield(strategy).liquidityToken(asset);
+            require(token != address(0), "Liquidity storage cannot be zero");
+        }
 
         if (token == address(0)) {
             withdrawTo.transfer(amountReceived);
@@ -450,7 +453,6 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         //     IStrategyRegistry(strategyRegistry).registry(msg.sender),
         //     "SavingsAccount::receive invalid transaction"
         // );
-
         // the above snippet of code causes gas issues. Commented till solution is found
     }
 }

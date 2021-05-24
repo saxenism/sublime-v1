@@ -184,15 +184,16 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         (uint256 price, uint256 _decimals) =
             IPriceOracle(IPoolFactory(PoolFactory).priceOracle())
                 .getLatestPrice(
-                    poolConstants.borrowAsset,
-                    poolConstants.collateralAsset
-                );
+                poolConstants.borrowAsset,
+                poolConstants.collateralAsset
+            );
         require(
             _amount >=
                 poolConstants
                     .idealCollateralRatio
                     .mul(poolConstants.borrowAmountRequested.mul(price))
-                    .div(1e8).div(10**_decimals),
+                    .div(1e8)
+                    .div(10**_decimals),
             "36"
         );
 
@@ -256,10 +257,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
                     _amount
                 );
                 if (_toSavingsAccount) {
-                    IERC20(_asset).safeApprove(
-                        address(_savingsAccount),
-                        _amount
-                    );
+                    IERC20(_asset).safeApprove(_poolSavingsStrategy, _amount);
                     _sharesReceived = _savingsAccount.depositTo(
                         _amount,
                         _asset,
@@ -669,7 +667,9 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
                     _collateralAsset
                 );
 
-        _ratio = (_currentCollateralTokens.mul(_ratioOfPrices).div(10**_decimals))
+        _ratio = (
+            _currentCollateralTokens.mul(_ratioOfPrices).div(10**_decimals)
+        )
             .div(_balance.add(_interest));
     }
 
@@ -894,18 +894,17 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         address _poolFactory
     ) public view returns (uint256) {
         IPoolFactory _PoolFactory = IPoolFactory(_poolFactory);
-        (uint256 _ratioOfPrices, uint256 _decimals) = IPriceOracle(
-            _PoolFactory.priceOracle()
-        ).getLatestPrice(
-            poolConstants.collateralAsset,
-            poolConstants.borrowAsset
-        );
-        return _collateralTokens.mul(
-                    _ratioOfPrices
-                )
+        (uint256 _ratioOfPrices, uint256 _decimals) =
+            IPriceOracle(_PoolFactory.priceOracle()).getLatestPrice(
+                poolConstants.collateralAsset,
+                poolConstants.borrowAsset
+            );
+        return
+            _collateralTokens
+                .mul(_ratioOfPrices)
                 .mul(
-                    uint256(10**8).sub(_PoolFactory.liquidatorRewardFraction())
-                )
+                uint256(10**8).sub(_PoolFactory.liquidatorRewardFraction())
+            )
                 .div(10**8)
                 .div(10**_decimals);
     }
