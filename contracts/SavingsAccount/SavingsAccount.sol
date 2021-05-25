@@ -287,22 +287,52 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         address strategy,
         bool withdrawShares
     ) internal returns (address token, uint256 amountReceived) {
-        amountReceived = amount;
-        if (!withdrawShares && strategy != address(0)) {
-            amountReceived = IYield(strategy).unlockTokens(asset, amount);
-        }
-
-        token = asset;
-        if (withdrawShares) {
-            token = IYield(strategy).liquidityToken(asset);
-            require(token != address(0), "Liquidity storage cannot be zero");
-        }
-
-        if (token == address(0)) {
-            withdrawTo.transfer(amountReceived);
+        if (strategy == address(0)) {
+            require(
+                !withdrawShares,
+                "Cannot withdraw shared when No strategy is used"
+            );
+            amountReceived = amount;
+            if (asset == address(0)) {
+                withdrawTo.transfer(amountReceived);
+            } else {
+                token = asset;
+                IERC20(asset).safeTransfer(withdrawTo, amountReceived);
+            }
         } else {
-            IERC20(token).safeTransfer(withdrawTo, amountReceived);
+            if (withdrawShares) {
+                token = IYield(strategy).liquidityToken(asset);
+                require(
+                    token != address(0),
+                    "Liquidity Tokens address cannot be address(0)"
+                );
+                amountReceived = IYield(strategy).unlockShares(token, amount);
+                IERC20(token).safeTransfer(withdrawTo, amountReceived);
+            } else {
+                token = asset;
+                amountReceived = IYield(strategy).unlockTokens(asset, amount);
+                if (token == address(0)) {
+                    withdrawTo.transfer(amountReceived);
+                } else {
+                    IERC20(token).safeTransfer(withdrawTo, amountReceived);
+                }
+            }
         }
+        // if (!withdrawShares && strategy != address(0)) {
+        //     amountReceived = IYield(strategy).unlockTokens(asset, amount);
+        // }
+
+        // token = asset;
+        // if (withdrawShares) {
+        //     token = IYield(strategy).liquidityToken(asset);
+        //     require(token != address(0), "Liquidity storage cannot be zero");
+        // }
+
+        // if (token == address(0)) {
+        //     withdrawTo.transfer(amountReceived);
+        // } else {
+        //     IERC20(token).safeTransfer(withdrawTo, amountReceived);
+        // }
     }
 
     function withdrawAll(address _asset)

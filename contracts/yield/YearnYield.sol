@@ -139,6 +139,20 @@ contract YearnYield is IYield, Initializable, OwnableUpgradeable {
         emit UnlockedTokens(asset, received);
     }
 
+    function unlockShares(address asset, uint256 amount)
+        public
+        override
+        onlySavingsAccount
+        returns (uint256 received)
+    {
+        require(amount != 0, "Invest: amount");
+        require(asset != address(0), "Asset address cannot be address(0)");
+        received = amount;
+        IERC20(asset).safeTransfer(savingsAccount, received);
+
+        emit UnlockedShares(asset, received);
+    }
+
     /**
      * @dev Used to get amount of underlying tokens for current number of shares
      * @param shares the amount of shares

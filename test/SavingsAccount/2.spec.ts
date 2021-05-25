@@ -23,6 +23,7 @@ import { CompoundYield } from "../../typechain/CompoundYield";
 import { ERC20 } from "../../typechain/ERC20";
 
 import { Contracts } from "../../existingContracts/compound.json";
+import { IyVault } from "../../typechain/IyVault";
 
 describe("Test Savings Account (with ERC20 Token)", async () => {
   let savingsAccount: SavingsAccount;
@@ -51,7 +52,7 @@ describe("Test Savings Account (with ERC20 Token)", async () => {
       strategyRegistry.address,
       mockCreditLinesAddress.address
     );
-    strategyRegistry.initialize(admin.address, 10);
+    strategyRegistry.initialize(admin.address, 1000);
 
     await network.provider.request({
       method: "hardhat_impersonateAccount",
@@ -229,9 +230,7 @@ describe("Test Savings Account (with ERC20 Token)", async () => {
               zeroAddress,
               true
             )
-        ).to.be.revertedWith(
-          "reverted: function call to a non-contract account"
-        );
+        ).to.be.revertedWith("Cannot withdraw shared when No strategy is used");
       });
     });
 
@@ -282,7 +281,7 @@ describe("Test Savings Account (with ERC20 Token)", async () => {
     let userAccount: SignerWithAddress;
     let aaveYield: AaveYield;
 
-    before(async () => {
+    beforeEach(async () => {
       const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
       aaveYield = await deployHelper.core.deployAaveYield();
       await aaveYield
@@ -296,9 +295,7 @@ describe("Test Savings Account (with ERC20 Token)", async () => {
         );
 
       await strategyRegistry.connect(admin).addStrategy(aaveYield.address);
-    });
 
-    beforeEach(async () => {
       randomAccount = getRandomFromArray(await ethers.getSigners());
       userAccount = getRandomFromArray(await ethers.getSigners());
 
@@ -387,10 +384,9 @@ describe("Test Savings Account (with ERC20 Token)", async () => {
           Contracts.LINK,
           aaveYield.address
         );
-
       expect(
         balanceLockedAfterTransaction.sub(balanceLockedBeforeTransaction)
-      ).eq(depositValueToTest); //@prateek to verify this
+      ).eq(depositValueToTest);
     });
 
     async function subject(
@@ -484,6 +480,8 @@ describe("Test Savings Account (with ERC20 Token)", async () => {
           randomAccount.address
         );
 
+      await incrementChain(network, 12000);
+
       const balanceLockedBeforeTransaction: BigNumber =
         await LinkTokenContract.balanceOf(randomAccount.address);
 
@@ -522,6 +520,12 @@ describe("Test Savings Account (with ERC20 Token)", async () => {
     });
 
     it("Withdraw Token (withdrawShares = true)", async () => {
+      let linkLiquidityToken = await aaveYield.liquidityToken(Contracts.LINK);
+      const deployHelper = new DeployHelper(proxyAdmin);
+      let liquidityToken = await deployHelper.mock.getMockERC20(
+        linkLiquidityToken
+      );
+
       await savingsAccount
         .connect(userAccount)
         .depositTo(
@@ -530,9 +534,11 @@ describe("Test Savings Account (with ERC20 Token)", async () => {
           aaveYield.address,
           randomAccount.address
         );
+      await incrementChain(network, 12000);
 
-      const balanceLockedBeforeTransaction: BigNumber =
-        await LinkTokenContract.balanceOf(randomAccount.address);
+      let liquidityTokenBalanceBefore = await liquidityToken.balanceOf(
+        randomAccount.address
+      );
 
       const balanceToWithdraw = await savingsAccount.userLockedBalance(
         randomAccount.address,
@@ -548,7 +554,8 @@ describe("Test Savings Account (with ERC20 Token)", async () => {
             balanceToWithdraw,
             Contracts.LINK,
             aaveYield.address,
-            true
+            true,
+            { gasPrice: 0 }
           )
       )
         .to.emit(savingsAccount, "Withdrawn")
@@ -556,16 +563,15 @@ describe("Test Savings Account (with ERC20 Token)", async () => {
           randomAccount.address,
           randomAccount.address,
           depositValueToTest,
-          ethers.utils.getAddress(Contracts.LINK),
+          ethers.utils.getAddress(linkLiquidityToken),
           aaveYield.address
         );
-
-      const balanceLockedAfterTransaction: BigNumber =
-        await LinkTokenContract.balanceOf(randomAccount.address);
-
-      expect(
-        balanceLockedAfterTransaction.sub(balanceLockedBeforeTransaction)
-      ).eq(depositValueToTest);
+      let liquidityTokenBalanceAfter = await liquidityToken.balanceOf(
+        randomAccount.address
+      );
+      expect(liquidityTokenBalanceAfter.sub(liquidityTokenBalanceBefore)).eq(
+        depositValueToTest
+      );
     });
   });
 
@@ -574,7 +580,7 @@ describe("Test Savings Account (with ERC20 Token)", async () => {
     let userAccount: SignerWithAddress;
     let yearnYield: YearnYield;
 
-    before(async () => {
+    beforeEach(async () => {
       const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
       yearnYield = await deployHelper.core.deployYearnYield();
       await yearnYield.initialize(admin.address, savingsAccount.address);
@@ -585,9 +591,6 @@ describe("Test Savings Account (with ERC20 Token)", async () => {
           DaiTokenContract.address,
           DAI_Yearn_Protocol_Address
         );
-    });
-
-    beforeEach(async () => {
       randomAccount = getRandomFromArray(await ethers.getSigners());
       userAccount = getRandomFromArray(await ethers.getSigners());
 
@@ -609,7 +612,12 @@ describe("Test Savings Account (with ERC20 Token)", async () => {
     });
 
     it("Should successfully deposit into account another account", async () => {
-      const balanceLockedBeforeTransaction: BigNumber =
+      let expectedShares = await yearnYield.getSharesForTokens(
+        depositValueToTest,
+        Contracts.DAI
+      );
+
+      const sharesLockedBeforeTransaction: BigNumber =
         await savingsAccount.userLockedBalance(
           randomAccount.address,
           Contracts.DAI,
@@ -634,7 +642,7 @@ describe("Test Savings Account (with ERC20 Token)", async () => {
           yearnYield.address
         );
 
-      const balanceLockedAfterTransaction: BigNumber =
+      const sharesLockedAfterTransaction: BigNumber =
         await savingsAccount.userLockedBalance(
           randomAccount.address,
           Contracts.DAI,
@@ -642,17 +650,27 @@ describe("Test Savings Account (with ERC20 Token)", async () => {
         );
 
       expect(
-        balanceLockedAfterTransaction.sub(balanceLockedBeforeTransaction)
-      ).eq(depositValueToTest);
+        sharesLockedAfterTransaction.sub(sharesLockedBeforeTransaction)
+      ).gt(0);
+
+      expect(
+        sharesLockedAfterTransaction.sub(sharesLockedBeforeTransaction)
+      ).lte(expectedShares);
     });
 
     it("Should successfully deposit into its own accounts", async () => {
-      const balanceLockedBeforeTransaction: BigNumber =
+      let expectedShares = await yearnYield.getSharesForTokens(
+        depositValueToTest,
+        Contracts.DAI
+      );
+
+      const sharesLockedBeforeTransaction: BigNumber =
         await savingsAccount.userLockedBalance(
           userAccount.address,
           Contracts.DAI,
           yearnYield.address
         );
+
       await expect(
         savingsAccount
           .connect(userAccount)
@@ -671,7 +689,7 @@ describe("Test Savings Account (with ERC20 Token)", async () => {
           yearnYield.address
         );
 
-      const balanceLockedAfterTransaction: BigNumber =
+      const sharesLockedAfterTransaction: BigNumber =
         await savingsAccount.userLockedBalance(
           userAccount.address,
           Contracts.DAI,
@@ -679,8 +697,12 @@ describe("Test Savings Account (with ERC20 Token)", async () => {
         );
 
       expect(
-        balanceLockedAfterTransaction.sub(balanceLockedBeforeTransaction)
-      ).eq(depositValueToTest);
+        sharesLockedAfterTransaction.sub(sharesLockedBeforeTransaction)
+      ).gt(0);
+
+      expect(
+        sharesLockedAfterTransaction.sub(sharesLockedBeforeTransaction)
+      ).lte(expectedShares);
     });
 
     async function subject(
@@ -783,6 +805,10 @@ describe("Test Savings Account (with ERC20 Token)", async () => {
         yearnYield.address
       );
 
+      let expectedBalanceWithdraw = await yearnYield.getTokensForShares(
+        await yearnYield.getSharesForTokens(depositValueToTest, Contracts.DAI),
+        Contracts.DAI
+      );
       await expect(
         savingsAccount
           .connect(randomAccount)
@@ -798,7 +824,7 @@ describe("Test Savings Account (with ERC20 Token)", async () => {
         .withArgs(
           randomAccount.address,
           randomAccount.address,
-          depositValueToTest,
+          expectedBalanceWithdraw,
           ethers.utils.getAddress(Contracts.DAI),
           yearnYield.address
         );
@@ -808,10 +834,21 @@ describe("Test Savings Account (with ERC20 Token)", async () => {
 
       expect(
         balanceLockedAfterTransaction.sub(balanceLockedBeforeTransaction)
-      ).eq(depositValueToTest);
+      ).eq(expectedBalanceWithdraw);
     });
 
     it("Withdraw Token (withdrawShares = true)", async () => {
+      let liquidityTokenAddress = await yearnYield.liquidityToken(
+        Contracts.DAI
+      );
+
+      const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
+      let liquidityToken = await deployHelper.mock.getMockERC20(
+        liquidityTokenAddress
+      );
+
+      let sharesBefore = await liquidityToken.balanceOf(randomAccount.address);
+
       await savingsAccount
         .connect(userAccount)
         .depositTo(
@@ -820,9 +857,6 @@ describe("Test Savings Account (with ERC20 Token)", async () => {
           yearnYield.address,
           randomAccount.address
         );
-
-      const balanceLockedBeforeTransaction: BigNumber =
-        await DaiTokenContract.balanceOf(randomAccount.address);
 
       const balanceToWithdraw = await savingsAccount.userLockedBalance(
         randomAccount.address,
@@ -845,17 +879,14 @@ describe("Test Savings Account (with ERC20 Token)", async () => {
         .withArgs(
           randomAccount.address,
           randomAccount.address,
-          depositValueToTest,
-          ethers.utils.getAddress(Contracts.DAI),
+          balanceToWithdraw,
+          ethers.utils.getAddress(liquidityTokenAddress),
           yearnYield.address
         );
 
-      const balanceLockedAfterTransaction: BigNumber =
-        await DaiTokenContract.balanceOf(randomAccount.address);
+      let sharesAfter = await liquidityToken.balanceOf(randomAccount.address);
 
-      expect(
-        balanceLockedAfterTransaction.sub(balanceLockedBeforeTransaction)
-      ).eq(depositValueToTest);
+      expect(sharesAfter.sub(sharesBefore)).eq(balanceToWithdraw);
     });
   });
 
@@ -864,7 +895,7 @@ describe("Test Savings Account (with ERC20 Token)", async () => {
     let userAccount: SignerWithAddress;
     let compoundYield: CompoundYield;
 
-    before(async () => {
+    beforeEach(async () => {
       const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
       compoundYield = await deployHelper.core.deployCompoundYield();
       await compoundYield.initialize(admin.address, savingsAccount.address);
@@ -872,9 +903,7 @@ describe("Test Savings Account (with ERC20 Token)", async () => {
       await compoundYield
         .connect(admin)
         .updateProtocolAddresses(Contracts.DAI, Contracts.cDAI);
-    });
 
-    beforeEach(async () => {
       randomAccount = getRandomFromArray(await ethers.getSigners());
       userAccount = getRandomFromArray(await ethers.getSigners());
 
@@ -921,6 +950,11 @@ describe("Test Savings Account (with ERC20 Token)", async () => {
           compoundYield.address
         );
 
+      let expectedValue = await compoundYield.callStatic.getSharesForTokens(
+        depositValueToTest,
+        Contracts.DAI
+      );
+
       const balanceLockedAfterTransaction: BigNumber =
         await savingsAccount.userLockedBalance(
           randomAccount.address,
@@ -930,7 +964,7 @@ describe("Test Savings Account (with ERC20 Token)", async () => {
 
       expect(
         balanceLockedAfterTransaction.sub(balanceLockedBeforeTransaction)
-      ).eq(depositValueToTest);
+      ).eq(expectedValue);
     });
 
     it("Should successfully deposit into its own accounts", async () => {
@@ -958,6 +992,11 @@ describe("Test Savings Account (with ERC20 Token)", async () => {
           compoundYield.address
         );
 
+      let expectedValue = await compoundYield.callStatic.getSharesForTokens(
+        depositValueToTest,
+        Contracts.DAI
+      );
+
       const balanceLockedAfterTransaction: BigNumber =
         await savingsAccount.userLockedBalance(
           userAccount.address,
@@ -967,7 +1006,7 @@ describe("Test Savings Account (with ERC20 Token)", async () => {
 
       expect(
         balanceLockedAfterTransaction.sub(balanceLockedBeforeTransaction)
-      ).eq(depositValueToTest);
+      ).eq(expectedValue);
     });
 
     async function subject(
@@ -1064,10 +1103,16 @@ describe("Test Savings Account (with ERC20 Token)", async () => {
       const balanceLockedBeforeTransaction: BigNumber =
         await DaiTokenContract.balanceOf(randomAccount.address);
 
-      const balanceToWithdraw = await savingsAccount.userLockedBalance(
+      const sharesToWithdraw = await savingsAccount.userLockedBalance(
         randomAccount.address,
         Contracts.DAI,
         compoundYield.address
+      );
+      await incrementChain(network, 12000);
+
+      let expectedValue = await compoundYield.callStatic.getTokensForShares(
+        sharesToWithdraw,
+        Contracts.DAI
       );
 
       await expect(
@@ -1075,30 +1120,37 @@ describe("Test Savings Account (with ERC20 Token)", async () => {
           .connect(randomAccount)
           .withdraw(
             randomAccount.address,
-            balanceToWithdraw,
+            sharesToWithdraw,
             Contracts.DAI,
             compoundYield.address,
             false
           )
-      )
-        .to.emit(savingsAccount, "Withdrawn")
-        .withArgs(
-          randomAccount.address,
-          randomAccount.address,
-          depositValueToTest,
-          ethers.utils.getAddress(Contracts.DAI),
-          compoundYield.address
-        );
+      ).to.emit(savingsAccount, "Withdrawn");
 
       const balanceLockedAfterTransaction: BigNumber =
         await DaiTokenContract.balanceOf(randomAccount.address);
 
+      let delta = "1000000000000";
+      let lowerRange = expectedValue.sub(delta);
+      let upperRange = expectedValue.add(delta);
       expect(
         balanceLockedAfterTransaction.sub(balanceLockedBeforeTransaction)
-      ).eq(depositValueToTest);
+      ).gte(lowerRange);
+
+      expect(
+        balanceLockedAfterTransaction.sub(balanceLockedBeforeTransaction)
+      ).lte(upperRange);
     });
 
     it("Withdraw Token (withdrawShares = true)", async () => {
+      const liquidityTokenAddress = await compoundYield.liquidityToken(
+        Contracts.DAI
+      );
+      const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
+      const liquidityToken = await deployHelper.mock.getMockERC20(
+        liquidityTokenAddress
+      );
+
       await savingsAccount
         .connect(userAccount)
         .depositTo(
@@ -1108,8 +1160,9 @@ describe("Test Savings Account (with ERC20 Token)", async () => {
           randomAccount.address
         );
 
-      const balanceLockedBeforeTransaction: BigNumber =
-        await DaiTokenContract.balanceOf(randomAccount.address);
+      const sharesBeforeTransaction: BigNumber = await liquidityToken.balanceOf(
+        randomAccount.address
+      );
 
       const balanceToWithdraw = await savingsAccount.userLockedBalance(
         randomAccount.address,
@@ -1132,17 +1185,18 @@ describe("Test Savings Account (with ERC20 Token)", async () => {
         .withArgs(
           randomAccount.address,
           randomAccount.address,
-          depositValueToTest,
-          ethers.utils.getAddress(Contracts.DAI),
+          balanceToWithdraw,
+          ethers.utils.getAddress(liquidityTokenAddress),
           compoundYield.address
         );
 
-      const balanceLockedAfterTransaction: BigNumber =
-        await DaiTokenContract.balanceOf(randomAccount.address);
+      const sharesAfterTransaction: BigNumber = await liquidityToken.balanceOf(
+        randomAccount.address
+      );
 
-      expect(
-        balanceLockedAfterTransaction.sub(balanceLockedBeforeTransaction)
-      ).eq(depositValueToTest);
+      expect(sharesAfterTransaction.sub(sharesBeforeTransaction)).eq(
+        balanceToWithdraw
+      );
     });
   });
 });
