@@ -3,7 +3,6 @@ pragma solidity 0.7.0;
 pragma experimental ABIEncoderV2;
 
 interface IRepayment {
-
     function initializeRepayment(
         uint256 numberOfTotalRepayments,
         uint256 repaymentInterval,
@@ -12,11 +11,22 @@ interface IRepayment {
         address lentAsset
     ) external;
 
-    function calculateRepayAmount(address poolID) external view returns(uint256);
+    function calculateRepayAmount(address poolID)
+        external
+        view
+        returns (uint256);
 
-    function getTotalRepaidAmount(address poolID) external view returns(uint256);
+    function getTotalRepaidAmount(address poolID)
+        external
+        view
+        returns (uint256);
+
     //function getRepaymentPeriodCovered(address poolID) external view returns(uint256);
     //function getRepaymentOverdue(address poolID) external view returns(uint256);
     function repaymentExtended(address poolID) external;
-    function getInterestCalculationVars(address poolID) external view returns(uint256, uint256);
+
+    function getInterestCalculationVars(address poolID)
+        external
+        view
+        returns (uint256, uint256);
 }

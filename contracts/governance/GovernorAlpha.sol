@@ -2,7 +2,6 @@
 pragma solidity 0.7.0;
 pragma experimental ABIEncoderV2;
 
-
 contract GovernorAlpha {
     /// @notice The name of this contract
     string public constant name = "Sublime Governor Alpha";
@@ -104,14 +103,14 @@ contract GovernorAlpha {
     mapping(address => uint256) public latestProposalIds;
 
     /// @notice The EIP-712 typehash for the contract's domain
-    bytes32 public constant DOMAIN_TYPEHASH = keccak256(
-        "EIP712Domain(string name,uint256 chainId,address verifyingContract)"
-    );
+    bytes32 public constant DOMAIN_TYPEHASH =
+        keccak256(
+            "EIP712Domain(string name,uint256 chainId,address verifyingContract)"
+        );
 
     /// @notice The EIP-712 typehash for the ballot struct used by the contract
-    bytes32 public constant BALLOT_TYPEHASH = keccak256(
-        "Ballot(uint256 proposalId,bool support)"
-    );
+    bytes32 public constant BALLOT_TYPEHASH =
+        keccak256("Ballot(uint256 proposalId,bool support)");
 
     /// @notice An event emitted when a new proposal is created
     event ProposalCreated(
@@ -147,7 +146,7 @@ contract GovernorAlpha {
         address timelock_,
         address LIME_,
         address guardian_
-     ) {
+    ) {
         timelock = TimelockInterface(timelock_);
         LIME = LIMEInterface(LIME_);
         guardian = guardian_;
@@ -182,9 +181,8 @@ contract GovernorAlpha {
 
         uint256 latestProposalId = latestProposalIds[msg.sender];
         if (latestProposalId != 0) {
-            ProposalState proposersLatestProposalState = state(
-                latestProposalId
-            );
+            ProposalState proposersLatestProposalState =
+                state(latestProposalId);
             require(
                 proposersLatestProposalState != ProposalState.Active,
                 "GovernorAlpha::propose: one live proposal per proposer, found an already active proposal"
@@ -295,10 +293,7 @@ contract GovernorAlpha {
         Proposal storage proposal = proposals[proposalId];
         require(
             msg.sender == guardian ||
-                LIME.getPriorVotes(
-                    proposal.proposer,
-                    sub256(block.number, 1)
-                ) <
+                LIME.getPriorVotes(proposal.proposer, sub256(block.number, 1)) <
                 proposalThreshold(),
             "GovernorAlpha::cancel: proposer above threshold"
         );
@@ -380,20 +375,21 @@ contract GovernorAlpha {
         bytes32 r,
         bytes32 s
     ) public {
-        bytes32 domainSeparator = keccak256(
-            abi.encode(
-                DOMAIN_TYPEHASH,
-                keccak256(bytes(name)),
-                getChainId(),
-                address(this)
-            )
-        );
-        bytes32 structHash = keccak256(
-            abi.encode(BALLOT_TYPEHASH, proposalId, support)
-        );
-        bytes32 digest = keccak256(
-            abi.encodePacked("\x19\x01", domainSeparator, structHash)
-        );
+        bytes32 domainSeparator =
+            keccak256(
+                abi.encode(
+                    DOMAIN_TYPEHASH,
+                    keccak256(bytes(name)),
+                    getChainId(),
+                    address(this)
+                )
+            );
+        bytes32 structHash =
+            keccak256(abi.encode(BALLOT_TYPEHASH, proposalId, support));
+        bytes32 digest =
+            keccak256(
+                abi.encodePacked("\x19\x01", domainSeparator, structHash)
+            );
         address signatory = ecrecover(digest, v, r, s);
         require(
             signatory != address(0),
@@ -502,7 +498,6 @@ contract GovernorAlpha {
     }
 }
 
-
 interface TimelockInterface {
     function delay() external view returns (uint256);
 
@@ -536,7 +531,6 @@ interface TimelockInterface {
         uint256 eta
     ) external payable returns (bytes memory);
 }
-
 
 interface LIMEInterface {
     function getPriorVotes(address account, uint256 blockNumber)

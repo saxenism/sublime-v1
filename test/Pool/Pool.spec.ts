@@ -18,7 +18,11 @@ import DeployHelper from "../../utils/deploys";
 
 import { SavingsAccount } from "../../typechain/SavingsAccount";
 import { StrategyRegistry } from "../../typechain/StrategyRegistry";
-import { getRandomFromArray, incrementChain } from "../../utils/helpers";
+import {
+  getPoolAddress,
+  getRandomFromArray,
+  incrementChain,
+} from "../../utils/helpers";
 import { Address } from "hardhat-deploy/dist/types";
 import { AaveYield } from "../../typechain/AaveYield";
 import { YearnYield } from "../../typechain/YearnYield";
@@ -32,8 +36,12 @@ import { Extension } from "../../typechain/Extension";
 
 import { Contracts } from "../../existingContracts/compound.json";
 import { sha256 } from "@ethersproject/sha2";
+import { PoolToken } from "../../typechain/PoolToken";
+import { Repayments } from "../../typechain/Repayments";
+import { ContractTransaction } from "@ethersproject/contracts";
+import { getContractAddress } from "@ethersproject/address";
 
-describe.only("Pool", async () => {
+describe("Pool", async () => {
   let savingsAccount: SavingsAccount;
   let strategyRegistry: StrategyRegistry;
 
@@ -158,8 +166,10 @@ describe.only("Pool", async () => {
 
   describe("Use Pool", async () => {
     let extenstion: Extension;
-    let pool: Pool;
+    let poolImpl: Pool;
+    let poolTokenImpl: PoolToken;
     let poolFactory: PoolFactory;
+    let repaymentImpl: Repayments;
 
     beforeEach(async () => {
       const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
@@ -194,6 +204,9 @@ describe.only("Pool", async () => {
           savingsAccount.address,
           extenstion.address
         );
+      poolImpl = await deployHelper.pool.deployPool();
+      poolTokenImpl = await deployHelper.pool.deployPoolToken();
+      repaymentImpl = await deployHelper.pool.deployRepayments();
     });
 
     describe("Failed Cases", async () => {
@@ -222,7 +235,8 @@ describe.only("Pool", async () => {
               aaveYield.address,
               _collateralAmount,
               false,
-              sha256(Buffer.from("borrower"))
+              sha256(Buffer.from("borrower")),
+              { value: _collateralAmount }
             )
         ).to.be.revertedWith(
           "PoolFactory::createPool - Invalid borrow token type"
@@ -263,6 +277,17 @@ describe.only("Pool", async () => {
           "PoolFactory::createPool - Invalid collateral token type"
         );
       });
+      it("Should revert if any other address other than owner tries to update implementation contracts", async () => {
+        await expect(
+          poolFactory
+            .connect(proxyAdmin)
+            .setImplementations(
+              poolFactory.address,
+              repaymentImpl.address,
+              poolTokenImpl.address
+            )
+        ).to.be.revertedWith("Ownable: caller is not the owner");
+      });
     });
 
     describe("Pool Factory owner paramters", async () => {
@@ -294,6 +319,47 @@ describe.only("Pool", async () => {
       await poolFactory
         .connect(admin)
         .updateSupportedCollateralTokens(Contracts.LINK, true);
+
+      await poolFactory
+        .connect(admin)
+        .setImplementations(
+          poolImpl.address,
+          repaymentImpl.address,
+          poolTokenImpl.address
+        );
+
+      let deployHelper: DeployHelper = new DeployHelper(borrower);
+      let collateralToken: ERC20 = await deployHelper.mock.getMockERC20(
+        Contracts.LINK
+      );
+
+      let generatedPoolAddress: Address = await getPoolAddress(
+        borrower.address,
+        Contracts.DAI,
+        Contracts.LINK,
+        aaveYield.address,
+        poolFactory.address,
+        sha256(Buffer.from("borrower")),
+        poolImpl.address,
+        false
+      );
+
+      const nonce =
+        (await poolFactory.provider.getTransactionCount(poolFactory.address)) +
+        1;
+      let newPoolToken: string = getContractAddress({
+        from: poolFactory.address,
+        nonce,
+      });
+
+      // console.log({
+      //   generatedPoolAddress,
+      //   msgSender: borrower.address,
+      //   newPoolToken,
+      //   savingsAccountFromPoolFactory: await poolFactory.savingsAccount(),
+      //   savingsAccount: savingsAccount.address
+      // });
+
       let {
         _poolSize,
         _minborrowAmount,
@@ -303,22 +369,48 @@ describe.only("Pool", async () => {
         _noOfRepaymentIntervals,
         _collateralAmount,
       } = createPoolParams;
-      await poolFactory
-        .connect(borrower)
-        .createPool(
-          _poolSize,
-          _minborrowAmount,
-          Contracts.DAI,
-          Contracts.LINK,
-          _collateralRatio,
-          _borrowRate,
-          _repaymentInterval,
-          _noOfRepaymentIntervals,
-          aaveYield.address,
-          _collateralAmount,
-          false,
-          sha256(Buffer.from("borrower"))
-        );
+
+      await collateralToken
+        .connect(admin)
+        .transfer(borrower.address, _collateralAmount.mul(2)); // Transfer quantity to borrower
+
+      await collateralToken.approve(
+        generatedPoolAddress,
+        _collateralAmount.mul(2)
+      );
+
+      await expect(
+        poolFactory
+          .connect(borrower)
+          .createPool(
+            _poolSize,
+            _minborrowAmount,
+            Contracts.DAI,
+            Contracts.LINK,
+            _collateralRatio,
+            _borrowRate,
+            _repaymentInterval,
+            _noOfRepaymentIntervals,
+            aaveYield.address,
+            _collateralAmount,
+            false,
+            sha256(Buffer.from("borrower"))
+          )
+      )
+        .to.emit(poolFactory, "PoolCreated")
+        .withArgs(generatedPoolAddress, borrower.address, newPoolToken);
+
+      let newlyCreatedToken: PoolToken = await deployHelper.pool.getPoolToken(
+        newPoolToken
+      );
+
+      expect(await newlyCreatedToken.name()).eq("Open Borrow Pool Tokens");
+      expect(await newlyCreatedToken.symbol()).eq("OBPT");
+      expect(await newlyCreatedToken.decimals()).eq(18);
     });
   });
 });
+
+function print(data: any) {
+  console.log(JSON.stringify(data, null, 4));
+}
