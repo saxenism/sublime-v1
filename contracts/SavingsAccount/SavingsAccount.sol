@@ -293,12 +293,9 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
                 "Cannot withdraw shared when No strategy is used"
             );
             amountReceived = amount;
-            if (asset == address(0)) {
-                withdrawTo.transfer(amountReceived);
-            } else {
-                token = asset;
-                IERC20(asset).safeTransfer(withdrawTo, amountReceived);
-            }
+            _transfer(asset, withdrawTo, amountReceived);
+            token = asset;
+            amountReceived = amount;
         } else {
             if (withdrawShares) {
                 token = IYield(strategy).liquidityToken(asset);
@@ -307,32 +304,25 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
                     "Liquidity Tokens address cannot be address(0)"
                 );
                 amountReceived = IYield(strategy).unlockShares(token, amount);
-                IERC20(token).safeTransfer(withdrawTo, amountReceived);
+                _transfer(token, withdrawTo, amountReceived);
             } else {
                 token = asset;
                 amountReceived = IYield(strategy).unlockTokens(asset, amount);
-                if (token == address(0)) {
-                    withdrawTo.transfer(amountReceived);
-                } else {
-                    IERC20(token).safeTransfer(withdrawTo, amountReceived);
-                }
+                _transfer(token, withdrawTo, amountReceived);
             }
         }
-        // if (!withdrawShares && strategy != address(0)) {
-        //     amountReceived = IYield(strategy).unlockTokens(asset, amount);
-        // }
+    }
 
-        // token = asset;
-        // if (withdrawShares) {
-        //     token = IYield(strategy).liquidityToken(asset);
-        //     require(token != address(0), "Liquidity storage cannot be zero");
-        // }
-
-        // if (token == address(0)) {
-        //     withdrawTo.transfer(amountReceived);
-        // } else {
-        //     IERC20(token).safeTransfer(withdrawTo, amountReceived);
-        // }
+    function _transfer(
+        address token,
+        address payable withdrawTo,
+        uint256 amount
+    ) internal {
+        if (token == address(0)) {
+            withdrawTo.transfer(amount);
+        } else {
+            IERC20(token).safeTransfer(withdrawTo, amount);
+        }
     }
 
     function withdrawAll(address _asset)

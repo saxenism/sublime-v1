@@ -164,6 +164,188 @@ describe("Test Savings Account (with ETH)", async () => {
     });
   });
 
+  describe("#When AaveYield is the strategy", async () => {
+    let randomAccount: SignerWithAddress;
+    let userAccount: SignerWithAddress;
+    let withdrawAccount: SignerWithAddress;
+
+    let aaveYield: AaveYield;
+    let sharesReceivedWithAave: BigNumberish;
+
+    before(async () => {
+      randomAccount = getRandomFromArray(await ethers.getSigners());
+
+      userAccount = getRandomFromArray(await ethers.getSigners());
+      while ([randomAccount.address].includes(userAccount.address)) {
+        userAccount = getRandomFromArray(await ethers.getSigners());
+      }
+
+      withdrawAccount = getRandomFromArray(await ethers.getSigners());
+      while (
+        [randomAccount.address, userAccount.address].includes(
+          withdrawAccount.address
+        )
+      ) {
+        withdrawAccount = getRandomFromArray(await ethers.getSigners());
+      }
+
+      const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
+      aaveYield = await deployHelper.core.deployAaveYield();
+      await aaveYield
+        .connect(admin)
+        .initialize(
+          admin.address,
+          savingsAccount.address,
+          aaveYieldParams._wethGateway,
+          aaveYieldParams._protocolDataProvider,
+          aaveYieldParams._lendingPoolAddressesProvider
+        );
+
+      await strategyRegistry.connect(admin).addStrategy(aaveYield.address);
+    });
+
+    it("Should deposit into another account", async () => {
+      const balanceLockedBeforeTransaction: BigNumber =
+        await savingsAccount.userLockedBalance(
+          randomAccount.address,
+          zeroAddress,
+          aaveYield.address
+        );
+
+      await expect(
+        savingsAccount
+          .connect(userAccount)
+          .depositTo(
+            depositValueToTest,
+            zeroAddress,
+            aaveYield.address,
+            randomAccount.address,
+            { value: depositValueToTest }
+          )
+      )
+        .to.emit(savingsAccount, "Deposited")
+        .withArgs(
+          randomAccount.address,
+          depositValueToTest,
+          zeroAddress,
+          aaveYield.address
+        );
+
+      const balanceLockedAfterTransaction: BigNumber =
+        await savingsAccount.userLockedBalance(
+          randomAccount.address,
+          zeroAddress,
+          aaveYield.address
+        );
+
+      sharesReceivedWithAave = balanceLockedAfterTransaction.sub(
+        balanceLockedBeforeTransaction
+      );
+      expect(sharesReceivedWithAave).eq(depositValueToTest);
+    });
+
+    context("Withdraw ETH", async () => {
+      it("Withdraw half of shares received to account (withdrawShares = false)", async () => {
+        const balanceBeforeWithdraw = await network.provider.request({
+          method: "eth_getBalance",
+          params: [withdrawAccount.address],
+        });
+
+        await incrementChain(network, 12000);
+        const sharesToWithdraw = BigNumber.from(sharesReceivedWithAave).div(2);
+        //gas price is put to zero to check amount received
+        await expect(
+          savingsAccount
+            .connect(randomAccount)
+            .withdraw(
+              withdrawAccount.address,
+              sharesToWithdraw,
+              zeroAddress,
+              aaveYield.address,
+              false,
+              { gasPrice: 0 }
+            )
+        )
+          .to.emit(savingsAccount, "Withdrawn")
+          .withArgs(
+            randomAccount.address,
+            withdrawAccount.address,
+            sharesToWithdraw,
+            zeroAddress,
+            aaveYield.address
+          );
+
+        const balanceAfterWithdraw = await network.provider.request({
+          method: "eth_getBalance",
+          params: [withdrawAccount.address],
+        });
+
+        const amountReceived: BigNumberish = BigNumber.from(
+          balanceAfterWithdraw
+        ).sub(BigNumber.from(balanceBeforeWithdraw));
+
+        expect(sharesToWithdraw).eq(amountReceived);
+
+        const balanceLockedAfterTransaction: BigNumber =
+          await savingsAccount.userLockedBalance(
+            randomAccount.address,
+            zeroAddress,
+            aaveYield.address
+          );
+
+        expect(balanceLockedAfterTransaction).eq(
+          BigNumber.from(sharesReceivedWithAave).sub(sharesToWithdraw)
+        );
+      });
+
+      it("Withdraw half of shares received to account (withdrawShares = true)", async () => {
+        let aaveEthLiquidityToken: string = await aaveYield.liquidityToken(
+          zeroAddress
+        );
+        await incrementChain(network, 12000);
+
+        //can be any random number less than the available shares
+        const sharesToWithdraw = BigNumber.from(sharesReceivedWithAave).div(2);
+
+        const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
+        const liquidityToken: ERC20 = await deployHelper.mock.getMockERC20(
+          aaveEthLiquidityToken
+        );
+
+        let sharesBefore = await liquidityToken.balanceOf(
+          withdrawAccount.address
+        );
+
+        //gas price is put to zero to check amount received
+        await expect(
+          savingsAccount
+            .connect(randomAccount)
+            .withdraw(
+              withdrawAccount.address,
+              sharesToWithdraw,
+              zeroAddress,
+              aaveYield.address,
+              true,
+              { gasPrice: 0 }
+            )
+        )
+          .to.emit(savingsAccount, "Withdrawn")
+          .withArgs(
+            randomAccount.address,
+            withdrawAccount.address,
+            sharesToWithdraw,
+            aaveEthLiquidityToken,
+            aaveYield.address
+          );
+
+        let sharesAfter = await liquidityToken.balanceOf(
+          withdrawAccount.address
+        );
+        expect(sharesAfter.sub(sharesBefore)).eq(sharesToWithdraw);
+      });
+    });
+  });
+
   describe("#When YearnYield is the strategy", async () => {
     let randomAccount: SignerWithAddress;
     let userAccount: SignerWithAddress;
@@ -333,187 +515,6 @@ describe("Test Savings Account (with ETH)", async () => {
             sharesToWithdraw,
             yearnEthLiquidityToken,
             yearnYield.address
-          );
-
-        let sharesAfter = await liquidityToken.balanceOf(
-          withdrawAccount.address
-        );
-        expect(sharesAfter.sub(sharesBefore)).eq(sharesToWithdraw);
-      });
-    });
-  });
-
-  describe("#When AaveYield is the strategy", async () => {
-    let randomAccount: SignerWithAddress;
-    let userAccount: SignerWithAddress;
-    let withdrawAccount: SignerWithAddress;
-
-    let aaveYield: AaveYield;
-    let sharesReceivedWithAave: BigNumberish;
-
-    before(async () => {
-      randomAccount = getRandomFromArray(await ethers.getSigners());
-
-      userAccount = getRandomFromArray(await ethers.getSigners());
-      while ([randomAccount.address].includes(userAccount.address)) {
-        userAccount = getRandomFromArray(await ethers.getSigners());
-      }
-
-      withdrawAccount = getRandomFromArray(await ethers.getSigners());
-      while (
-        [randomAccount.address, userAccount.address].includes(
-          withdrawAccount.address
-        )
-      ) {
-        withdrawAccount = getRandomFromArray(await ethers.getSigners());
-      }
-
-      const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
-      aaveYield = await deployHelper.core.deployAaveYield();
-      await aaveYield
-        .connect(admin)
-        .initialize(
-          admin.address,
-          savingsAccount.address,
-          aaveYieldParams._wethGateway,
-          aaveYieldParams._protocolDataProvider,
-          aaveYieldParams._lendingPoolAddressesProvider
-        );
-
-      await strategyRegistry.connect(admin).addStrategy(aaveYield.address);
-    });
-
-    it("Should deposit into another account", async () => {
-      const balanceLockedBeforeTransaction: BigNumber =
-        await savingsAccount.userLockedBalance(
-          randomAccount.address,
-          zeroAddress,
-          aaveYield.address
-        );
-
-      await expect(
-        savingsAccount
-          .connect(userAccount)
-          .depositTo(
-            depositValueToTest,
-            zeroAddress,
-            aaveYield.address,
-            randomAccount.address,
-            { value: depositValueToTest }
-          )
-      )
-        .to.emit(savingsAccount, "Deposited")
-        .withArgs(
-          randomAccount.address,
-          depositValueToTest,
-          zeroAddress,
-          aaveYield.address
-        );
-
-      const balanceLockedAfterTransaction: BigNumber =
-        await savingsAccount.userLockedBalance(
-          randomAccount.address,
-          zeroAddress,
-          aaveYield.address
-        );
-
-      sharesReceivedWithAave = balanceLockedAfterTransaction.sub(
-        balanceLockedBeforeTransaction
-      );
-      expect(sharesReceivedWithAave).eq(depositValueToTest);
-    });
-
-    context("Withdraw ETH", async () => {
-      it("Withdraw half of shares received to account (withdrawShares = false)", async () => {
-        const balanceBeforeWithdraw = await network.provider.request({
-          method: "eth_getBalance",
-          params: [withdrawAccount.address],
-        });
-
-        await incrementChain(network, 12000);
-        const sharesToWithdraw = BigNumber.from(sharesReceivedWithAave).div(2);
-        //gas price is put to zero to check amount received
-        await expect(
-          savingsAccount
-            .connect(randomAccount)
-            .withdraw(
-              withdrawAccount.address,
-              sharesToWithdraw,
-              zeroAddress,
-              aaveYield.address,
-              false,
-              { gasPrice: 0 }
-            )
-        )
-          .to.emit(savingsAccount, "Withdrawn")
-          .withArgs(
-            randomAccount.address,
-            withdrawAccount.address,
-            sharesToWithdraw,
-            zeroAddress,
-            aaveYield.address
-          );
-
-        const balanceAfterWithdraw = await network.provider.request({
-          method: "eth_getBalance",
-          params: [withdrawAccount.address],
-        });
-
-        const amountReceived: BigNumberish = BigNumber.from(
-          balanceAfterWithdraw
-        ).sub(BigNumber.from(balanceBeforeWithdraw));
-
-        expect(sharesToWithdraw).eq(amountReceived);
-
-        const balanceLockedAfterTransaction: BigNumber =
-          await savingsAccount.userLockedBalance(
-            randomAccount.address,
-            zeroAddress,
-            aaveYield.address
-          );
-
-        expect(balanceLockedAfterTransaction).eq(
-          BigNumber.from(sharesReceivedWithAave).sub(sharesToWithdraw)
-        );
-      });
-
-      it("Withdraw half of shares received to account (withdrawShares = true)", async () => {
-        let aaveEthLiquidityToken: string = await aaveYield.liquidityToken(
-          zeroAddress
-        );
-        await incrementChain(network, 12000);
-
-        //can be any random number less than the available shares
-        const sharesToWithdraw = BigNumber.from(sharesReceivedWithAave).div(2);
-
-        const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
-        const liquidityToken: ERC20 = await deployHelper.mock.getMockERC20(
-          aaveEthLiquidityToken
-        );
-
-        let sharesBefore = await liquidityToken.balanceOf(
-          withdrawAccount.address
-        );
-        //gas price is put to zero to check amount received
-        await expect(
-          savingsAccount
-            .connect(randomAccount)
-            .withdraw(
-              withdrawAccount.address,
-              sharesToWithdraw,
-              zeroAddress,
-              aaveYield.address,
-              true,
-              { gasPrice: 0 }
-            )
-        )
-          .to.emit(savingsAccount, "Withdrawn")
-          .withArgs(
-            randomAccount.address,
-            withdrawAccount.address,
-            sharesToWithdraw,
-            aaveEthLiquidityToken,
-            aaveYield.address
           );
 
         let sharesAfter = await liquidityToken.balanceOf(

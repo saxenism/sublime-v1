@@ -23,7 +23,6 @@ import { CompoundYield } from "../../typechain/CompoundYield";
 import { ERC20 } from "../../typechain/ERC20";
 
 import { Contracts } from "../../existingContracts/compound.json";
-import { IyVault } from "../../typechain/IyVault";
 
 describe("Test Savings Account (with ERC20 Token)", async () => {
   let savingsAccount: SavingsAccount;
@@ -255,7 +254,8 @@ describe("Test Savings Account (with ERC20 Token)", async () => {
             depositValueToTest,
             Contracts.BAT,
             zeroAddress,
-            false
+            false,
+            { gasPrice: 0 }
           )
       )
         .to.emit(savingsAccount, "Withdrawn")

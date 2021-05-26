@@ -143,14 +143,17 @@ contract YearnYield is IYield, Initializable, OwnableUpgradeable {
         public
         override
         onlySavingsAccount
-        returns (uint256 received)
+        returns (uint256)
     {
-        require(amount != 0, "Invest: amount");
-        require(asset != address(0), "Asset address cannot be address(0)");
-        received = amount;
-        IERC20(asset).safeTransfer(savingsAccount, received);
+        if (amount == 0) {
+            return 0;
+        }
 
-        emit UnlockedShares(asset, received);
+        require(asset != address(0), "Asset address cannot be address(0)");
+        IERC20(asset).safeTransfer(savingsAccount, amount);
+
+        emit UnlockedShares(asset, amount);
+        return amount;
     }
 
     /**
