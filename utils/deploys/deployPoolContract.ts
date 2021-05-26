@@ -4,11 +4,13 @@ import { PoolToken } from "../../typechain/PoolToken";
 import { PoolFactory } from "../../typechain/PoolFactory";
 import { Pool } from "../../typechain/Pool";
 import { Extension } from "../../typechain/Extension";
+import { Repayments } from "../../typechain/Repayments";
 
 import { PoolToken__factory } from "../../typechain/factories/PoolToken__factory";
 import { PoolFactory__factory } from "../../typechain/factories/PoolFactory__factory";
 import { Pool__factory } from "../../typechain/factories/Pool__factory";
 import { Extension__factory } from "../../typechain/factories/Extension__factory";
+import { Repayments__factory } from "../../typechain/factories/Repayments__factory";
 
 import { Address } from "hardhat-deploy/dist/types";
 
@@ -17,6 +19,16 @@ export default class DeployPoolContracts {
 
   constructor(deployerSigner: Signer) {
     this._deployerSigner = deployerSigner;
+  }
+
+  public async deployRepayments(): Promise<Repayments> {
+    return await new Repayments__factory(this._deployerSigner).deploy();
+  }
+
+  public async getRepayments(repaymentAddress: Address): Promise<Repayments> {
+    return await new Repayments__factory(this._deployerSigner).attach(
+      repaymentAddress
+    );
   }
 
   public async deployExtenstion(): Promise<Extension> {

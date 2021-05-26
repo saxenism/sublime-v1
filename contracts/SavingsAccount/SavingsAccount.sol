@@ -287,18 +287,41 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         address strategy,
         bool withdrawShares
     ) internal returns (address token, uint256 amountReceived) {
-        amountReceived = amount;
-        if (!withdrawShares && strategy != address(0)) {
-            amountReceived = IYield(strategy).unlockTokens(asset, amount);
-        }
-
-        token = asset;
-        if (withdrawShares) token = IYield(strategy).liquidityToken(asset);
-
-        if (token == address(0)) {
-            withdrawTo.transfer(amountReceived);
+        if (strategy == address(0)) {
+            require(
+                !withdrawShares,
+                "Cannot withdraw shared when No strategy is used"
+            );
+            amountReceived = amount;
+            _transfer(asset, withdrawTo, amountReceived);
+            token = asset;
+            amountReceived = amount;
         } else {
-            IERC20(token).safeTransfer(withdrawTo, amountReceived);
+            if (withdrawShares) {
+                token = IYield(strategy).liquidityToken(asset);
+                require(
+                    token != address(0),
+                    "Liquidity Tokens address cannot be address(0)"
+                );
+                amountReceived = IYield(strategy).unlockShares(token, amount);
+                _transfer(token, withdrawTo, amountReceived);
+            } else {
+                token = asset;
+                amountReceived = IYield(strategy).unlockTokens(asset, amount);
+                _transfer(token, withdrawTo, amountReceived);
+            }
+        }
+    }
+
+    function _transfer(
+        address token,
+        address payable withdrawTo,
+        uint256 amount
+    ) internal {
+        if (token == address(0)) {
+            withdrawTo.transfer(amount);
+        } else {
+            IERC20(token).safeTransfer(withdrawTo, amount);
         }
     }
 
@@ -450,7 +473,6 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         //     IStrategyRegistry(strategyRegistry).registry(msg.sender),
         //     "SavingsAccount::receive invalid transaction"
         // );
-
         // the above snippet of code causes gas issues. Commented till solution is found
     }
 }

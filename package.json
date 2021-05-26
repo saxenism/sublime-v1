@@ -8,7 +8,9 @@
     "test": "npx hardhat test",
     "typechain": "npx hardhat typechain",
     "prettier": "prettier --write '{test,utils,scripts,types}/**/*.{ts,js,json}' && prettier --write hardhat.config.ts",
-    "flatten": "npx waffle flatten"
+    "flatten": "npx waffle flatten",
+    "lint-sol": "npx prettier --write 'contracts/**/*.sol'",
+    "lint-ts": "tslint -c tslint.json -p tsconfig.json '{utils,test}/**/*.{ts}' --fix"
   },
   "repository": {
     "type": "git",
@@ -43,21 +45,25 @@
     "chai": "^4.3.4",
     "chai-as-promised": "^7.1.1",
     "ethereum-waffle": "^3.3.0",
+    "ethereumjs-wallet": "^1.0.1",
     "ethers": "^5.1.4",
     "hardhat": "^2.2.1",
     "hardhat-deploy": "^0.7.5",
     "hardhat-typechain": "^0.3.5",
     "jsdoc": "^3.6.7",
     "nyc": "^15.1.0",
-    "prettier": "^2.2.1",
-    "replace-in-file": "^6.2.0",
+    "prettier": "^2.3.0",
+    "prettier-plugin-solidity": "^1.0.0-beta.10",
     "solidity-coverage": "^0.7.16",
     "ts-generator": "^0.1.1",
     "ts-node": "^9.1.1",
+    "tslint": "^6.1.3",
+    "tslint-eslint-rules": "^5.4.0",
     "typechain": "^4.0.3",
     "typedoc": "0.20.28",
     "typedoc-plugin-markdown": "3.6.0",
     "typescript": "3.9.9",
     "web3": "^1.3.5"
-  }
+  },
+  "dependencies": {}
 }
