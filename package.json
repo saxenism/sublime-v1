@@ -4,7 +4,7 @@
   "description": "Defi Protocol to facilitate the under-collateralized loan",
   "main": "dist/",
   "scripts": {
-    "build": "yarn typechain",
+    "build": "npm run typechain",
     "test": "npx hardhat test",
     "typechain": "npx hardhat typechain",
     "prettier": "prettier --write '{test,utils,scripts,types}/**/*.{ts,js,json}' && prettier --write hardhat.config.ts",
