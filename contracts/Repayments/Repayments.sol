@@ -16,6 +16,10 @@ contract Repayments is RepaymentStorage, IRepayment {
 
     address PoolFactory;
 
+    event InterestRepaid(address poolID, uint256 repayAmount); // Made during current period interest repayment
+    event MissedRepaymentRepaid(address poolID); // Previous period's interest is repaid fully
+    event PartialExtensionRepaymentMade(address poolID); // Previous period's interest is repaid partially
+
     modifier isPoolInitialized() {
         require(
             repaymentDetails[msg.sender].numberOfTotalRepayments != 0,
@@ -94,10 +98,6 @@ contract Repayments is RepaymentStorage, IRepayment {
         return interestDueTillPeriodEnd;
     }
 
-    event InterestRepaid(address poolID, uint256 repayAmount); // Made during current period interest repayment
-    event MissedRepaymentRepaid(address poolID); // Previous period's interest is repaid fully
-    event PartialExtensionRepaymentMade(address poolID); // Previous period's interest is repaid partially
-
     function repayInterest(address _poolID, uint256 _amount) public payable isPoolInitialized {
 
         uint256 _loanStatus = IPool(_poolID).getLoanStatus();
@@ -116,12 +116,12 @@ contract Repayments is RepaymentStorage, IRepayment {
         uint256 _loanDurationLeft = repaymentDetails[_poolID].loanDuration
                                     .sub(repaymentDetails[_poolID].loanDurationCovered);
 
-        uint256 _interestLeft = _interestPerSecond.mul(_loanDurationLeft);
+        uint256 _interestLeft = _interestPerSecond.mul(_loanDurationLeft).div(10**8);
 
         require(_amount <= _interestLeft,
                 "Repayments:repayInterest cannot repay more interest than due.");
 
-        uint256 _loanDurationCovered = _amount.div(_interestPerSecond);
+        uint256 _loanDurationCovered = _amount.div(_interestPerSecond).div(10**8);
 
         repaymentDetails[_poolID].loanDurationCovered = repaymentDetails[_poolID].loanDurationCovered
                                                         .add(_loanDurationCovered);
@@ -131,15 +131,12 @@ contract Repayments is RepaymentStorage, IRepayment {
         if (_asset == address(0)) {
             require(_amount == msg.value,
                     "Repayments::repayAmount amount does not match message value.");
-        } 
-        else {
-            ISavingsAccount(savingsAccount).depositTo(_amount, _asset, address(0), _poolID);
         }
-
-
+        // Note: If ether is sent unnecessarily then that will be sent to savingsAccount
+        ISavingsAccount(savingsAccount).depositTo{value: msg.value}(_amount, _asset, address(0), _poolID);
     }
 
-    function repayPrincipal(address _poolID, uint256 _amount) public payable isPoolInitialized {
+    function repayPrincipal(address payable _poolID, uint256 _amount) public payable isPoolInitialized {
 
         uint256 _loanStatus = IPool(_poolID).getLoanStatus();
         require(_loanStatus == 1,
@@ -160,13 +157,13 @@ contract Repayments is RepaymentStorage, IRepayment {
         if (_asset == address(0)) {
             require(_amount == msg.value,
                     "Repayments::repayAmount amount does not match message value.");
+            _poolID.transfer(_amount);
         } 
         else {
-            ISavingsAccount(savingsAccount).depositTo(_amount, _asset, address(0), _poolID);
+            IERC20(_asset).transferFrom(msg.sender, _poolID, _amount);
         }
 
         IPool(_poolID).closeLoan();
-
     }
 
     function repayOverdue(address _poolID, uint256 _amount) public payable isPoolInitialized {
@@ -174,25 +171,24 @@ contract Repayments is RepaymentStorage, IRepayment {
         uint256 _loanStatus = IPool(_poolID).getLoanStatus();
         require(_loanStatus == 1,
                 "Repayments:repayPrincipal Pool should be active");
+        uint256 _repaymentOverdue = repaymentDetails[_poolID].repaymentOverdue;
 
-        require(repaymentDetails[_poolID].repaymentOverdue != 0,
+        require(_repaymentOverdue != 0,
                 "Repayments:repayOverdue there is no overdue");
 
-        require(repaymentDetails[_poolID].repaymentOverdue >= _amount,
-                "Repayments:repayOverdue amount must be less than overdue");
+        require(_repaymentOverdue >= _amount,
+                "Repayments:repayOverdue amount must not be greater than overdue");
 
-        repaymentDetails[_poolID].repaymentOverdue = repaymentDetails[_poolID].repaymentOverdue
-                                                    .sub(_amount);
+        repaymentDetails[_poolID].repaymentOverdue = _repaymentOverdue - _amount;
 
         address _asset = repaymentDetails[_poolID].repayAsset;
 
         if (_asset == address(0)) {
             require(_amount == msg.value,
                     "Repayments::repayAmount amount does not match message value.");
-        } 
-        else {
-            ISavingsAccount(savingsAccount).depositTo(_amount, _asset, address(0), _poolID);
         }
+        // Note: If ether is sent unnecessarily then that will be sent to savingsAccount
+        ISavingsAccount(savingsAccount).depositTo{value: _amount}(_amount, _asset, address(0), _poolID);
     }
 
     /*
