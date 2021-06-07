@@ -67,6 +67,10 @@ export const testPoolFactoryParams = {
 // address _poolSavingsStrategy,
 // bool _transferFromSavingsAccount,
 
+export const OperationalAmounts = {
+  _amountLent: BigNumber.from(1000000),
+};
+
 export const ChainLinkAggregators = {
   "LINK/USD": "0x2c1d072e956AFFC0D435Cb7AC38EF18d24d9127c",
   "DAI/USD": "0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9",

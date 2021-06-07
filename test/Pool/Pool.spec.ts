@@ -13,6 +13,7 @@ import {
   testPoolFactoryParams,
   createPoolParams,
   ChainLinkAggregators,
+  OperationalAmounts,
 } from "../../utils/constants";
 import DeployHelper from "../../utils/deploys";
 
@@ -311,7 +312,7 @@ describe("Pool", async () => {
       });
     });
 
-    it("Borrow", async () => {
+    it("Create Pool", async () => {
       await poolFactory
         .connect(admin)
         .updateSupportedBorrowTokens(Contracts.DAI, true);
@@ -407,6 +408,288 @@ describe("Pool", async () => {
       expect(await newlyCreatedToken.name()).eq("Open Borrow Pool Tokens");
       expect(await newlyCreatedToken.symbol()).eq("OBPT");
       expect(await newlyCreatedToken.decimals()).eq(18);
+    });
+
+    describe("Deposit Collateral", () => {
+      let pool: Pool;
+      // repeated code, try to avoid
+      beforeEach(async () => {
+        await poolFactory
+          .connect(admin)
+          .updateSupportedBorrowTokens(Contracts.DAI, true);
+
+        await poolFactory
+          .connect(admin)
+          .updateSupportedCollateralTokens(Contracts.LINK, true);
+
+        await poolFactory
+          .connect(admin)
+          .setImplementations(
+            poolImpl.address,
+            repaymentImpl.address,
+            poolTokenImpl.address
+          );
+
+        let deployHelper: DeployHelper = new DeployHelper(borrower);
+        let collateralToken: ERC20 = await deployHelper.mock.getMockERC20(
+          Contracts.LINK
+        );
+
+        let generatedPoolAddress: Address = await getPoolAddress(
+          borrower.address,
+          Contracts.DAI,
+          Contracts.LINK,
+          aaveYield.address,
+          poolFactory.address,
+          sha256(Buffer.from("borrower")),
+          poolImpl.address,
+          false
+        );
+
+        const nonce =
+          (await poolFactory.provider.getTransactionCount(
+            poolFactory.address
+          )) + 1;
+        let newPoolToken: string = getContractAddress({
+          from: poolFactory.address,
+          nonce,
+        });
+
+        // console.log({
+        //   generatedPoolAddress,
+        //   msgSender: borrower.address,
+        //   newPoolToken,
+        //   savingsAccountFromPoolFactory: await poolFactory.savingsAccount(),
+        //   savingsAccount: savingsAccount.address
+        // });
+
+        let {
+          _poolSize,
+          _minborrowAmount,
+          _collateralRatio,
+          _borrowRate,
+          _repaymentInterval,
+          _noOfRepaymentIntervals,
+          _collateralAmount,
+        } = createPoolParams;
+
+        await collateralToken
+          .connect(admin)
+          .transfer(borrower.address, _collateralAmount.mul(2)); // Transfer quantity to borrower
+
+        await collateralToken.approve(
+          generatedPoolAddress,
+          _collateralAmount.mul(2)
+        );
+
+        await expect(
+          poolFactory
+            .connect(borrower)
+            .createPool(
+              _poolSize,
+              _minborrowAmount,
+              Contracts.DAI,
+              Contracts.LINK,
+              _collateralRatio,
+              _borrowRate,
+              _repaymentInterval,
+              _noOfRepaymentIntervals,
+              aaveYield.address,
+              _collateralAmount,
+              false,
+              sha256(Buffer.from("borrower"))
+            )
+        )
+          .to.emit(poolFactory, "PoolCreated")
+          .withArgs(generatedPoolAddress, borrower.address, newPoolToken);
+
+        let newlyCreatedToken: PoolToken = await deployHelper.pool.getPoolToken(
+          newPoolToken
+        );
+
+        expect(await newlyCreatedToken.name()).eq("Open Borrow Pool Tokens");
+        expect(await newlyCreatedToken.symbol()).eq("OBPT");
+        expect(await newlyCreatedToken.decimals()).eq(18);
+
+        pool = await deployHelper.pool.getPool(generatedPoolAddress);
+      });
+
+      it("Deposit Collateral, don't transfer it from savings account", async () => {
+        await pool
+          .connect(borrower)
+          .depositCollateral(BigNumber.from("1"), false);
+      });
+
+      it("Deposit Collateral, transfer it from savings account", async () => {
+        let deployHelper: DeployHelper = new DeployHelper(borrower);
+        let collateralToken: ERC20 = await deployHelper.mock.getMockERC20(
+          Contracts.LINK
+        );
+        let amount = BigNumber.from("100000000000000000");
+        let amountUsedForDeposit = BigNumber.from("100");
+
+        let liquidityShares = await aaveYield.getTokensForShares(
+          amountUsedForDeposit,
+          Contracts.LINK
+        );
+        // console.log({liquidityShares: liquidityShares.toString()});
+
+        await collateralToken.connect(admin).transfer(borrower.address, amount);
+
+        await collateralToken
+          .connect(borrower)
+          .approve(aaveYield.address, liquidityShares.mul(2));
+
+        await savingsAccount
+          .connect(borrower)
+          .approve(Contracts.LINK, pool.address, liquidityShares.mul(2));
+
+        await savingsAccount
+          .connect(borrower)
+          .depositTo(
+            amountUsedForDeposit.mul(10),
+            Contracts.LINK,
+            aaveYield.address,
+            borrower.address
+          );
+        // console.log({aaveYield: aaveYield.address, yearnYield: yearnYield.address, compoundYield: compoundYield.address});
+        // console.log({poolConstants: await pool.poolConstants()})
+        // console.log({allowance1: await savingsAccount.allowance(borrower.address, Contracts.LINK, pool.address)})
+
+        await pool
+          .connect(borrower)
+          .depositCollateral(amountUsedForDeposit, true);
+      });
+    });
+
+    describe("Lend", async () => {
+      let pool: Pool;
+      beforeEach(async () => {
+        await poolFactory
+          .connect(admin)
+          .updateSupportedBorrowTokens(Contracts.DAI, true);
+
+        await poolFactory
+          .connect(admin)
+          .updateSupportedCollateralTokens(Contracts.LINK, true);
+
+        await poolFactory
+          .connect(admin)
+          .setImplementations(
+            poolImpl.address,
+            repaymentImpl.address,
+            poolTokenImpl.address
+          );
+
+        let deployHelper: DeployHelper = new DeployHelper(borrower);
+        let collateralToken: ERC20 = await deployHelper.mock.getMockERC20(
+          Contracts.LINK
+        );
+
+        let generatedPoolAddress: Address = await getPoolAddress(
+          borrower.address,
+          Contracts.DAI,
+          Contracts.LINK,
+          aaveYield.address,
+          poolFactory.address,
+          sha256(Buffer.from("borrower")),
+          poolImpl.address,
+          false
+        );
+
+        const nonce =
+          (await poolFactory.provider.getTransactionCount(
+            poolFactory.address
+          )) + 1;
+        let newPoolToken: string = getContractAddress({
+          from: poolFactory.address,
+          nonce,
+        });
+
+        // console.log({
+        //   generatedPoolAddress,
+        //   msgSender: borrower.address,
+        //   newPoolToken,
+        //   savingsAccountFromPoolFactory: await poolFactory.savingsAccount(),
+        //   savingsAccount: savingsAccount.address
+        // });
+
+        let {
+          _poolSize,
+          _minborrowAmount,
+          _collateralRatio,
+          _borrowRate,
+          _repaymentInterval,
+          _noOfRepaymentIntervals,
+          _collateralAmount,
+        } = createPoolParams;
+
+        await collateralToken
+          .connect(admin)
+          .transfer(borrower.address, _collateralAmount.mul(2)); // Transfer quantity to borrower
+
+        await collateralToken.approve(
+          generatedPoolAddress,
+          _collateralAmount.mul(2)
+        );
+
+        await expect(
+          poolFactory
+            .connect(borrower)
+            .createPool(
+              _poolSize,
+              _minborrowAmount,
+              Contracts.DAI,
+              Contracts.LINK,
+              _collateralRatio,
+              _borrowRate,
+              _repaymentInterval,
+              _noOfRepaymentIntervals,
+              aaveYield.address,
+              _collateralAmount,
+              false,
+              sha256(Buffer.from("borrower"))
+            )
+        )
+          .to.emit(poolFactory, "PoolCreated")
+          .withArgs(generatedPoolAddress, borrower.address, newPoolToken);
+
+        let newlyCreatedToken: PoolToken = await deployHelper.pool.getPoolToken(
+          newPoolToken
+        );
+
+        expect(await newlyCreatedToken.name()).eq("Open Borrow Pool Tokens");
+        expect(await newlyCreatedToken.symbol()).eq("OBPT");
+        expect(await newlyCreatedToken.decimals()).eq(18);
+
+        pool = await deployHelper.pool.getPool(generatedPoolAddress);
+        await pool
+          .connect(borrower)
+          .depositCollateral(_collateralAmount, false);
+      });
+
+      it("Test Lending", async () => {
+        const deployHelper: DeployHelper = new DeployHelper(admin);
+        const DaiTokenContract = await deployHelper.mock.getMockERC20(
+          Contracts.DAI
+        );
+        await DaiTokenContract.transfer(
+          lender.address,
+          OperationalAmounts._amountLent
+        );
+        await DaiTokenContract.connect(lender).approve(
+          pool.address,
+          OperationalAmounts._amountLent
+        );
+
+        await expect(
+          pool
+            .connect(lender)
+            .lend(lender.address, OperationalAmounts._amountLent, false)
+        )
+          .to.emit(pool, "LiquiditySupplied")
+          .withArgs(OperationalAmounts._amountLent, lender.address);
+      });
     });
   });
 });

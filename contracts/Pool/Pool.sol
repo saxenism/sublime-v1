@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.0;
 
-import "hardhat/console.sol";
-
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -15,6 +13,8 @@ import "../interfaces/ISavingsAccount.sol";
 import "../interfaces/IPool.sol";
 import "../interfaces/IExtension.sol";
 import "../interfaces/IPoolToken.sol";
+
+import "hardhat/console.sol";
 
 contract Pool is Initializable, IPool, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -275,12 +275,19 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
                         _asset
                     );
             if (_toSavingsAccount) {
+                // _sharesReceived = _savingsAccount.transferFrom(
+                //     _asset,
+                //     _depositFrom,
+                //     address(this),
+                //     _poolSavingsStrategy,
+                //     _liquidityshare
+                // );
                 _sharesReceived = _savingsAccount.transferFrom(
                     _asset,
                     _depositFrom,
                     address(this),
                     _poolSavingsStrategy,
-                    _liquidityshare
+                    _amount
                 );
             } else {
                 _savingsAccount.withdrawFrom(

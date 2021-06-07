@@ -418,7 +418,6 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         uint256 amount
     ) external override returns (uint256) {
         require(amount != 0, "SavingsAccount::transferFrom zero amount");
-
         //update allowance
         allowance[from][token][msg.sender] = allowance[from][token][msg.sender]
             .sub(
