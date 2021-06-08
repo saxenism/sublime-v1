@@ -393,9 +393,9 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         emit AmountBorrowed(_tokensLent);
     }
 
-    function withdrawAllCollateral() internal {
+    function withdrawAllCollateral(uint256 _penality) internal {
         uint256 _collateralShares =
-            poolVars.baseLiquidityShares.add(poolVars.extraLiquidityShares);
+            poolVars.baseLiquidityShares.add(poolVars.extraLiquidityShares).sub(_penality);
 
         uint256 _sharesReceived;
         if (_collateralShares != 0) {
@@ -474,24 +474,6 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             .add(toTransfer);
     }
 
-    function cancelOpenBorrowPool() external OnlyBorrower(msg.sender) {
-        LoanStatus _poolStatus = poolVars.loanStatus;
-        require(
-            _poolStatus == LoanStatus.COLLECTION ||
-                _poolStatus == LoanStatus.CANCELLED,
-            "20"
-        );
-        _cancelPool();
-    }
-
-    function cancelIncompletePool() external {
-        require (
-            _loanStatus == LoanStatus.COLLECTION &&
-            poolConstants.loanStartTime < block.timestamp &&
-            poolToken.totalSupply() < poolConstants.minborrowAmount
-        );
-    }
-
     function cancelPool() external {
         LoanStatus _poolStatus = poolVars.loanStatus;
         require(_poolStatus == LoanStatus.COLLECTION, "");
@@ -535,7 +517,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             _poolFactory, 
             IPoolFactory(_poolFactory).poolCancelPenalityFraction()
         );
-        IERC20(poolConstants.borrowAsset).trasferFrom(msg.sender, _liquidationTokens);
+        IERC20(poolConstants.borrowAsset).transferFrom(msg.sender, address(this), _liquidationTokens);
         poolVars.penalityLiquidityAmount = _liquidationTokens;
         uint256 _penalityCollateral;
         if(!_receiveLiquidityShare) {
@@ -550,7 +532,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         _withdraw(
             _toSavingsAccount,
             _receiveLiquidityShare,
-            poolVars.collateralAsset,
+            poolConstants.collateralAsset,
             poolConstants.poolSavingsStrategy,
             _penalityCollateral,
             _penalityLiquidityShares
@@ -590,7 +572,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
 
         poolVars.loanStatus = LoanStatus.CLOSED;
         IExtension(IPoolFactory(PoolFactory).extension()).closePoolExtension();
-        withdrawAllCollateral();
+        withdrawAllCollateral(0);
         poolToken.pause();
         emit OpenBorrowPoolClosed();
     }
