@@ -637,7 +637,11 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             );
 
         uint256 _interestAccruedThisPeriod =
-            ((block.timestamp).sub(_repaymentPeriodCovered)).mul(
+            ((block.timestamp).sub(poolConstants.loanStartTime).sub(
+                _repaymentPeriodCovered.mul(
+                    poolConstants.repaymentInterval
+                ), "Nothing to repay"
+            )).mul(
                 _interestPerPeriod
             );
 
