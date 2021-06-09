@@ -477,10 +477,9 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     function cancelPool() external {
         LoanStatus _poolStatus = poolVars.loanStatus;
         require(_poolStatus == LoanStatus.COLLECTION, "");
-        uint256 penality;
 
         if(poolConstants.loanStartTime < block.timestamp && poolToken.totalSupply() < poolConstants.minborrowAmount) {
-            return _cancelPool(penality);
+            return _cancelPool(0);
         }
 
         if(poolConstants.loanWithdrawalDeadline > block.timestamp) {
@@ -488,7 +487,8 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         }
         // note: extra liquidity shares are not applicable as the loan never reaches active state
         uint256 _collateralLiquidityShare = poolVars.baseLiquidityShares;
-        penality = IPoolFactory(PoolFactory).poolCancelPenalityFraction().mul(_collateralLiquidityShare).div(10**8);
+        uint256 penality = IPoolFactory(PoolFactory).poolCancelPenalityFraction().mul(_collateralLiquidityShare).div(10**8);
+        _cancelPool(penality);
     }
 
     function _cancelPool(uint256 _penality) internal {
