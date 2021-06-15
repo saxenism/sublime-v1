@@ -345,11 +345,11 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         }
     }
 
-    function _pullTokens(address _asset, uint256 _amount, address _depositTo) internal returns(uint256){
+    function _pullTokens(address _asset, uint256 _amount, address _to) internal returns(uint256){
         if(_asset == address(0)) {
             require(msg.value >= _amount, "");
-            if(_depositTo != address(this)) {
-                payable(_depositTo).transfer(_amount);
+            if(_to != address(this)) {
+                payable(_to).transfer(_amount);
             }
             if(msg.value != _amount) {
                 payable(address(msg.sender)).transfer(msg.value.sub(_amount));
@@ -359,7 +359,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
 
         IERC20(_asset).transferFrom(
             msg.sender,
-            _depositTo,
+            _to,
             _amount
         );
         return _amount; 
@@ -624,22 +624,18 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     function closeLoan() external payable OnlyBorrower(msg.sender) {
         require(poolVars.loanStatus == LoanStatus.ACTIVE, "22");
         require(poolVars.nextDuePeriod == 0, "23");
+
         uint256 _principleToPayback = poolToken.totalSupply();
         address _borrowAsset = poolConstants.borrowAsset;
-        if (_borrowAsset == address(0)) {
-            require(msg.value == _principleToPayback, "37");
-        } else {
-            IERC20(_borrowAsset).safeTransferFrom(
-                msg.sender,
-                address(this),
-                _principleToPayback
-            );
-        }
+        
+        _pullTokens(_borrowAsset, _principleToPayback, address(this));
 
         poolVars.loanStatus = LoanStatus.CLOSED;
+
         IExtension(IPoolFactory(PoolFactory).extension()).closePoolExtension();
         withdrawAllCollateral();
         poolToken.pause();
+        
         emit OpenBorrowPoolClosed();
     }
 
