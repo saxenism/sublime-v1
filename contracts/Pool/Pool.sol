@@ -354,7 +354,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             if(msg.value != _amount) {
                 payable(address(msg.sender)).transfer(msg.value.sub(_amount));
             }
-            return;
+            return _amount;
         }
 
         IERC20(_asset).transferFrom(
@@ -379,7 +379,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         if(_fromSavingsAccount) {
             uint256 _shares = _amount;
             if(_poolSavingsStrategy != address(0)) {
-                _shares = IYield(_poolSavingsStrategy).getTokensForShares(
+                _shares = IYield(_poolSavingsStrategy).getSharesForTokens(
                     _amount,
                     _asset
                 );
@@ -458,17 +458,16 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         nonReentrant
     {
         LoanStatus _poolStatus = poolVars.loanStatus;
+        uint256 _tokensLent = poolToken.totalSupply();
         require(
             _poolStatus == LoanStatus.COLLECTION &&
-                poolConstants.loanStartTime < block.timestamp,
+            poolConstants.loanStartTime < block.timestamp,
             "12"
         );
-
-        uint256 _tokensLent = poolToken.totalSupply();
-
-        if (_tokensLent < poolConstants.minborrowAmount) {
-            _cancelPool();
-        }
+        require(
+            _tokensLent >= poolConstants.minborrowAmount,
+            ""
+        );
 
         poolVars.loanStatus = LoanStatus.ACTIVE;
         uint256 _currentCollateralRatio = getCurrentCollateralRatio();
