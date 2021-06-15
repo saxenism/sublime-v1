@@ -877,86 +877,99 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         );
     }
 
+    function _canLenderBeLiquidated(address _lender) public view {
+        require(
+            (poolVars.loanStatus == LoanStatus.ACTIVE) &&
+                (block.timestamp > poolConstants.loanWithdrawalDeadline),
+            "27"
+        );
+        uint256 _marginCallEndTime = lenders[_lender].marginCallEndTime;
+        require(_marginCallEndTime != 0, "No margin call has been called.");
+        require(_marginCallEndTime < block.timestamp, "28");
+
+        require(
+            poolConstants.idealCollateralRatio.sub(
+                IPoolFactory(PoolFactory).collateralVolatilityThreshold()
+            ) > getCurrentCollateralRatio(_lender),
+            "29"
+        );
+        require(poolToken.balanceOf(_lender) != 0, "30");
+    }
+
+    function updateLenderSharesDuringLiquidation(
+        address _lender
+    ) internal returns(
+        uint256 _lenderCollateralLPShare, 
+        uint256 _lenderBalance
+    ) {
+        uint256 _poolBaseLPShares = poolVars.baseLiquidityShares;
+        _lenderBalance = poolToken.balanceOf(_lender);
+
+        uint256 _lenderBaseLPShares =
+            (_poolBaseLPShares.mul(_lenderBalance)).div(
+                poolToken.totalSupply()
+            );
+        uint256 _lenderExtraLPShares =
+            lenders[_lender].extraLiquidityShares;
+        poolVars.baseLiquidityShares = _poolBaseLPShares.sub(
+            _lenderBaseLPShares
+        );
+        poolVars.extraLiquidityShares = poolVars.extraLiquidityShares.sub(
+            _lenderExtraLPShares
+        );
+
+        _lenderCollateralLPShare = _lenderBaseLPShares.add(
+            _lenderExtraLPShares
+        );
+    }
+
     function liquidateLender(
         address _lender,
         bool _fromSavingsAccount,
         bool _toSavingsAccount,
         bool _recieveLiquidityShare
     ) public payable nonReentrant {
-        //avoid stack too deep
         address _poolFactory = PoolFactory;
-        {
-            require(
-                (poolVars.loanStatus == LoanStatus.ACTIVE) &&
-                    (block.timestamp > poolConstants.loanWithdrawalDeadline),
-                "27"
-            );
-            uint256 _marginCallEndTime = lenders[_lender].marginCallEndTime;
-            require(_marginCallEndTime != 0, "No margin call has been called.");
-            require(_marginCallEndTime < block.timestamp, "28");
 
-            require(
-                poolConstants.idealCollateralRatio.sub(
-                    IPoolFactory(_poolFactory).collateralVolatilityThreshold()
-                ) > getCurrentCollateralRatio(_lender),
-                "29"
-            );
-            require(poolToken.balanceOf(_lender) != 0, "30");
-        }
+        _canLenderBeLiquidated(_lender);
 
         address _collateralAsset = poolConstants.collateralAsset;
         address _poolSavingsStrategy = poolConstants.poolSavingsStrategy;
-        uint256 _lenderBalance = poolToken.balanceOf(_lender);
-        uint256 _lenderCollateralLPShare;
-        {
-            uint256 _poolBaseLPShares = poolVars.baseLiquidityShares;
-            uint256 _lenderBaseLPShares =
-                (_poolBaseLPShares.mul(_lenderBalance)).div(
-                    poolToken.totalSupply()
-                );
-            uint256 _lenderExtraLPShares =
-                lenders[_lender].extraLiquidityShares;
-            poolVars.baseLiquidityShares = _poolBaseLPShares.sub(
-                _lenderBaseLPShares
-            );
-            poolVars.extraLiquidityShares = poolVars.extraLiquidityShares.sub(
-                _lenderExtraLPShares
-            );
+        (uint256 _lenderCollateralLPShare, uint256 _lenderBalance) = updateLenderSharesDuringLiquidation(_lender);
 
-            _lenderCollateralLPShare = _lenderBaseLPShares.add(
-                _lenderExtraLPShares
+        uint256 _lenderCollateralShare = _lenderCollateralLPShare;
+        if(_poolSavingsStrategy != address(0)) {
+            _lenderCollateralShare = IYield(_poolSavingsStrategy).getTokensForShares(
+                _lenderCollateralLPShare,
+                _collateralAsset
             );
         }
 
-        uint256 _lenderCollateralShare =
-            _poolSavingsStrategy == address(0)
-                ? _lenderCollateralLPShare
-                : IYield(_poolSavingsStrategy).getTokensForShares(
-                    _lenderCollateralLPShare,
-                    _collateralAsset
-                );
         {
             uint256 _lenderLiquidationTokens =
                 correspondingBorrowTokens(_lenderCollateralShare, _poolFactory);
 
             address _borrowAsset = poolConstants.borrowAsset;
-            uint256 _sharesReceived =
-                _deposit(
-                    _fromSavingsAccount,
-                    false,
-                    _borrowAsset,
-                    _lenderLiquidationTokens,
-                    _poolSavingsStrategy,
-                    msg.sender,
-                    address(this)
-                );
-            _withdrawRepayment(_lender, true);
-            ISavingsAccount(IPoolFactory(_poolFactory).savingsAccount())
-                .transfer(
+            uint256 _sharesReceived = _deposit(
+                _fromSavingsAccount,
+                false,
                 _borrowAsset,
-                _lender,
+                _lenderLiquidationTokens,
                 _poolSavingsStrategy,
-                _sharesReceived
+                msg.sender,
+                address(this)
+            );
+            
+            _withdrawRepayment(_lender, true);
+
+            ISavingsAccount _savingsAccount = ISavingsAccount(IPoolFactory(_poolFactory).savingsAccount());
+            _savingsAccountTransfer(
+                _savingsAccount, 
+                address(this), 
+                _lender,
+                _sharesReceived,
+                _borrowAsset, 
+                _poolSavingsStrategy
             );
         }
 
