@@ -508,14 +508,14 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
 
         uint256 _sharesReceived;
         if (_collateralShares != 0) {
-            _sharesReceived = ISavingsAccount(
-                IPoolFactory(PoolFactory).savingsAccount()
-            )
-                .transfer(
-                poolConstants.collateralAsset,
+            ISavingsAccount _savingsAccount = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
+            _sharesReceived = _savingsAccountTransfer(
+                _savingsAccount, 
+                address(this), 
                 msg.sender,
-                poolConstants.poolSavingsStrategy,
-                _collateralShares
+                _collateralShares,
+                poolConstants.collateralAsset, 
+                poolConstants.poolSavingsStrategy
             );
         }
         emit CollateralWithdrawn(msg.sender, _sharesReceived);
