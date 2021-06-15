@@ -374,8 +374,6 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         address _depositFrom,
         address _depositTo
     ) internal returns (uint256 _sharesReceived) {
-        ISavingsAccount _savingsAccount =
-            ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
         if(_fromSavingsAccount) {
             uint256 _shares = _amount;
             if(_poolSavingsStrategy != address(0)) {
@@ -385,7 +383,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
                 );
             }
             _sharesReceived = _depositFromSavingsAccount(
-                _savingsAccount,
+                ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()),
                 _depositFrom,
                 _depositTo,
                 _shares,
@@ -396,7 +394,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             );
         } else {
             _sharesReceived = _directDeposit(
-                _savingsAccount,
+                ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()),
                 _depositTo,
                 _amount,
                 _asset,
