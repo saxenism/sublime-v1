@@ -644,13 +644,6 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     function withdrawLiquidity() external isLender(msg.sender) nonReentrant {
         LoanStatus _loanStatus = poolVars.loanStatus;
 
-        if (
-            _loanStatus == LoanStatus.COLLECTION &&
-            poolConstants.loanStartTime < block.timestamp &&
-            poolToken.totalSupply() < poolConstants.minborrowAmount
-        ) {
-            poolVars.loanStatus = LoanStatus.CANCELLED;
-        }
         require(
             _loanStatus == LoanStatus.CLOSED ||
                 _loanStatus == LoanStatus.CANCELLED ||
