@@ -606,11 +606,14 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         // TODO: Add delay before the transfer to admin can happen
         uint256 _collateralShares =
             poolVars.baseLiquidityShares.add(poolVars.extraLiquidityShares);
-        ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()).transfer(
-            poolConstants.collateralAsset,
+        ISavingsAccount _savingsAccount = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
+        _savingsAccountTransfer(
+            _savingsAccount, 
+            address(this), 
             IPoolFactory(PoolFactory).owner(),
-            poolConstants.poolSavingsStrategy,
-            _collateralShares
+            _collateralShares,
+            poolConstants.collateralAsset, 
+            poolConstants.poolSavingsStrategy
         );
         poolToken.pause();
         poolVars.loanStatus = LoanStatus.TERMINATED;
