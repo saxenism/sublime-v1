@@ -1112,6 +1112,10 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         uint256 _amountToWithdraw = calculateRepaymentWithdrawable(_lender);
         address _poolSavingsStrategy = address(0); //add defaultStrategy
 
+        if(_amountToWithdraw == 0) {
+            return;
+        }
+
         _withdraw(
             _withdrawToSavingsAccount,
             false,
