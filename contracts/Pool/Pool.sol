@@ -796,8 +796,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
                 poolVars.baseLiquidityShares.mul(_balanceOfLender).div(
                     poolToken.totalSupply()
                 )
-            )
-                .add(lenders[_lender].extraLiquidityShares);
+            ).add(lenders[_lender].extraLiquidityShares);
 
         return (calculateCollateralRatio(_balanceOfLender, _liquidityShares));
     }
@@ -822,13 +821,14 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         uint256 _collateralLiquidityShare =
             poolVars.baseLiquidityShares.add(poolVars.extraLiquidityShares);
         address _poolSavingsStrategy = poolConstants.poolSavingsStrategy;
-        uint256 _collateralTokens =
-            _poolSavingsStrategy == address(0)
-                ? _collateralLiquidityShare
-                : IYield(_poolSavingsStrategy).getTokensForShares(
-                    _collateralLiquidityShare,
-                    _collateralAsset
-                );
+
+        uint256 _collateralTokens = _collateralLiquidityShare;
+        if(_poolSavingsStrategy != address(0)) {
+            _collateralTokens = IYield(_poolSavingsStrategy).getTokensForShares(
+                _collateralLiquidityShare,
+                _collateralAsset
+            );
+        }
 
         uint256 _poolBorrowTokens =
             correspondingBorrowTokens(_collateralTokens, _poolFactory);
@@ -848,7 +848,6 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             _recieveLiquidityShare,
             _collateralAsset,
             _poolSavingsStrategy,
-            _collateralTokens,
             _collateralLiquidityShare
         );
 
@@ -862,37 +861,20 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         bool _recieveLiquidityShare,
         address _asset,
         address _poolSavingsStrategy,
-        uint256 _amountInTokens,
         uint256 _amountInShares
-    ) internal returns (uint256 _amountReceived) {
+    ) internal returns (uint256) {
         ISavingsAccount _savingsAccount =
             ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
-        if (_toSavingsAccount) {
-            _amountReceived = _savingsAccount.transfer(
-                _asset,
-                msg.sender,
-                _poolSavingsStrategy,
-                _amountInShares
-            );
-        } else {
-            _amountReceived = _savingsAccount.withdraw(
-                payable(address(this)),
-                _amountInTokens,
-                _asset,
-                _poolSavingsStrategy,
-                _recieveLiquidityShare
-            );
-            if (_recieveLiquidityShare) {
-                address _addressOfTheLiquidityToken =
-                    IYield(_poolSavingsStrategy).liquidityToken(_asset);
-                IERC20(_addressOfTheLiquidityToken).safeTransfer(
-                    msg.sender,
-                    _amountReceived
-                );
-            } else {
-                _tokenTransfer(_asset, msg.sender, _amountReceived);
-            }
-        }
+        return  _depositFromSavingsAccount(
+            _savingsAccount,
+            address(this),
+            msg.sender,
+            _amountInShares,
+            _asset, 
+            _poolSavingsStrategy,
+            _recieveLiquidityShare,
+            _toSavingsAccount
+        );
     }
 
     function liquidateLender(
@@ -984,7 +966,6 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
                 _recieveLiquidityShare,
                 _collateralAsset,
                 _poolSavingsStrategy,
-                _lenderCollateralShare,
                 _lenderCollateralLPShare
             );
         poolToken.burn(_lender, _lenderBalance);
@@ -1114,8 +1095,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             false,
             poolConstants.borrowAsset,
             _poolSavingsStrategy,
-            _amountToWithdraw,
-            0
+            _amountToWithdraw
         );
         lenders[_lender].interestWithdrawn = lenders[_lender]
             .interestWithdrawn
