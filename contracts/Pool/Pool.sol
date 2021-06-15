@@ -532,8 +532,9 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         require(block.timestamp < poolConstants.loanStartTime, "16");
         uint256 _amount = _amountLent;
         uint256 _borrowAmountNeeded = poolConstants.borrowAmountRequested;
-        if (_amountLent.add(poolToken.totalSupply()) > _borrowAmountNeeded) {
-            _amount = _borrowAmountNeeded.sub(poolToken.totalSupply());
+        uint256 _lentAmount = poolToken.totalSupply();
+        if (_amountLent.add(_lentAmount) > _borrowAmountNeeded) {
+            _amount = _borrowAmountNeeded.sub(_lentAmount);
         }
 
         address _borrowToken = poolConstants.borrowAsset;
