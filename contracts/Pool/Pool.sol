@@ -1008,17 +1008,15 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     }
 
     function checkRepayment() public returns (LoanStatus) {
+        IPoolFactory _poolFactory = IPoolFactory(PoolFactory);
         uint256 _gracePeriodPenaltyFraction =
-            IPoolFactory(PoolFactory).gracePeriodPenaltyFraction();
-        if (
-            block.timestamp >
-            getNextDueTime().add(
-                _gracePeriodPenaltyFraction.mul(poolConstants.repaymentInterval)
-            )
-        ) {
+            _poolFactory.gracePeriodPenaltyFraction();
+        uint256 _defaultDeadline = getNextDueTime().add(
+            _gracePeriodPenaltyFraction.mul(poolConstants.repaymentInterval)
+        );
+        if (block.timestamp > _defaultDeadline) {
             poolVars.loanStatus = LoanStatus.DEFAULTED;
-            IExtension(IPoolFactory(PoolFactory).extension())
-                .closePoolExtension();
+            IExtension(_poolFactory.extension()).closePoolExtension();
             return (LoanStatus.DEFAULTED);
         }
         return (poolVars.loanStatus);
