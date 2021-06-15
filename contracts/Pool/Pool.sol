@@ -181,19 +181,17 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         uint256 _amount,
         bool _transferFromSavingsAccount
     ) internal {
-        (uint256 price, uint256 _decimals) =
-            IPriceOracle(IPoolFactory(PoolFactory).priceOracle())
-                .getLatestPrice(
-                poolConstants.borrowAsset,
-                poolConstants.collateralAsset
-            );
+        uint256 _equivalentCollateral = getEquivalentTokens(
+            poolConstants.borrowAsset,
+            poolConstants.collateralAsset,
+            poolConstants.borrowAmountRequested
+        );
         require(
             _amount >=
                 poolConstants
                     .idealCollateralRatio
-                    .mul(poolConstants.borrowAmountRequested.mul(price))
-                    .div(1e8)
-                    .div(10**_decimals),
+                    .mul(_equivalentCollateral)
+                    .div(1e8),
             "36"
         );
 
@@ -222,6 +220,151 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         emit CollateralAdded(_borrower, _amount, _sharesReceived);
     }
 
+    function _depositFromSavingsAccount(
+        ISavingsAccount _savingsAccount,
+        address _from,
+        address _to,
+        uint256 _shares,
+        address _asset,
+        address _strategy,
+        bool _withdrawShares,
+        bool _toSavingsAccount
+    ) internal returns(uint256) {
+        if(_toSavingsAccount) {
+            return _savingsAccountTransfer(
+                _savingsAccount, 
+                _from, 
+                _to,
+                _shares,
+                _asset, 
+                _strategy
+            );
+        } else {
+            return _withdrawFromSavingsAccount(
+                _savingsAccount,
+                _from,
+                _to,
+                _shares, 
+                _asset, 
+                _strategy,
+                _withdrawShares
+            );
+        }
+    }
+
+    function _directDeposit(
+        ISavingsAccount _savingsAccount,
+        address _to,
+        uint256 _amount,
+        address _asset,
+        bool _toSavingsAccount,
+        address _strategy
+    ) internal returns(uint256) {
+        if(_toSavingsAccount) {
+            return _directSavingsAccountDeposit(_savingsAccount, _to, _amount, _asset, _strategy);
+        } else {
+            return _pullTokens(_to, _amount, _asset);
+        }
+    }
+
+    function _directSavingsAccountDeposit(
+        ISavingsAccount _savingsAccount,
+        address _to,
+        uint256 _amount,
+        address _asset,
+        address _strategy
+    ) internal returns(uint256 _sharesReceived) {
+        _pullTokens(_asset, _amount, _to);
+        uint256 _ethValue;
+        if(_asset == address(0)) {
+            _ethValue = _amount;   
+        } else {
+            IERC20(_asset).safeApprove(_strategy, _amount);
+        }
+        _sharesReceived = _savingsAccount.depositTo{value: _ethValue}(
+            _amount,
+            _asset,
+            _strategy,
+            _to
+        );
+    }
+
+    function _savingsAccountTransfer(
+        ISavingsAccount _savingsAccount, 
+        address _from, 
+        address _to,
+        uint256 _shares,
+        address _asset, 
+        address _strategy
+    ) internal returns(uint256) {
+        if(_from == address(this)) {
+            _savingsAccount.transfer(
+                _asset,
+                _to,
+                _strategy,
+                _shares
+            );
+        } else {
+            _savingsAccount.transferFrom(
+                _asset,
+                _from,
+                _to,
+                _strategy,
+                _shares
+            );
+        }
+        return _shares;
+    }
+
+    function _withdrawFromSavingsAccount(
+        ISavingsAccount _savingsAccount,
+        address _from,
+        address _to,
+        uint256 _shares,
+        address _asset,
+        address _strategy,
+        bool _withdrawShares
+    ) internal returns(uint256 _amountReceived){
+        if(_from == address(this)) {
+            _amountReceived = _savingsAccount.withdraw(
+                payable(_to),
+                _shares,
+                _asset,
+                _strategy,
+                _withdrawShares
+            );
+        } else {
+            _amountReceived = _savingsAccount.withdrawFrom(
+                _from,
+                payable(_to),
+                _shares,
+                _asset,
+                _strategy,
+                _withdrawShares
+            );
+        }
+    }
+
+    function _pullTokens(address _asset, uint256 _amount, address _depositTo) internal returns(uint256){
+        if(_asset == address(0)) {
+            require(msg.value >= _amount, "");
+            if(_depositTo != address(this)) {
+                payable(_depositTo).transfer(_amount);
+            }
+            if(msg.value != _amount) {
+                payable(address(msg.sender)).transfer(msg.value.sub(_amount));
+            }
+            return;
+        }
+
+        IERC20(_asset).transferFrom(
+            msg.sender,
+            _depositTo,
+            _amount
+        );
+        return _amount; 
+    }
+
     function _deposit(
         bool _fromSavingsAccount,
         bool _toSavingsAccount,
@@ -230,70 +373,37 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         address _poolSavingsStrategy,
         address _depositFrom,
         address _depositTo
-    ) internal returns (uint256) {
+    ) internal returns (uint256 _sharesReceived) {
         ISavingsAccount _savingsAccount =
             ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
-        uint256 _sharesReceived;
-        if (!_fromSavingsAccount) {
-            _sharesReceived = _amount;
-            if (_asset == address(0)) {
-                uint256 _tokensSent = msg.value;
-                require(_tokensSent >= _amount, "8");
-                if (_toSavingsAccount) {
-                    _sharesReceived = _savingsAccount.depositTo{value: _amount}(
-                        _amount,
-                        _asset,
-                        _poolSavingsStrategy,
-                        _depositTo
-                    );
-                }
-                if (_tokensSent > _amount) {
-                    msg.sender.transfer(_tokensSent.sub(_amount));
-                }
-            } else {
-                IERC20(_asset).safeTransferFrom(
-                    _depositFrom,
-                    address(this),
-                    _amount
+        if(_fromSavingsAccount) {
+            uint256 _shares = _amount;
+            if(_poolSavingsStrategy != address(0)) {
+                _shares = IYield(_poolSavingsStrategy).getTokensForShares(
+                    _amount,
+                    _asset
                 );
-                if (_toSavingsAccount) {
-                    IERC20(_asset).safeApprove(_poolSavingsStrategy, _amount);
-                    _sharesReceived = _savingsAccount.depositTo(
-                        _amount,
-                        _asset,
-                        _poolSavingsStrategy,
-                        _depositTo
-                    );
-                }
             }
+            _sharesReceived = _depositFromSavingsAccount(
+                _savingsAccount,
+                _depositFrom,
+                _depositTo,
+                _shares,
+                _asset,
+                _poolSavingsStrategy,
+                true,
+                _toSavingsAccount
+            );
         } else {
-            uint256 _liquidityshare =
-                _poolSavingsStrategy == address(0)
-                    ? _amount
-                    : IYield(_poolSavingsStrategy).getTokensForShares(
-                        _amount,
-                        _asset
-                    );
-            if (_toSavingsAccount) {
-                _sharesReceived = _savingsAccount.transferFrom(
-                    _asset,
-                    _depositFrom,
-                    address(this),
-                    _poolSavingsStrategy,
-                    _liquidityshare
-                );
-            } else {
-                _savingsAccount.withdrawFrom(
-                    _depositFrom,
-                    address(this),
-                    _liquidityshare,
-                    _asset,
-                    _poolSavingsStrategy,
-                    true
-                );
-            }
+            _sharesReceived = _directDeposit(
+                _savingsAccount,
+                _depositTo,
+                _amount,
+                _asset,
+                _toSavingsAccount,
+                _poolSavingsStrategy
+            );
         }
-        return _sharesReceived;
     }
 
     function addCollateralInMarginCall(
@@ -1071,5 +1181,15 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
 
     receive() external payable {
         require(msg.sender == IPoolFactory(PoolFactory).savingsAccount(), "35");
+    }
+
+    function getEquivalentTokens(address _source, address _target, uint256 _amount) public view returns(uint256) {
+        (uint256 _price, uint256 _decimals) =
+            IPriceOracle(IPoolFactory(PoolFactory).priceOracle())
+                .getLatestPrice(
+                _source,
+                _target
+            );
+        return _amount.mul(_price).div(10**_decimals);
     }
 }
