@@ -699,16 +699,17 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     function requestMarginCall() external isLender(msg.sender) {
         require(poolVars.loanStatus == LoanStatus.ACTIVE, "4");
 
+        IPoolFactory _poolFactory = IPoolFactory(PoolFactory);
         require(
             poolConstants.idealCollateralRatio >
                 getCurrentCollateralRatio(msg.sender).add(
-                    IPoolFactory(PoolFactory).collateralVolatilityThreshold()
+                    _poolFactory.collateralVolatilityThreshold()
                 ),
             "26"
         );
 
         lenders[msg.sender].marginCallEndTime = block.timestamp.add(
-            IPoolFactory(PoolFactory).marginCallDuration()
+            _poolFactory.marginCallDuration()
         );
 
         emit MarginCalled(msg.sender);
