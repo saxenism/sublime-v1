@@ -877,7 +877,8 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         );
     }
 
-    function _canLenderBeLiquidated(address _lender) public view {
+    // TODO: Can this function be made public view ?
+    function _canLenderBeLiquidated(address _lender) internal {
         require(
             (poolVars.loanStatus == LoanStatus.ACTIVE) &&
                 (block.timestamp > poolConstants.loanWithdrawalDeadline),
