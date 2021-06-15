@@ -924,21 +924,11 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         );
     }
 
-    function liquidateLender(
-        address _lender,
-        bool _fromSavingsAccount,
-        bool _toSavingsAccount,
-        bool _recieveLiquidityShare
-    ) public payable nonReentrant {
-        address _poolFactory = PoolFactory;
-
-        _canLenderBeLiquidated(_lender);
-
+    function _liquidateLender(bool _fromSavingsAccount, address _lender, uint256 _lenderCollateralLPShare) internal {
+        uint256 _lenderCollateralShare = _lenderCollateralLPShare;
         address _collateralAsset = poolConstants.collateralAsset;
         address _poolSavingsStrategy = poolConstants.poolSavingsStrategy;
-        (uint256 _lenderCollateralLPShare, uint256 _lenderBalance) = updateLenderSharesDuringLiquidation(_lender);
 
-        uint256 _lenderCollateralShare = _lenderCollateralLPShare;
         if(_poolSavingsStrategy != address(0)) {
             _lenderCollateralShare = IYield(_poolSavingsStrategy).getTokensForShares(
                 _lenderCollateralLPShare,
@@ -946,39 +936,53 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             );
         }
 
-        {
-            uint256 _lenderLiquidationTokens =
-                correspondingBorrowTokens(_lenderCollateralShare, _poolFactory);
+        address _poolFactory = PoolFactory;
+        uint256 _lenderLiquidationTokens =
+            correspondingBorrowTokens(_lenderCollateralShare, _poolFactory);
 
-            address _borrowAsset = poolConstants.borrowAsset;
-            uint256 _sharesReceived = _deposit(
-                _fromSavingsAccount,
-                false,
-                _borrowAsset,
-                _lenderLiquidationTokens,
-                _poolSavingsStrategy,
-                msg.sender,
-                address(this)
-            );
-            
-            _withdrawRepayment(_lender, true);
+        address _borrowAsset = poolConstants.borrowAsset;
+        uint256 _sharesReceived = _deposit(
+            _fromSavingsAccount,
+            false,
+            _borrowAsset,
+            _lenderLiquidationTokens,
+            _poolSavingsStrategy,
+            msg.sender,
+            address(this)
+        );
+        
+        _withdrawRepayment(_lender, true);
 
-            ISavingsAccount _savingsAccount = ISavingsAccount(IPoolFactory(_poolFactory).savingsAccount());
-            _savingsAccountTransfer(
-                _savingsAccount, 
-                address(this), 
-                _lender,
-                _sharesReceived,
-                _borrowAsset, 
-                _poolSavingsStrategy
-            );
-        }
+        ISavingsAccount _savingsAccount = ISavingsAccount(IPoolFactory(_poolFactory).savingsAccount());
+        _savingsAccountTransfer(
+            _savingsAccount, 
+            address(this), 
+            _lender,
+            _sharesReceived,
+            _borrowAsset, 
+            _poolSavingsStrategy
+        );
+    }
+
+    function liquidateLender(
+        address _lender,
+        bool _fromSavingsAccount,
+        bool _toSavingsAccount,
+        bool _recieveLiquidityShare
+    ) public payable nonReentrant {
+
+        _canLenderBeLiquidated(_lender);
+
+        address _poolSavingsStrategy = poolConstants.poolSavingsStrategy;
+        (uint256 _lenderCollateralLPShare, uint256 _lenderBalance) = updateLenderSharesDuringLiquidation(_lender);
+
+        _liquidateLender(_fromSavingsAccount, _lender, _lenderCollateralLPShare);
 
         uint256 _amountReceived =
             _withdraw(
                 _toSavingsAccount,
                 _recieveLiquidityShare,
-                _collateralAsset,
+                poolConstants.collateralAsset,
                 _poolSavingsStrategy,
                 _lenderCollateralLPShare
             );
