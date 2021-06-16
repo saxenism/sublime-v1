@@ -42,7 +42,7 @@ import { Repayments } from "../../typechain/Repayments";
 import { ContractTransaction } from "@ethersproject/contracts";
 import { getContractAddress } from "@ethersproject/address";
 
-describe.only("Pool", async () => {
+describe("Pool", async () => {
   let savingsAccount: SavingsAccount;
   let strategyRegistry: StrategyRegistry;
 
@@ -210,6 +210,7 @@ describe.only("Pool", async () => {
       repaymentImpl = await deployHelper.pool.deployRepayments();
     });
 
+    // start here
     describe("Lend", async () => {
       let pool: Pool;
       before(async () => {
@@ -315,7 +316,7 @@ describe.only("Pool", async () => {
           .connect(borrower)
           .depositCollateral(_collateralAmount, false);
       });
-
+      
       it("Test Lending", async () => {
         const deployHelper: DeployHelper = new DeployHelper(admin);
         const DaiTokenContract = await deployHelper.mock.getMockERC20(
