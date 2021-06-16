@@ -447,8 +447,8 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         uint256 _amount
     ) public override {
         require(msg.sender == address(poolToken));
-        require(lenders[_from].marginCallEndTime != 0, "18");
-        require(lenders[_to].marginCallEndTime != 0, "19");
+        require(lenders[_from].marginCallEndTime == 0, "18");
+        require(lenders[_to].marginCallEndTime == 0, "19");
 
         //Withdraw repayments for user
         _withdrawRepayment(_from, true);
