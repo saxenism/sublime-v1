@@ -85,8 +85,12 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
         override
         returns (address aToken)
     {
-        (aToken, , ) = IProtocolDataProvider(protocolDataProvider)
-            .getReserveTokensAddresses(asset);
+        if (asset == address(0)) {
+            aToken = IWETHGateway(wethGateway).getAWETHAddress();
+        } else {
+            (aToken, , ) = IProtocolDataProvider(protocolDataProvider)
+                .getReserveTokensAddresses(asset);
+        }
     }
 
     function updateSavingsAccount(address payable _savingsAccount)
@@ -195,6 +199,23 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
         }
 
         emit UnlockedTokens(asset, received);
+    }
+
+    function unlockShares(address asset, uint256 amount)
+        public
+        override
+        onlySavingsAccount
+        returns (uint256)
+    {
+        if (amount == 0) {
+            return 0;
+        }
+
+        require(asset != address(0), "Asset address cannot be address(0)");
+        IERC20(asset).safeTransfer(savingsAccount, amount);
+
+        emit UnlockedShares(asset, amount);
+        return amount;
     }
 
     /**

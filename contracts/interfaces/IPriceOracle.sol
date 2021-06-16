@@ -6,5 +6,9 @@ interface IPriceOracle {
         external
         view
         returns (uint256, uint256);
-    function doesFeedExist(address btoken, address ctoken) external view returns(bool);
+
+    function doesFeedExist(address btoken, address ctoken)
+        external
+        view
+        returns (bool);
 }

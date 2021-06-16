@@ -5,7 +5,6 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-
 /**
  * @title Credit Line contract with Methods related to credit Line
  * @notice Implements the functions related to Credit Line
@@ -16,8 +15,14 @@ contract CreditLineStorage is OwnableUpgradeable {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
-    
-    enum creditLineStatus {NOT_CREATED, REQUESTED, ACTIVE, CLOSED, CANCELLED, LIQUIDATED}
+    enum creditLineStatus {
+        NOT_CREATED,
+        REQUESTED,
+        ACTIVE,
+        CLOSED,
+        CANCELLED,
+        LIQUIDATED
+    }
 
     uint256 CreditLineCounter;
 
@@ -30,8 +35,6 @@ contract CreditLineStorage is OwnableUpgradeable {
         uint256 netPrinciple;
         uint256 accrueInterest;
     }*/
-
-
 
     struct CreditLineUsageVars {
         uint256 principal;

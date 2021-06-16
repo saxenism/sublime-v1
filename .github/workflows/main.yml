@@ -9,7 +9,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: docker://node:14.16.0
-      - run: npm install
+      - run: npm install --save-dev
       - run: npm run build
         env:
           DEFAULT_BRANCH: main
