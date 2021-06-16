@@ -169,7 +169,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     ) external payable onlyBorrower {
         require(
             _minBorrowAmount <= _poolSize,
-            "PoolFactory::createPool - invalid min borrow fraction"
+            "PoolFactory::createPool - invalid min borrow amount"
         );
         require(
             isBorrowToken[_borrowTokenType],
