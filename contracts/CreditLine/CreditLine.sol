@@ -523,9 +523,10 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         uint256 _totalCollateralToken =
             calculateTotalCollateralTokens(creditLineHash);
         uint256 collateralRatioIfAmountIsWithdrawn =
-            _ratioOfPrices.mul(_totalCollateralToken).div(
-                _currentDebt.add(borrowAmount)
-            ).div(10**_decimals);
+            _ratioOfPrices
+                .mul(_totalCollateralToken)
+                .div(_currentDebt.add(borrowAmount))
+                .div(10**_decimals);
         require(
             collateralRatioIfAmountIsWithdrawn >
                 creditLineInfo[creditLineHash].idealCollateralRatio,
@@ -866,7 +867,11 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
                         .getLatestPrice(_borrowAsset, _collateralAsset);
 
                 uint256 _borrowToken =
-                    (_totalCollateralToken.mul(_ratioOfPrices).div(10**_decimals));
+                    (
+                        _totalCollateralToken.mul(_ratioOfPrices).div(
+                            10**_decimals
+                        )
+                    );
                 IERC20(_borrowAsset).safeTransferFrom(
                     msg.sender,
                     _lender,
