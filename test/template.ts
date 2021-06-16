@@ -14,35 +14,37 @@ import {
   createPoolParams,
   ChainLinkAggregators,
   OperationalAmounts,
-} from "../../utils/constants";
-import DeployHelper from "../../utils/deploys";
+} from "../utils/constants";
+import DeployHelper from "../utils/deploys";
 
-import { SavingsAccount } from "../../typechain/SavingsAccount";
-import { StrategyRegistry } from "../../typechain/StrategyRegistry";
+import { SavingsAccount } from "../typechain/SavingsAccount";
+import { StrategyRegistry } from "../typechain/StrategyRegistry";
+
 import {
   getPoolAddress,
   getRandomFromArray,
   incrementChain,
-} from "../../utils/helpers";
-import { Address } from "hardhat-deploy/dist/types";
-import { AaveYield } from "../../typechain/AaveYield";
-import { YearnYield } from "../../typechain/YearnYield";
-import { CompoundYield } from "../../typechain/CompoundYield";
-import { Pool } from "../../typechain/Pool";
-import { Verification } from "../../typechain/Verification";
-import { PoolFactory } from "../../typechain/PoolFactory";
-import { ERC20 } from "../../typechain/ERC20";
-import { PriceOracle } from "../../typechain/PriceOracle";
-import { Extension } from "../../typechain/Extension";
+} from "../utils/helpers";
 
-import { Contracts } from "../../existingContracts/compound.json";
+import { Address } from "hardhat-deploy/dist/types";
+import { AaveYield } from "../typechain/AaveYield";
+import { YearnYield } from "../typechain/YearnYield";
+import { CompoundYield } from "../typechain/CompoundYield";
+import { Pool } from "../typechain/Pool";
+import { Verification } from "../typechain/Verification";
+import { PoolFactory } from "../typechain/PoolFactory";
+import { ERC20 } from "../typechain/ERC20";
+import { PriceOracle } from "../typechain/PriceOracle";
+import { Extension } from "../typechain/Extension";
+
+import { Contracts } from "../existingContracts/compound.json";
 import { sha256 } from "@ethersproject/sha2";
-import { PoolToken } from "../../typechain/PoolToken";
-import { Repayments } from "../../typechain/Repayments";
+import { PoolToken } from "../typechain/PoolToken";
+import { Repayments } from "../typechain/Repayments";
 import { ContractTransaction } from "@ethersproject/contracts";
 import { getContractAddress } from "@ethersproject/address";
 
-describe("Pool", async () => {
+describe.skip("Template For Test cases", async () => {
   let savingsAccount: SavingsAccount;
   let strategyRegistry: StrategyRegistry;
 
@@ -165,7 +167,7 @@ describe("Pool", async () => {
       );
   });
 
-  describe("Use Pool", async () => {
+  describe("Pool Related", async () => {
     let extenstion: Extension;
     let poolImpl: Pool;
     let poolTokenImpl: PoolToken;
@@ -210,7 +212,8 @@ describe("Pool", async () => {
       repaymentImpl = await deployHelper.pool.deployRepayments();
     });
 
-    describe("Lend", async () => {
+    // start here
+    describe("Pool is created here", async () => {
       let pool: Pool;
       before(async () => {
         await poolFactory
@@ -316,34 +319,8 @@ describe("Pool", async () => {
           .depositCollateral(_collateralAmount, false);
       });
 
-      it("Test Lending", async () => {
-        const deployHelper: DeployHelper = new DeployHelper(admin);
-        const DaiTokenContract = await deployHelper.mock.getMockERC20(
-          Contracts.DAI
-        );
-        await DaiTokenContract.transfer(
-          lender.address,
-          OperationalAmounts._amountLent
-        );
-        await DaiTokenContract.connect(lender).approve(
-          pool.address,
-          OperationalAmounts._amountLent
-        );
-
-        await expect(
-          pool
-            .connect(lender)
-            .lend(lender.address, OperationalAmounts._amountLent, false)
-        )
-          .to.emit(pool, "LiquiditySupplied")
-          .withArgs(OperationalAmounts._amountLent, lender.address);
-      });
-
-      it("Lender should not be able to withdraw the tokens lent (collection stage)", async () => {
-        //   console.log(await pool.connect(lender).poolVars());
-        await expect(
-          pool.connect(lender).withdrawLiquidity()
-        ).to.be.revertedWith("24");
+      it("Dummy test case here", async () => {
+        // use DeployHelper class and it's instance to get contracts
       });
     });
   });
