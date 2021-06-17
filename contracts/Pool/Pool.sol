@@ -561,7 +561,6 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
 
         //gets amount through liquidity shares
         uint256 _balance = poolToken.balanceOf(msg.sender);
-        poolToken.burn(msg.sender, _balance);
 
         if (_loanStatus == LoanStatus.DEFAULTED) {
             uint256 _totalAsset;
@@ -588,6 +587,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         _withdrawRepayment(msg.sender, true);
         //to add transfer if not included in above (can be transferred with liquidity)
 
+        poolToken.burn(msg.sender, _balance);
         //transfer liquidity provided
         _tokenTransfer(poolConstants.borrowAsset, msg.sender, _balance);
 
@@ -1012,6 +1012,10 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     {
         uint256 _amountToWithdraw = calculateRepaymentWithdrawable(_lender);
         address _poolSavingsStrategy = address(0); //add defaultStrategy
+
+        if(_amountToWithdraw == 0) {
+            return;
+        }
 
         _withdraw(
             _withdrawToSavingsAccount,
