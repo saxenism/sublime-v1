@@ -3,7 +3,6 @@ pragma solidity 0.7.0;
 
 import "./SafeMath.sol";
 
-
 contract Timelock {
     using SafeMath for uint256;
 
@@ -118,9 +117,8 @@ contract Timelock {
             "Timelock::queueTransaction: Estimated execution block must satisfy delay."
         );
 
-        bytes32 txHash = keccak256(
-            abi.encode(target, value, signature, data, eta)
-        );
+        bytes32 txHash =
+            keccak256(abi.encode(target, value, signature, data, eta));
         queuedTransactions[txHash] = true;
 
         emit QueueTransaction(txHash, target, value, signature, data, eta);
@@ -139,9 +137,8 @@ contract Timelock {
             "Timelock::cancelTransaction: Call must come from admin."
         );
 
-        bytes32 txHash = keccak256(
-            abi.encode(target, value, signature, data, eta)
-        );
+        bytes32 txHash =
+            keccak256(abi.encode(target, value, signature, data, eta));
         queuedTransactions[txHash] = false;
 
         emit CancelTransaction(txHash, target, value, signature, data, eta);
@@ -159,9 +156,8 @@ contract Timelock {
             "Timelock::executeTransaction: Call must come from admin."
         );
 
-        bytes32 txHash = keccak256(
-            abi.encode(target, value, signature, data, eta)
-        );
+        bytes32 txHash =
+            keccak256(abi.encode(target, value, signature, data, eta));
         require(
             queuedTransactions[txHash],
             "Timelock::executeTransaction: Transaction hasn't been queued."
@@ -189,9 +185,8 @@ contract Timelock {
         }
 
         // solium-disable-next-line security/no-call-value
-        (bool success, bytes memory returnData) = target.call{value: value}(
-            callData
-        );
+        (bool success, bytes memory returnData) =
+            target.call{value: value}(callData);
         require(
             success,
             "Timelock::executeTransaction: Transaction execution reverted."

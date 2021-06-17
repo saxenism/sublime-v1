@@ -6,14 +6,20 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../interfaces/IPool.sol";
 
 contract PoolToken is Initializable, ERC20PresetMinterPauserUpgradeable {
-
     using SafeMath for uint256;
 
     bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
     address public pool;
 
-    function initialize(string memory name, string memory symbol, address _pool) public initializer {
-        ERC20PresetMinterPauserUpgradeable.__ERC20PresetMinterPauser_init(name, symbol);
+    function initialize(
+        string memory name,
+        string memory symbol,
+        address _pool
+    ) public initializer {
+        ERC20PresetMinterPauserUpgradeable.__ERC20PresetMinterPauser_init(
+            name,
+            symbol
+        );
         _setupRole(MINTER_ROLE, _pool);
         _setupRole(PAUSER_ROLE, _pool);
         _setupRole(BURNER_ROLE, _pool);
@@ -23,6 +29,12 @@ contract PoolToken is Initializable, ERC20PresetMinterPauserUpgradeable {
     function burn(address user, uint256 amount) public {
         require(hasRole(BURNER_ROLE, msg.sender));
         _burn(user, amount);
+    }
+
+    function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
+        if(to != address(0)) {
+            require(!paused(), "ERC20Pausable: token transfer while paused");
+        }
     }
 
     function transfer(address _recipient, uint256 _amount)
@@ -52,5 +64,4 @@ contract PoolToken is Initializable, ERC20PresetMinterPauserUpgradeable {
         );
         return true;
     }
-
 }

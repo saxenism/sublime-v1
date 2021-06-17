@@ -44,6 +44,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     uint256 public override liquidatorRewardFraction;
     uint256 public override votingPassRatio;
     uint256 public override gracePeriodFraction;
+    uint256 public override poolCancelPenalityFraction;
 
     /*
     * @notice Used to mark assets supported for borrowing
@@ -196,7 +197,8 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         uint256 _liquidatorRewardFraction,
         address _priceOracle,
         address _savingsAccount,
-        address _extension
+        address _extension,
+        uint256 _poolCancelPenalityFraction
     ) external initializer {
         {
             OwnableUpgradeable.__Ownable_init();
@@ -216,6 +218,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         priceOracle = _priceOracle;
         savingsAccount = _savingsAccount;
         extension = _extension;
+        poolCancelPenalityFraction = _poolCancelPenalityFraction;
     }
 
     function setImplementations(
@@ -248,7 +251,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     ) external payable onlyBorrower {
         require(
             _minBorrowAmount <= _poolSize,
-            "PoolFactory::createPool - invalid min borrow fraction"
+            "PoolFactory::createPool - invalid min borrow amount"
         );
         require(
             isBorrowToken[_borrowTokenType],

@@ -4,7 +4,6 @@ pragma solidity 0.7.0;
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 contract Verification is Initializable, OwnableUpgradeable {
-
     mapping(address => bytes32) public registeredUsers;
 
     event UserRegistered(address user, bytes32 offChainDetails);
@@ -19,11 +18,7 @@ contract Verification is Initializable, OwnableUpgradeable {
         uint256 time
     );
 
-    event CollateralWithdrawn(
-        bytes32 poolHash,
-        address user,
-        uint256 amount
-    );
+    event CollateralWithdrawn(bytes32 poolHash, address user, uint256 amount);
 
     modifier ifUserRegistered(address _user) {
         require(
@@ -49,7 +44,10 @@ contract Verification is Initializable, OwnableUpgradeable {
         external
         onlyOwner
     {
-        require(registeredUsers[_user] == bytes32(0), "Verification: User already registered");
+        require(
+            registeredUsers[_user] == bytes32(0),
+            "Verification: User already registered"
+        );
         require(_user != address(0), "Verification: Invalid entity address");
         require(
             _offChainDetails != bytes32(0),
@@ -73,8 +71,8 @@ contract Verification is Initializable, OwnableUpgradeable {
         emit UserDetailsUpdated(_user, _offChainDetails);
     }
 
-    function unregisterUser(address _user) 
-        external 
+    function unregisterUser(address _user)
+        external
         onlyOwner
         ifUserRegistered(_user)
     {
@@ -82,7 +80,7 @@ contract Verification is Initializable, OwnableUpgradeable {
         emit UserUnregistered(_user);
     }
 
-    function isUser(address _user) public view returns(bool) {
+    function isUser(address _user) public view returns (bool) {
         return (registeredUsers[_user] != bytes32(0));
     }
 }

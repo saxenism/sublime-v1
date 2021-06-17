@@ -1,1 +1,0 @@
-docker rm -f sublime_contracts
