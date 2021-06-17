@@ -224,7 +224,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         ISavingsAccount _savingsAccount,
         address _from,
         address _to,
-        uint256 _shares,
+        uint256 _amount,
         address _asset,
         address _strategy,
         bool _withdrawShares,
@@ -235,7 +235,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
                 _savingsAccount, 
                 _from, 
                 _to,
-                _shares,
+                _amount,
                 _asset, 
                 _strategy
             );
@@ -244,7 +244,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
                 _savingsAccount,
                 _from,
                 _to,
-                _shares, 
+                _amount, 
                 _asset, 
                 _strategy,
                 _withdrawShares
@@ -293,7 +293,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         ISavingsAccount _savingsAccount, 
         address _from, 
         address _to,
-        uint256 _shares,
+        uint256 _amount,
         address _asset, 
         address _strategy
     ) internal returns(uint256) {
@@ -302,7 +302,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
                 _asset,
                 _to,
                 _strategy,
-                _shares
+                _amount
             );
         } else {
             _savingsAccount.transferFrom(
@@ -310,17 +310,17 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
                 _from,
                 _to,
                 _strategy,
-                _shares
+                _amount
             );
         }
-        return _shares;
+        return _amount;
     }
 
     function _withdrawFromSavingsAccount(
         ISavingsAccount _savingsAccount,
         address _from,
         address _to,
-        uint256 _shares,
+        uint256 _amount,
         address _asset,
         address _strategy,
         bool _withdrawShares
@@ -328,7 +328,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         if(_from == address(this)) {
             _amountReceived = _savingsAccount.withdraw(
                 payable(_to),
-                _shares,
+                _amount,
                 _asset,
                 _strategy,
                 _withdrawShares
@@ -337,7 +337,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             _amountReceived = _savingsAccount.withdrawFrom(
                 _from,
                 payable(_to),
-                _shares,
+                _amount,
                 _asset,
                 _strategy,
                 _withdrawShares

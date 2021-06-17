@@ -169,6 +169,10 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
             "SavingsAccount::switchStrategy Amount must be greater than zero"
         );
 
+        if(currentStrategy != address(0)) {
+            amount = IYield(currentStrategy).getSharesForTokens(amount, asset);
+        }
+
         userLockedBalance[msg.sender][asset][
             currentStrategy
         ] = userLockedBalance[msg.sender][asset][currentStrategy].sub(
@@ -225,6 +229,10 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
             "SavingsAccount::withdraw Amount must be greater than zero"
         );
 
+        if(strategy != address(0)) {
+            amount = IYield(strategy).getSharesForTokens(amount, asset);
+        }
+
         // TODO not considering yield generated, needs to be updated later
         userLockedBalance[msg.sender][asset][strategy] = userLockedBalance[
             msg.sender
@@ -261,6 +269,10 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
             amount,
             "SavingsAccount::withdrawFrom allowance limit exceeding"
         );
+
+        if(strategy != address(0)) {
+            amount = IYield(strategy).getSharesForTokens(amount, asset);
+        }
 
         //reduce sender's balance
         userLockedBalance[from][asset][strategy] = userLockedBalance[from][
@@ -386,26 +398,30 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
     function transfer(
         address token,
         address to,
-        address poolSavingsStrategy,
+        address strategy,
         uint256 amount
     ) external override returns (uint256) {
         require(amount != 0, "SavingsAccount::transfer zero amount");
 
+        if(strategy != address(0)) {
+            amount = IYield(strategy).getSharesForTokens(amount, token);
+        }
+
         //reduce msg.sender balance
         userLockedBalance[msg.sender][token][
-            poolSavingsStrategy
-        ] = userLockedBalance[msg.sender][token][poolSavingsStrategy].sub(
+            strategy
+        ] = userLockedBalance[msg.sender][token][strategy].sub(
             amount,
             "SavingsAccount::transfer insufficient funds"
         );
 
         //update receiver's balance
-        userLockedBalance[to][token][poolSavingsStrategy] = userLockedBalance[
+        userLockedBalance[to][token][strategy] = userLockedBalance[
             to
-        ][token][poolSavingsStrategy]
+        ][token][strategy]
             .add(amount);
 
-        emit Transfer(token, poolSavingsStrategy, msg.sender, to, amount);
+        emit Transfer(token, strategy, msg.sender, to, amount);
         //not sure
         return amount;
     }
@@ -414,7 +430,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         address token,
         address from,
         address to,
-        address poolSavingsStrategy,
+        address strategy,
         uint256 amount
     ) external override returns (uint256) {
         require(amount != 0, "SavingsAccount::transferFrom zero amount");
@@ -426,19 +442,23 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
             "SavingsAccount::transferFrom allowance limit exceeding"
         );
 
+        if(strategy != address(0)) {
+            amount = IYield(strategy).getSharesForTokens(amount, token);
+        }
+
         //reduce sender's balance
-        userLockedBalance[from][token][poolSavingsStrategy] = userLockedBalance[
+        userLockedBalance[from][token][strategy] = userLockedBalance[
             from
-        ][token][poolSavingsStrategy]
+        ][token][strategy]
             .sub(amount, "SavingsAccount::transferFrom insufficient allowance");
 
         //update receiver's balance
-        userLockedBalance[to][token][poolSavingsStrategy] = (
-            userLockedBalance[to][token][poolSavingsStrategy]
+        userLockedBalance[to][token][strategy] = (
+            userLockedBalance[to][token][strategy]
         )
             .add(amount);
 
-        emit Transfer(token, poolSavingsStrategy, from, to, amount);
+        emit Transfer(token, strategy, from, to, amount);
 
         //not sure
         return amount;
