@@ -611,7 +611,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         }
 
         if(_loanStatus == LoanStatus.CANCELLED) {
-            _balance = _balance.mul(poolVars.penalityLiquidityAmount).div(poolToken.totalSupply());
+            _balance = _balance.add(_balance.mul(poolVars.penalityLiquidityAmount).div(poolToken.totalSupply()));
         }
 
         // _due = _balance.add(_due);
