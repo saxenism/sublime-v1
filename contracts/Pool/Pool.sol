@@ -375,18 +375,11 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         address _depositTo
     ) internal returns (uint256 _sharesReceived) {
         if(_fromSavingsAccount) {
-            uint256 _shares = _amount;
-            if(_poolSavingsStrategy != address(0)) {
-                _shares = IYield(_poolSavingsStrategy).getSharesForTokens(
-                    _amount,
-                    _asset
-                );
-            }
             _sharesReceived = _depositFromSavingsAccount(
                 ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()),
                 _depositFrom,
                 _depositTo,
-                _shares,
+                _amount,
                 _asset,
                 _poolSavingsStrategy,
                 true,
@@ -500,9 +493,19 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         emit AmountBorrowed(_tokensLent);
     }
 
-    function withdrawAllCollateral() internal {
+    function _withdrawAllCollateral() internal {
+        address _poolSavingsStrategy = poolConstants.poolSavingsStrategy;
+        address _collateralAsset = poolConstants.collateralAsset;
         uint256 _collateralShares =
             poolVars.baseLiquidityShares.add(poolVars.extraLiquidityShares);
+
+        uint256 _collateralTokens = _collateralShares;
+        if(_poolSavingsStrategy != address(0)) {
+            _collateralTokens = IYield(_poolSavingsStrategy).getTokensForShares(
+                _collateralShares,
+                _collateralAsset
+            );
+        }
 
         uint256 _sharesReceived;
         if (_collateralShares != 0) {
@@ -511,9 +514,9 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
                 _savingsAccount, 
                 address(this), 
                 msg.sender,
-                _collateralShares,
-                poolConstants.collateralAsset, 
-                poolConstants.poolSavingsStrategy
+                _collateralTokens,
+                _collateralAsset, 
+                _poolSavingsStrategy
             );
         }
         emit CollateralWithdrawn(msg.sender, _sharesReceived);
@@ -595,24 +598,14 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     function _cancelPool() internal {
         poolVars.loanStatus = LoanStatus.CANCELLED;
         IExtension(IPoolFactory(PoolFactory).extension()).closePoolExtension();
-        withdrawAllCollateral();
+        _withdrawAllCollateral();
         poolToken.pause();
         emit OpenBorrowPoolCancelled();
     }
 
     function terminateOpenBorrowPool() external onlyOwner {
         // TODO: Add delay before the transfer to admin can happen
-        uint256 _collateralShares =
-            poolVars.baseLiquidityShares.add(poolVars.extraLiquidityShares);
-        ISavingsAccount _savingsAccount = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
-        _savingsAccountTransfer(
-            _savingsAccount, 
-            address(this), 
-            IPoolFactory(PoolFactory).owner(),
-            _collateralShares,
-            poolConstants.collateralAsset, 
-            poolConstants.poolSavingsStrategy
-        );
+        _withdrawAllCollateral();
         poolToken.pause();
         poolVars.loanStatus = LoanStatus.TERMINATED;
         IExtension(IPoolFactory(PoolFactory).extension()).closePoolExtension();
@@ -631,7 +624,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         poolVars.loanStatus = LoanStatus.CLOSED;
 
         IExtension(IPoolFactory(PoolFactory).extension()).closePoolExtension();
-        withdrawAllCollateral();
+        _withdrawAllCollateral();
         poolToken.pause();
         
         emit OpenBorrowPoolClosed();
@@ -846,7 +839,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             _recieveLiquidityShare,
             _collateralAsset,
             _poolSavingsStrategy,
-            _collateralLiquidityShare
+            _collateralTokens
         );
 
         delete poolVars.extraLiquidityShares;
@@ -859,7 +852,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         bool _recieveLiquidityShare,
         address _asset,
         address _poolSavingsStrategy,
-        uint256 _amountInShares
+        uint256 _amountInTokens
     ) internal returns (uint256) {
         ISavingsAccount _savingsAccount =
             ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
@@ -867,7 +860,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             _savingsAccount,
             address(this),
             msg.sender,
-            _amountInShares,
+            _amountInTokens,
             _asset, 
             _poolSavingsStrategy,
             _recieveLiquidityShare,
@@ -922,44 +915,25 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         );
     }
 
-    function _liquidateLender(bool _fromSavingsAccount, address _lender, uint256 _lenderCollateralLPShare) internal {
-        uint256 _lenderCollateralShare = _lenderCollateralLPShare;
-        address _collateralAsset = poolConstants.collateralAsset;
+    function _liquidateLender(bool _fromSavingsAccount, address _lender, uint256 _lenderCollateralShare) internal {
         address _poolSavingsStrategy = poolConstants.poolSavingsStrategy;
-
-        if(_poolSavingsStrategy != address(0)) {
-            _lenderCollateralShare = IYield(_poolSavingsStrategy).getTokensForShares(
-                _lenderCollateralLPShare,
-                _collateralAsset
-            );
-        }
 
         address _poolFactory = PoolFactory;
         uint256 _lenderLiquidationTokens =
             correspondingBorrowTokens(_lenderCollateralShare, _poolFactory);
 
         address _borrowAsset = poolConstants.borrowAsset;
-        uint256 _sharesReceived = _deposit(
+        _deposit(
             _fromSavingsAccount,
             false,
             _borrowAsset,
             _lenderLiquidationTokens,
             _poolSavingsStrategy,
             msg.sender,
-            address(this)
+            _lender
         );
         
         _withdrawRepayment(_lender, true);
-
-        ISavingsAccount _savingsAccount = ISavingsAccount(IPoolFactory(_poolFactory).savingsAccount());
-        _savingsAccountTransfer(
-            _savingsAccount, 
-            address(this), 
-            _lender,
-            _sharesReceived,
-            _borrowAsset, 
-            _poolSavingsStrategy
-        );
     }
 
     function liquidateLender(
@@ -974,7 +948,15 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         address _poolSavingsStrategy = poolConstants.poolSavingsStrategy;
         (uint256 _lenderCollateralLPShare, uint256 _lenderBalance) = updateLenderSharesDuringLiquidation(_lender);
 
-        _liquidateLender(_fromSavingsAccount, _lender, _lenderCollateralLPShare);
+        uint256 _lenderCollateralShare = _lenderCollateralLPShare;
+        if(_poolSavingsStrategy != address(0)) {
+            _lenderCollateralShare = IYield(_poolSavingsStrategy).getTokensForShares(
+                _lenderCollateralLPShare,
+                poolConstants.collateralAsset
+            );
+        }
+
+        _liquidateLender(_fromSavingsAccount, _lender, _lenderCollateralShare);
 
         uint256 _amountReceived =
             _withdraw(
@@ -982,7 +964,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
                 _recieveLiquidityShare,
                 poolConstants.collateralAsset,
                 _poolSavingsStrategy,
-                _lenderCollateralLPShare
+                _lenderCollateralShare
             );
         poolToken.burn(_lender, _lenderBalance);
         delete lenders[_lender];
