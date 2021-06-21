@@ -51,6 +51,7 @@ describe("Pool Collection stage", async () => {
     let admin: SignerWithAddress;
     let borrower: SignerWithAddress;
     let lender: SignerWithAddress;
+    let lender1: SignerWithAddress;
 
     let extenstion: Extension;
     let poolImpl: Pool;
@@ -73,7 +74,7 @@ describe("Pool Collection stage", async () => {
     let WhaleAccount: any;
 
     before(async () => {
-        [proxyAdmin, admin, mockCreditLines, borrower, lender] = await ethers.getSigners();
+        [proxyAdmin, admin, mockCreditLines, borrower, lender, lender1] = await ethers.getSigners();
         const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
         savingsAccount = await deployHelper.core.deploySavingsAccount();
         strategyRegistry = await deployHelper.core.deployStrategyRegistry();
@@ -337,14 +338,14 @@ describe("Pool Collection stage", async () => {
             assert(poolTokenTotalSupplyAfter.toString() == poolTokenTotalSupplyBefore.add(amount).toString(), `Pool token supply not correct. amount: ${amount} Expected: ${poolTokenTotalSupplyBefore.add(amount)} Actual: ${poolTokenTotalSupplyBefore}`);
         });
 
-        it("Lend Tokens from savings account by depositing with same amount in savingsAccount", async () => {
+        it("Lend Tokens from savings account by depositing with same account in savingsAccount", async () => {
             const amount = OperationalAmounts._amountLent.div(10);
             await borrowToken.connect(admin).transfer(
                 lender.address,
                 amount
             );
-            await borrowToken.connect(lender).approve(savingsAccount.address, amount);
-            await savingsAccount.connect(lender).depositTo(amount, borrowToken.address, zeroAddress, lender.address);
+            await borrowToken.connect(lender).approve(aaveYield.address, amount);
+            await savingsAccount.connect(lender).depositTo(amount, borrowToken.address, aaveYield.address, lender.address);
 
             const poolTokenBalanceBefore = await poolToken.balanceOf(lender.address);
             const poolTokenTotalSupplyBefore = await poolToken.totalSupply();
@@ -352,6 +353,35 @@ describe("Pool Collection stage", async () => {
 
             const lendExpect = expect(
                 pool.connect(lender).lend(lender.address, amount, true)
+            );
+
+            await lendExpect.to.emit(pool, "LiquiditySupplied")
+            .withArgs(amount, lender.address);
+
+            await lendExpect.to.emit(poolToken, "Transfer")
+            .withArgs(zeroAddress, lender.address, amount);
+
+            const poolTokenBalanceAfter = await poolToken.balanceOf(lender.address);
+            const poolTokenTotalSupplyAfter = await poolToken.totalSupply();
+            assert(poolTokenBalanceAfter.toString() == poolTokenBalanceBefore.add(amount).toString(), `Pool tokens not minted correctly. amount: ${amount} Expected: ${poolTokenBalanceBefore.add(amount)} Actual: ${poolTokenBalanceAfter}`);
+            assert(poolTokenTotalSupplyAfter.toString() == poolTokenTotalSupplyBefore.add(amount).toString(), `Pool token supply not correct. amount: ${amount} Expected: ${poolTokenTotalSupplyBefore.add(amount)} Actual: ${poolTokenTotalSupplyBefore}`);
+        });
+
+        it("Lend Tokens from savings account by depositing and lending with different account in savingsAccount", async () => {
+            const amount = OperationalAmounts._amountLent.div(10);
+            await borrowToken.connect(admin).transfer(
+                lender1.address,
+                amount
+            );
+            await borrowToken.connect(lender1).approve(aaveYield.address, amount);
+            await savingsAccount.connect(lender1).depositTo(amount, borrowToken.address, aaveYield.address, lender1.address);
+
+            const poolTokenBalanceBefore = await poolToken.balanceOf(lender.address);
+            const poolTokenTotalSupplyBefore = await poolToken.totalSupply();
+            await savingsAccount.connect(lender1).approve(borrowToken.address, pool.address, amount);
+
+            const lendExpect = expect(
+                pool.connect(lender1).lend(lender.address, amount, true)
             );
 
             await lendExpect.to.emit(pool, "LiquiditySupplied")

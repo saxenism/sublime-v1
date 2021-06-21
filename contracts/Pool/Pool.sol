@@ -489,9 +489,14 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         IExtension(_poolFactory.extension()).initializePoolExtension(
             _repaymentInterval
         );
-        IERC20(poolConstants.borrowAsset).transfer(
-            poolConstants.borrower,
-            _tokensLent
+        _withdrawFromSavingsAccount(
+            ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()), 
+            address(this), 
+            msg.sender, 
+            _tokensLent, 
+            poolConstants.borrowAsset, 
+            address(0), 
+            false
         );
 
         delete poolConstants.loanWithdrawalDeadline;
@@ -546,10 +551,10 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         address _borrowToken = poolConstants.borrowAsset;
         _deposit(
             _fromSavingsAccount,
-            false,
+            true,
             _borrowToken,
             _amount,
-            address(0),
+            poolConstants.poolSavingsStrategy,
             msg.sender,
             address(this)
         );
