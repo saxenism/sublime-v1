@@ -78,8 +78,14 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
     event PartialCreditLineRepaid(bytes32 creditLineHash, uint256 repayAmount);
     event CreditLineClosed(bytes32 creditLineHash);
 
-    function initialize(address _defaultStrategy) public initializer {
+    function initialize(
+        address _defaultStrategy,
+        address _poolFactory,
+        address _strategyRegistry
+    ) public initializer {
         __Ownable_init();
+        PoolFactory = _poolFactory;
+        strategyRegistry = _strategyRegistry;
         defaultStrategy = _defaultStrategy;
     }
 
@@ -189,20 +195,17 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
                 uint256 _tokenInStrategy = _liquidityShares;
                 if (_strategyList[_index] != address(0)) {
                     _tokenInStrategy = IYield(_strategyList[_index])
-                        .getTokensForShares(_liquidityShares, _asset); //TODO might not pass since yield is included in tokenInStrategy
+                        .getTokensForShares(_liquidityShares, _asset);
                 }
 
                 if (_activeAmount.add(_tokenInStrategy) >= _amount) {
-                    uint256 _sharesToTransfer =
-                        (_amount.sub(_activeAmount)).mul(_liquidityShares).div(
-                            _tokenInStrategy
-                        );
+                    uint256 _tokensToTransfer = (_amount.sub(_activeAmount));
                     _savingsAccount.transferFrom(
                         _asset,
                         _sender,
                         _recipient,
                         _strategyList[_index],
-                        _sharesToTransfer
+                        _tokensToTransfer
                     );
                     return;
                 } else {
@@ -212,7 +215,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
                         _sender,
                         _recipient,
                         _strategyList[_index],
-                        _liquidityShares
+                        _tokenInStrategy
                     );
                 }
             }
@@ -459,15 +462,13 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
                     tokenInStrategy = IYield(_strategyList[_index])
                         .getTokensForShares(_liquidityShares, _asset); //TODO might not pass since yield is included in tokenInStrategy
                 }
-                uint256 _sharesToTransfer = _liquidityShares;
+                uint256 _tokensToTransfer = tokenInStrategy;
                 if (_activeAmount.add(_tokenInStrategy) >= _amountInTokens) {
-                    _sharesToTransfer = (_amountInTokens.sub(_activeAmount))
-                        .mul(_liquidityShares)
-                        .div(_tokenInStrategy);
+                    _tokensToTransfer = (_amountInTokens.sub(_activeAmount));
                     _savingsAccount.withdrawFrom(
                         _lender,
                         address(this),
-                        _sharesToTransfer,
+                        _tokensToTransfer,
                         _asset,
                         _strategyList[_index],
                         false
@@ -475,18 +476,17 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
                     //_savingsAccount.transferFrom(_asset, _sender, _recipient, _strategyList[_index], _sharesToTransfer);
                     // collateralShareInStrategy[_creditLineHash][_strategyList[_index]] = collateralShareInStrategy[_creditLineHash][_strategyList[_index]]
                     //                                                                     .add(_sharesToTransfer);
-                    return;
                 } else {
                     _activeAmount = _activeAmount.add(_tokenInStrategy);
+                    _savingsAccount.withdrawFrom(
+                        _lender,
+                        address(this),
+                        _tokensToTransfer,
+                        _asset,
+                        _strategyList[_index],
+                        false
+                    );
                 }
-                _savingsAccount.withdrawFrom(
-                    _lender,
-                    address(this),
-                    _liquidityShares,
-                    _asset,
-                    _strategyList[_index],
-                    false
-                );
                 //_savingsAccount.transferFrom(_asset, _sender, _recipient, _strategyList[_index], _liquidityShares);
                 // collateralShareInStrategy[_creditLineHash][_strategyList[_index]] = collateralShareInStrategy[_creditLineHash][_strategyList[_index]]
                 //                                                                     .add(_liquidityShares);
