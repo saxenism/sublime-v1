@@ -266,7 +266,7 @@ describe("Pool Collection stage", async () => {
 
             await collateralToken
                 .connect(admin)
-                .transfer(borrower.address, _collateralAmount.mul(2)); // Transfer quantity to borrower
+                .transfer(borrower.address, _collateralAmount); // Transfer quantity to borrower
 
             await collateralToken.approve(
                 generatedPoolAddress,
@@ -303,14 +303,11 @@ describe("Pool Collection stage", async () => {
             expect(await newlyCreatedToken.decimals()).eq(18);
 
             pool = await deployHelper.pool.getPool(generatedPoolAddress);
-            await pool
-                .connect(borrower)
-                .depositCollateral(_collateralAmount, false);
         });
 
         it("Lend Tokens directly", async () => {
             const amount = OperationalAmounts._amountLent.div(10);
-            await borrowToken.connect(admin.address).transfer(
+            await borrowToken.connect(admin).transfer(
                 lender.address,
                 amount
             );
@@ -323,6 +320,10 @@ describe("Pool Collection stage", async () => {
                 pool.connect(lender).lend(lender.address, amount, false)
             ).to.emit(pool, "LiquiditySupplied")
             .withArgs(amount, lender.address);
+        });
+
+        it("Lend Tokens from savings account", async () => {
+
         });
     });
 });
