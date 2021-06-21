@@ -653,7 +653,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
 
     function terminateOpenBorrowPool() external onlyOwner {
         // TODO: Add delay before the transfer to admin can happen
-        _withdrawAllCollateral();
+        _withdrawAllCollateral(0);
         poolToken.pause();
         poolVars.loanStatus = LoanStatus.TERMINATED;
         IExtension(IPoolFactory(PoolFactory).extension()).closePoolExtension();
