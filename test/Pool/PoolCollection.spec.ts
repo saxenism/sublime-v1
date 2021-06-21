@@ -1,7 +1,7 @@
 import { ethers, network } from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
-import { expect } from "chai";
+import { assert, expect } from "chai";
 
 import {
   aaveYieldParams,
@@ -225,6 +225,7 @@ describe("Pool Collection stage", async () => {
 
     describe("Pool that borrows ERC20 with ERC20 as collateral", async () => {
         let pool: Pool;
+        let poolToken: PoolToken;
         let collateralToken: ERC20;
         let borrowToken: ERC20;
         beforeEach(async () => {
@@ -237,13 +238,15 @@ describe("Pool Collection stage", async () => {
                 Contracts.DAI
             );
 
+            const salt = sha256(Buffer.from("borrower"+Math.random()*1000000));
+
             let generatedPoolAddress: Address = await getPoolAddress(
                 borrower.address,
                 Contracts.DAI,
                 Contracts.LINK,
                 aaveYield.address,
                 poolFactory.address,
-                sha256(Buffer.from("borrower")),
+                salt,
                 poolImpl.address,
                 false
             );
@@ -268,7 +271,7 @@ describe("Pool Collection stage", async () => {
                 .connect(admin)
                 .transfer(borrower.address, _collateralAmount); // Transfer quantity to borrower
 
-            await collateralToken.approve(
+            await collateralToken.connect(borrower).approve(
                 generatedPoolAddress,
                 _collateralAmount
             );
@@ -288,25 +291,27 @@ describe("Pool Collection stage", async () => {
                         aaveYield.address,
                         _collateralAmount,
                         false,
-                        sha256(Buffer.from("borrower"))
+                        salt
                     )
             )
             .to.emit(poolFactory, "PoolCreated")
             .withArgs(generatedPoolAddress, borrower.address, newPoolToken);
 
-            let newlyCreatedToken: PoolToken = await deployHelper.pool.getPoolToken(
+            poolToken = await deployHelper.pool.getPoolToken(
                 newPoolToken
             );
 
-            expect(await newlyCreatedToken.name()).eq("Open Borrow Pool Tokens");
-            expect(await newlyCreatedToken.symbol()).eq("OBPT");
-            expect(await newlyCreatedToken.decimals()).eq(18);
+            expect(await poolToken.name()).eq("Open Borrow Pool Tokens");
+            expect(await poolToken.symbol()).eq("OBPT");
+            expect(await poolToken.decimals()).eq(18);
 
             pool = await deployHelper.pool.getPool(generatedPoolAddress);
         });
 
         it("Lend Tokens directly", async () => {
             const amount = OperationalAmounts._amountLent.div(10);
+            const poolTokenBalanceBefore = await poolToken.balanceOf(lender.address);
+            const poolTokenTotalSupplyBefore = await poolToken.totalSupply();
             await borrowToken.connect(admin).transfer(
                 lender.address,
                 amount
@@ -315,15 +320,50 @@ describe("Pool Collection stage", async () => {
                 pool.address,
                 amount
             );
-
-            await expect(
+            
+            const lendExpect = expect(
                 pool.connect(lender).lend(lender.address, amount, false)
-            ).to.emit(pool, "LiquiditySupplied")
+            );
+
+            await lendExpect.to.emit(pool, "LiquiditySupplied")
             .withArgs(amount, lender.address);
+
+            await lendExpect.to.emit(poolToken, "Transfer")
+            .withArgs(zeroAddress, lender.address, amount);
+
+            const poolTokenBalanceAfter = await poolToken.balanceOf(lender.address);
+            const poolTokenTotalSupplyAfter = await poolToken.totalSupply();
+            assert(poolTokenBalanceAfter.toString() == poolTokenBalanceBefore.add(amount).toString(), `Pool tokens not minted correctly. amount: ${amount} Expected: ${poolTokenBalanceBefore.add(amount)} Actual: ${poolTokenBalanceAfter}`);
+            assert(poolTokenTotalSupplyAfter.toString() == poolTokenTotalSupplyBefore.add(amount).toString(), `Pool token supply not correct. amount: ${amount} Expected: ${poolTokenTotalSupplyBefore.add(amount)} Actual: ${poolTokenTotalSupplyBefore}`);
         });
 
-        it("Lend Tokens from savings account", async () => {
+        it("Lend Tokens from savings account by depositing with same amount in savingsAccount", async () => {
+            const amount = OperationalAmounts._amountLent.div(10);
+            await borrowToken.connect(admin).transfer(
+                lender.address,
+                amount
+            );
+            await borrowToken.connect(lender).approve(savingsAccount.address, amount);
+            await savingsAccount.connect(lender).depositTo(amount, borrowToken.address, zeroAddress, lender.address);
 
+            const poolTokenBalanceBefore = await poolToken.balanceOf(lender.address);
+            const poolTokenTotalSupplyBefore = await poolToken.totalSupply();
+            await savingsAccount.connect(lender).approve(borrowToken.address, pool.address, amount);
+
+            const lendExpect = expect(
+                pool.connect(lender).lend(lender.address, amount, true)
+            );
+
+            await lendExpect.to.emit(pool, "LiquiditySupplied")
+            .withArgs(amount, lender.address);
+
+            await lendExpect.to.emit(poolToken, "Transfer")
+            .withArgs(zeroAddress, lender.address, amount);
+
+            const poolTokenBalanceAfter = await poolToken.balanceOf(lender.address);
+            const poolTokenTotalSupplyAfter = await poolToken.totalSupply();
+            assert(poolTokenBalanceAfter.toString() == poolTokenBalanceBefore.add(amount).toString(), `Pool tokens not minted correctly. amount: ${amount} Expected: ${poolTokenBalanceBefore.add(amount)} Actual: ${poolTokenBalanceAfter}`);
+            assert(poolTokenTotalSupplyAfter.toString() == poolTokenTotalSupplyBefore.add(amount).toString(), `Pool token supply not correct. amount: ${amount} Expected: ${poolTokenTotalSupplyBefore.add(amount)} Actual: ${poolTokenTotalSupplyBefore}`);
         });
     });
 });

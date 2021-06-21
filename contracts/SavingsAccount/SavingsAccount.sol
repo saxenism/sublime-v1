@@ -300,10 +300,6 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         bool withdrawShares
     ) internal returns (address token, uint256 amountReceived) {
         if (strategy == address(0)) {
-            require(
-                !withdrawShares,
-                "Cannot withdraw shared when No strategy is used"
-            );
             amountReceived = amount;
             _transfer(asset, withdrawTo, amountReceived);
             token = asset;
