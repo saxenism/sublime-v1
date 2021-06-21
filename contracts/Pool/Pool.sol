@@ -559,8 +559,6 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
 
         //gets amount through liquidity shares
         uint256 _balance = poolToken.balanceOf(msg.sender);
-        poolToken.burn(msg.sender, _balance);
-
         if (_loanStatus == LoanStatus.DEFAULTED) {
             uint256 _totalAsset;
             if (poolConstants.borrowAsset != address(0)) {
@@ -590,6 +588,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         _tokenTransfer(poolConstants.borrowAsset, msg.sender, _balance);
 
         // TODO: Something wrong in the below event. Please have a look
+        poolToken.burn(msg.sender, _balance);
         emit LiquidityWithdrawn(_balance, msg.sender);
     }
 
@@ -642,13 +641,15 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             );
 
         uint256 _interestAccruedThisPeriod =
-            ((block.timestamp).sub(poolConstants.loanStartTime).sub(
-                _repaymentPeriodCovered.mul(
-                    poolConstants.repaymentInterval
-                ), "Nothing to repay"
-            )).mul(
-                _interestPerPeriod
-            );
+            (
+                (block.timestamp).sub(poolConstants.loanStartTime).sub(
+                    _repaymentPeriodCovered.mul(
+                        poolConstants.repaymentInterval
+                    ),
+                    "Nothing to repay"
+                )
+            )
+                .mul(_interestPerPeriod);
 
         uint256 _totalInterest =
             (_interestAccruedThisPeriod.add(_repaymentOverdue))

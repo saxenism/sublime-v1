@@ -42,7 +42,7 @@ import { Repayments } from "../../typechain/Repayments";
 import { ContractTransaction } from "@ethersproject/contracts";
 import { getContractAddress } from "@ethersproject/address";
 
-describe("Pool", async () => {
+describe.only("Pool", async () => {
   let savingsAccount: SavingsAccount;
   let strategyRegistry: StrategyRegistry;
 
@@ -254,14 +254,6 @@ describe("Pool", async () => {
           nonce,
         });
 
-        // console.log({
-        //   generatedPoolAddress,
-        //   msgSender: borrower.address,
-        //   newPoolToken,
-        //   savingsAccountFromPoolFactory: await poolFactory.savingsAccount(),
-        //   savingsAccount: savingsAccount.address
-        // });
-
         let {
           _poolSize,
           _minborrowAmount,
@@ -305,6 +297,7 @@ describe("Pool", async () => {
         let newlyCreatedToken: PoolToken = await deployHelper.pool.getPoolToken(
           newPoolToken
         );
+        poolTokenImpl = newlyCreatedToken;
 
         expect(await newlyCreatedToken.name()).eq("Open Borrow Pool Tokens");
         expect(await newlyCreatedToken.symbol()).eq("OBPT");
@@ -336,7 +329,8 @@ describe("Pool", async () => {
             .lend(lender.address, OperationalAmounts._amountLent, false)
         )
           .to.emit(pool, "LiquiditySupplied")
-          .withArgs(OperationalAmounts._amountLent, lender.address);
+          .withArgs(OperationalAmounts._amountLent, lender.address)
+          .to.emit(poolTokenImpl, "Transfer");
       });
 
       it("Lender should not be able to withdraw the tokens lent (collection stage)", async () => {
@@ -344,6 +338,11 @@ describe("Pool", async () => {
         await expect(
           pool.connect(lender).withdrawLiquidity()
         ).to.be.revertedWith("24");
+      });
+
+      it("Cancel open borrow loan", async () => {
+        await pool.connect(borrower).cancelOpenBorrowPool();
+        await pool.connect(lender).withdrawLiquidity();
       });
     });
   });
