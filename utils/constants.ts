@@ -54,6 +54,7 @@ export const testPoolFactoryParams = {
   _liquidatorRewardFraction: BigNumber.from(15),
   _poolInitFuncSelector: "0x272edaf2",
   _poolTokenInitFuncSelector: "0x077f224a",
+  _poolCancelPenalityFraction: BigNumber.from(10000000)
 };
 
 // Pool Factory inputs tro be manually added
