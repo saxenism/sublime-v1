@@ -471,18 +471,17 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
                     //_savingsAccount.transferFrom(_asset, _sender, _recipient, _strategyList[_index], _sharesToTransfer);
                     // collateralShareInStrategy[_creditLineHash][_strategyList[_index]] = collateralShareInStrategy[_creditLineHash][_strategyList[_index]]
                     //                                                                     .add(_sharesToTransfer);
-                    return;
                 } else {
                     _activeAmount = _activeAmount.add(_tokenInStrategy);
+                    _savingsAccount.withdrawFrom(
+                        _lender,
+                        address(this),
+                        _tokensToTransfer,
+                        _asset,
+                        _strategyList[_index],
+                        false
+                    );
                 }
-                _savingsAccount.withdrawFrom(
-                    _lender,
-                    address(this),
-                    _tokensToTransfer,
-                    _asset,
-                    _strategyList[_index],
-                    false
-                );
                 //_savingsAccount.transferFrom(_asset, _sender, _recipient, _strategyList[_index], _liquidityShares);
                 // collateralShareInStrategy[_creditLineHash][_strategyList[_index]] = collateralShareInStrategy[_creditLineHash][_strategyList[_index]]
                 //                                                                     .add(_liquidityShares);
