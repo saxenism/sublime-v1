@@ -31,7 +31,11 @@
             "marginCallDuration": "",
             "collateralVolatilityThreshold": "",
             "gracePeriodPenaltyFraction": "",
-            "liquidatorRewardFraction": ""
+            "liquidatorRewardFraction": "",
+            "poolCancelPenalityFraction": 0
+        },
+        "creditLines": {
+            "defaultStrategy": "0x0000000000000000000000000000000000000000"
         }
     },
     "kovan": {
@@ -67,7 +71,8 @@
             "marginCallDuration": 120,
             "collateralVolatilityThreshold": 10000000,
             "gracePeriodPenaltyFraction": 5000000,
-            "liquidatorRewardFraction": 5000000
+            "liquidatorRewardFraction": 5000000,
+            "poolCancelPenalityFraction": 10000000
         },
         "OpenBorrowPool": {
             "poolSize": "40000000000000000",
@@ -84,6 +89,9 @@
             "salt": "borrower"
         },
         "creditLines": {
+            "defaultStrategy": "0x0000000000000000000000000000000000000000"
+        },
+        "creditLinesDeploy": {
             "borrowLimit": "10000000000000000000",
             "liquidationThreshold": "10",
             "borrowRate": "6000000000000000000",
