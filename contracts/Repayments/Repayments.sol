@@ -10,6 +10,8 @@ import "../interfaces/IPool.sol";
 import "../interfaces/IRepayment.sol";
 import "../interfaces/ISavingsAccount.sol";
 
+import "hardhat/console.sol";
+
 contract Repayments is RepaymentStorage, IRepayment {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
@@ -54,18 +56,19 @@ contract Repayments is RepaymentStorage, IRepayment {
         uint256 loanStartTime,
         address lentAsset
     ) external override onlyValidPool {
-        repaymentDetails[msg.sender].gracePenaltyRate = gracePenaltyRate;
-        repaymentDetails[msg.sender].gracePeriodFraction = gracePeriodFraction;
-        repaymentDetails[msg.sender]
-            .numberOfTotalRepayments = numberOfTotalRepayments;
-        repaymentDetails[msg.sender].loanDuration = repaymentInterval.mul(
-            numberOfTotalRepayments
-        );
-        repaymentDetails[msg.sender].repaymentInterval = repaymentInterval;
-        repaymentDetails[msg.sender].borrowRate = borrowRate;
-        repaymentDetails[msg.sender].loanStartTime = loanStartTime;
-        repaymentDetails[msg.sender].repayAsset = lentAsset;
-        repaymentDetails[msg.sender].savingsAccount = savingsAccount;
+        console.log("Initializing repayment");
+        // repaymentDetails[msg.sender].gracePenaltyRate = gracePenaltyRate;
+        // repaymentDetails[msg.sender].gracePeriodFraction = gracePeriodFraction;
+        // repaymentDetails[msg.sender]
+        //     .numberOfTotalRepayments = numberOfTotalRepayments;
+        // repaymentDetails[msg.sender].loanDuration = repaymentInterval.mul(
+        //     numberOfTotalRepayments
+        // );
+        // repaymentDetails[msg.sender].repaymentInterval = repaymentInterval;
+        // repaymentDetails[msg.sender].borrowRate = borrowRate;
+        // repaymentDetails[msg.sender].loanStartTime = loanStartTime;
+        // repaymentDetails[msg.sender].repayAsset = lentAsset;
+        // repaymentDetails[msg.sender].savingsAccount = savingsAccount;
     }
 
     function calculateRepayAmount(address poolID)

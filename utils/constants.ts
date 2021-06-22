@@ -8,7 +8,7 @@ export const zeroAddress: Address =
   "0x0000000000000000000000000000000000000000";
 
 export const aaveYieldParams = {
-  _wethGateway: "0xDcD33426BA191383f1c9B431A342498fdac73488",
+  _wethGateway: "0xcc9a0B7c43DC2a5F023Bb9b738E45B0Ef6B06E04",
   _protocolDataProvider: "0x057835Ad21a177dbdd3090bB1CAE03EaCF78Fc6d",
   _lendingPoolAddressesProvider: "0xb53c1a33016b2dc2ff3653530bff1848a515c8c5",
 };
@@ -28,7 +28,7 @@ const collateralRatio = BigNumber.from(275);
 export const createPoolParams = {
   _poolSize: BigNumber.from(10000000),
   _borrowAmountRequested: depositValueToTest,
-  _minborrowAmount: BigNumber.from(1),
+  _minborrowAmount: BigNumber.from(6000000),
   _idealCollateralRatio: collateralRatio,
   _collateralRatio: collateralRatio,
   _borrowRate: BigNumber.from(5),
@@ -55,6 +55,11 @@ export const testPoolFactoryParams = {
   _poolInitFuncSelector: "0x272edaf2",
   _poolTokenInitFuncSelector: "0x077f224a",
   _poolCancelPenalityFraction: BigNumber.from(10000000)
+};
+
+
+export const repaymentParams = {
+  "votingPassRatio": 50000000
 };
 
 // Pool Factory inputs tro be manually added

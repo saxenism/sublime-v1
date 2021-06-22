@@ -9,6 +9,8 @@ import "../interfaces/IYield.sol";
 import "../interfaces/Invest/ICEther.sol";
 import "../interfaces/Invest/ICToken.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @title Yield contract
  * @notice Implements the functions to lock/unlock tokens into available exchanges
@@ -108,6 +110,7 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable {
             sharesReceived = _depositETH(investedTo, amount);
         } else {
             IERC20(asset).safeTransferFrom(user, address(this), amount);
+            console.log("tokens transferred to yeild", amount);
             sharesReceived = _depositERC20(asset, investedTo, amount);
         }
         emit LockedTokens(user, investedTo, sharesReceived);
@@ -203,12 +206,14 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable {
         address cToken,
         uint256 amount
     ) internal returns (uint256 sharesReceived) {
+        console.log("depositing ERRC20 to compound", cToken, address(this));
         uint256 initialCTokenBalance = IERC20(cToken).balanceOf(address(this));
-
+        console.log("to approve compound for locking");
         //mint cToken
         IERC20(asset).approve(cToken, amount);
+        console.log("approved to compound for locking");
         require(ICToken(cToken).mint(amount) == 0, "Error in minting tokens");
-
+        console.log("cTOken minnted");
         sharesReceived = IERC20(cToken).balanceOf(address(this)).sub(
             initialCTokenBalance
         );

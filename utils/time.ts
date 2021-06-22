@@ -7,13 +7,20 @@ export async function timeTravel(network: Network, time: number) {
     });
 }
 
-export async function blockTravel(network: Network, blocks: number) {
+export async function blocksTravel(network: Network, blocks: number) {
     for (let index = 0; index < blocks; index++) {
         await network.provider.request({
             method: "evm_mine",
             params: [],
         });
     }
+}
+
+export async function blockTravel(network: Network, time: number) {
+    await network.provider.request({
+        method: "evm_mine",
+        params: [time],
+    });
 }
 
 export async function incrementChain(

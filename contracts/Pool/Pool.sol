@@ -151,6 +151,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             _collateralAmount,
             _transferFromSavingsAccount
         );
+        console.log("deposit complete");
 
         poolConstants.borrower = _borrower;
         poolConstants.minborrowAmount = _minborrowAmount;
@@ -163,6 +164,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             .timestamp
             .add(_collectionPeriod)
             .add(_loanWithdrawalDuration);
+        console.log("Init complete");
     }
 
     function setPoolToken(address _poolToken) external override {
@@ -279,18 +281,25 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         address _strategy
     ) internal returns(uint256 _sharesReceived) {
         _pullTokens(_asset, _amount, _from, _to);
+        console.log(_asset, _strategy, _amount);
         uint256 _ethValue;
         if(_asset == address(0)) {
             _ethValue = _amount;   
         } else {
-            IERC20(_asset).safeApprove(_strategy, _amount);
+            address _approveTo = _strategy;
+            if(_strategy == address(0)) {
+                _approveTo = address(_savingsAccount);
+            }
+            IERC20(_asset).safeApprove(_approveTo, _amount);
         }
+        console.log("Approve done", _strategy, _amount);
         _sharesReceived = _savingsAccount.depositTo{value: _ethValue}(
             _amount,
             _asset,
             _strategy,
             _to
         );
+        console.log("deposit done");
     }
 
     function _savingsAccountTransfer(
@@ -350,6 +359,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     }
 
     function _pullTokens(address _asset, uint256 _amount, address _from, address _to) internal returns(uint256){
+        console.log("Tokens pullled");
         if(_asset == address(0)) {
             require(msg.value >= _amount, "");
             if(_to != address(this)) {
@@ -360,12 +370,14 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             }
             return _amount;
         }
-
+        console.log("transferring tokens", _asset, _amount, IERC20(_asset).allowance(_from, _to));
+        console.log(_from, _to);
         IERC20(_asset).transferFrom(
             _from,
             _to,
             _amount
         );
+        console.log("transfer complete");
         return _amount; 
     }
 
@@ -399,6 +411,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
                 _toSavingsAccount,
                 _poolSavingsStrategy
             );
+            console.log("Direct deposit complete", _sharesReceived);
         }
     }
 
@@ -453,6 +466,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         OnlyBorrower(msg.sender)
         nonReentrant
     {
+        console.log("Withdrawing borrowed amount");
         LoanStatus _poolStatus = poolVars.loanStatus;
         uint256 _tokensLent = poolToken.totalSupply();
         require(
@@ -467,7 +481,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
 
         poolVars.loanStatus = LoanStatus.ACTIVE;
         uint256 _currentCollateralRatio = getCurrentCollateralRatio();
-
+        console.log(_currentCollateralRatio, poolConstants.idealCollateralRatio);
         IPoolFactory _poolFactory = IPoolFactory(PoolFactory);
         require(
             _currentCollateralRatio >=
@@ -479,6 +493,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
 
         uint256 _noOfRepaymentIntervals = poolConstants.noOfRepaymentIntervals;
         uint256 _repaymentInterval = poolConstants.repaymentInterval;
+        console.log("Initializing repayment", _poolFactory.repaymentImpl());
         IRepayment(_poolFactory.repaymentImpl()).initializeRepayment(
             _noOfRepaymentIntervals,
             _repaymentInterval,
@@ -486,9 +501,11 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             poolConstants.loanStartTime,
             poolConstants.borrowAsset
         );
+        console.log("Initializing extension", _poolFactory.extension());
         IExtension(_poolFactory.extension()).initializePoolExtension(
             _repaymentInterval
         );
+        console.log("withdrawing borrowed amount");
         _withdrawFromSavingsAccount(
             ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()), 
             address(this), 
@@ -549,16 +566,18 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         }
 
         address _borrowToken = poolConstants.borrowAsset;
+        console.log("lend", _amount, _amountLent, _lentAmount);
         _deposit(
             _fromSavingsAccount,
             true,
             _borrowToken,
             _amount,
-            poolConstants.poolSavingsStrategy,
+            address(0),
             msg.sender,
             address(this)
         );
         poolToken.mint(_lender, _amount);
+        console.log(poolToken.balanceOf(_lender));
         emit LiquiditySupplied(_amount, _lender);
     }
 
