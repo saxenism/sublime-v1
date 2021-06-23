@@ -50,6 +50,8 @@ const config: HardhatUserConfig = {
                 blockNumber: 12400000,
             },
             accounts: getHardhatPrivateKeys(),
+            gasPrice: 0,
+            blockGasLimit: 12000000,
             live: true,
             saveDeployments: false,
             tags: ['hardhat'],

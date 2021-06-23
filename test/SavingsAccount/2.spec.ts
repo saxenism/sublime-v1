@@ -24,7 +24,7 @@ import { ERC20 } from '../../typechain/ERC20';
 
 import { Contracts } from '../../existingContracts/compound.json';
 
-describe.only('Test Savings Account (with ERC20 Token)', async () => {
+describe('Test Savings Account (with ERC20 Token)', async () => {
     let savingsAccount: SavingsAccount;
     let strategyRegistry: StrategyRegistry;
 
@@ -264,7 +264,7 @@ describe.only('Test Savings Account (with ERC20 Token)', async () => {
         });
     });
 
-    describe.only('# When Aave STRATEGY is preferred', async () => {
+    describe('# When Aave STRATEGY is preferred', async () => {
         let randomAccount: SignerWithAddress;
         let userAccount: SignerWithAddress;
         let aaveYield: AaveYield;
@@ -492,14 +492,14 @@ describe.only('Test Savings Account (with ERC20 Token)', async () => {
                 Contracts.LINK,
                 aaveYield.address
             );
-            console.log({ balanceToWithdraw: balanceToWithdraw.toString() });
+            // console.log({ balanceToWithdraw: balanceToWithdraw.toString() });
 
             await expect(
                 savingsAccount
                     .connect(randomAccount)
                     .withdraw(
                         randomAccount.address,
-                        balanceToWithdraw.mul(10000000000000),
+                        balanceToWithdraw,
                         Contracts.LINK,
                         aaveYield.address,
                         false
@@ -558,7 +558,7 @@ describe.only('Test Savings Account (with ERC20 Token)', async () => {
                     .connect(randomAccount)
                     .withdraw(
                         randomAccount.address,
-                        balanceToWithdraw.mul(10000000000000),
+                        balanceToWithdraw,
                         Contracts.LINK,
                         aaveYield.address,
                         true,

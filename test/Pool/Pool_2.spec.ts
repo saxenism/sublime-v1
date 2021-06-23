@@ -42,7 +42,7 @@ import { Repayments } from '../../typechain/Repayments';
 import { ContractTransaction } from '@ethersproject/contracts';
 import { getContractAddress } from '@ethersproject/address';
 
-describe('Pool', async () => {
+describe('Pool_2 specs', async () => {
     let savingsAccount: SavingsAccount;
     let strategyRegistry: StrategyRegistry;
 
@@ -161,15 +161,13 @@ describe('Pool', async () => {
         await priceOracle.connect(admin).initialize(admin.address);
         await priceOracle
             .connect(admin)
-            .setfeedAddress(
-                Contracts.LINK,
-                Contracts.DAI,
-                ChainLinkAggregators['LINK/USD'],
-                ChainLinkAggregators['DAI/USD']
-            );
+            .setfeedAddress(Contracts.LINK, ChainLinkAggregators['LINK/USD']);
+        await priceOracle
+            .connect(admin)
+            .setfeedAddress(Contracts.DAI, ChainLinkAggregators['DAI/USD']);
     });
 
-    describe('Use Pool', async () => {
+    describe('Use Pool (specs 2)', async () => {
         let extenstion: Extension;
         let poolImpl: Pool;
         let poolTokenImpl: PoolToken;

@@ -44,7 +44,7 @@ import { Repayments } from '../typechain/Repayments';
 import { ContractTransaction } from '@ethersproject/contracts';
 import { getContractAddress } from '@ethersproject/address';
 
-describe.skip('Template For Test cases', async () => {
+describe('Template For Test cases', async () => {
     let savingsAccount: SavingsAccount;
     let strategyRegistry: StrategyRegistry;
 
@@ -163,12 +163,10 @@ describe.skip('Template For Test cases', async () => {
         await priceOracle.connect(admin).initialize(admin.address);
         await priceOracle
             .connect(admin)
-            .setfeedAddress(
-                Contracts.LINK,
-                Contracts.DAI,
-                ChainLinkAggregators['LINK/USD'],
-                ChainLinkAggregators['DAI/USD']
-            );
+            .setfeedAddress(Contracts.LINK, ChainLinkAggregators['LINK/USD']);
+        await priceOracle
+            .connect(admin)
+            .setfeedAddress(Contracts.DAI, ChainLinkAggregators['DAI/USD']);
     });
 
     describe('Pool Related', async () => {

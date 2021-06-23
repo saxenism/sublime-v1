@@ -23,7 +23,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
     address public strategyRegistry;
     address public CreditLine;
 
-    //user -> strategy -> token (underlying address) -> amount (shares)
+    //user -> asset -> strategy (underlying address) -> amount (shares)
     mapping(address => mapping(address => mapping(address => uint256)))
         public
         override userLockedBalance;
@@ -92,9 +92,6 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         ]
             .add(sharesReceived);
 
-        // console.log("amount (input param)", amount);
-        // console.log("shares received on deposit", sharesReceived);
-        // console.log("Total shares", userLockedBalance[to][asset][strategy]);
         emit Deposited(to, amount, asset, strategy);
     }
 
@@ -234,18 +231,15 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
             "SavingsAccount::withdraw Amount must be greater than zero"
         );
 
-        if (strategy != address(0)) {
-            amount = IYield(strategy).getSharesForTokens(amount, asset);
-            console.log("amount that will be withdrawn", amount);
-        }
+        // if (strategy != address(0)) {
+        //     amount = IYield(strategy).getSharesForTokens(amount, asset);
+        // }
 
         // TODO not considering yield generated, needs to be updated later
         userLockedBalance[msg.sender][asset][strategy] = userLockedBalance[
             msg.sender
         ][asset][strategy]
             .sub(amount, "SavingsAccount::withdraw Insufficient amount");
-
-        console.log("asset in input param (in withdraw function)", asset);
 
         address token;
         (token, amountReceived) = _withdraw(
@@ -255,9 +249,6 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
             strategy,
             withdrawShares
         );
-
-        console.log("token which will be withdrawn", token);
-        console.log("amount received on withdraw", amountReceived);
 
         emit Withdrawn(msg.sender, withdrawTo, amountReceived, token, strategy);
     }
@@ -281,9 +272,9 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
             "SavingsAccount::withdrawFrom allowance limit exceeding"
         );
 
-        if (strategy != address(0)) {
-            amount = IYield(strategy).getSharesForTokens(amount, asset);
-        }
+        // if (strategy != address(0)) {
+        //     amount = IYield(strategy).getSharesForTokens(amount, asset);
+        // }
 
         //reduce sender's balance
         userLockedBalance[from][asset][strategy] = userLockedBalance[from][
@@ -322,6 +313,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
                     token != address(0),
                     "Liquidity Tokens address cannot be address(0)"
                 );
+                // uint256 sharesToWithdraw = IYield(strategy).getSharesForTokens(amount, asset);
                 amountReceived = IYield(strategy).unlockShares(token, amount);
                 _transfer(token, withdrawTo, amountReceived);
             } else {

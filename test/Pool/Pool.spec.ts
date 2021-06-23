@@ -161,12 +161,10 @@ describe('Pool', async () => {
         await priceOracle.connect(admin).initialize(admin.address);
         await priceOracle
             .connect(admin)
-            .setfeedAddress(
-                Contracts.LINK,
-                Contracts.DAI,
-                ChainLinkAggregators['LINK/USD'],
-                ChainLinkAggregators['DAI/USD']
-            );
+            .setfeedAddress(Contracts.LINK, ChainLinkAggregators['LINK/USD']);
+        await priceOracle
+            .connect(admin)
+            .setfeedAddress(Contracts.DAI, ChainLinkAggregators['DAI/USD']);
     });
 
     describe('Use Pool', async () => {
@@ -543,7 +541,6 @@ describe('Pool', async () => {
                     amountUsedForDeposit,
                     Contracts.LINK
                 );
-                // console.log({liquidityShares: liquidityShares.toString()});
 
                 await collateralToken
                     .connect(admin)
