@@ -24,7 +24,7 @@ import { ERC20 } from '../../typechain/ERC20';
 
 import { Contracts } from '../../existingContracts/compound.json';
 
-describe('Test Savings Account (with ERC20 Token)', async () => {
+describe.only('Test Savings Account (with ERC20 Token)', async () => {
     let savingsAccount: SavingsAccount;
     let strategyRegistry: StrategyRegistry;
 
@@ -217,30 +217,6 @@ describe('Test Savings Account (with ERC20 Token)', async () => {
                     'SavingsAccount::_deposit Amount must be greater than zero'
                 );
             });
-            it('should fail/revert when shares are withdrawn with no strategy (withdrawShares = true)', async () => {
-                await savingsAccount
-                    .connect(userAccount)
-                    .depositTo(
-                        depositValueToTest,
-                        Contracts.BAT,
-                        zeroAddress,
-                        randomAccount.address
-                    );
-
-                await expect(
-                    savingsAccount
-                        .connect(randomAccount)
-                        .withdraw(
-                            randomAccount.address,
-                            depositValueToTest,
-                            Contracts.BAT,
-                            zeroAddress,
-                            true
-                        )
-                ).to.be.revertedWith(
-                    'Cannot withdraw shared when No strategy is used'
-                );
-            });
         });
 
         it('Withdraw Token (withdrawShares = false)', async () => {
@@ -288,7 +264,7 @@ describe('Test Savings Account (with ERC20 Token)', async () => {
         });
     });
 
-    describe('# When Aave STRATEGY is preferred', async () => {
+    describe.only('# When Aave STRATEGY is preferred', async () => {
         let randomAccount: SignerWithAddress;
         let userAccount: SignerWithAddress;
         let aaveYield: AaveYield;
@@ -516,13 +492,14 @@ describe('Test Savings Account (with ERC20 Token)', async () => {
                 Contracts.LINK,
                 aaveYield.address
             );
+            console.log({ balanceToWithdraw: balanceToWithdraw.toString() });
 
             await expect(
                 savingsAccount
                     .connect(randomAccount)
                     .withdraw(
                         randomAccount.address,
-                        balanceToWithdraw,
+                        balanceToWithdraw.mul(10000000000000),
                         Contracts.LINK,
                         aaveYield.address,
                         false
@@ -581,7 +558,7 @@ describe('Test Savings Account (with ERC20 Token)', async () => {
                     .connect(randomAccount)
                     .withdraw(
                         randomAccount.address,
-                        balanceToWithdraw,
+                        balanceToWithdraw.mul(10000000000000),
                         Contracts.LINK,
                         aaveYield.address,
                         true,

@@ -243,6 +243,15 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
             .mul(liquidityIndex)
             .mul(shares)
             .div(IERC20(aToken).balanceOf(address(this)));
+        
+        // console.log("liquidityIndex",liquidityIndex);
+        // console.log("IERC20(aToken).balanceOf(address(this))",IERC20(aToken).balanceOf(address(this)));
+        
+        // console.log("IScaledBalanceToken(aToken).scaledBalanceOf(address(this))", IScaledBalanceToken(aToken).scaledBalanceOf(address(this)));
+        // console.log("IScaledBalanceToken(aToken).scaledBalanceOf(address(this)).mul(liquidityIndex)", IScaledBalanceToken(aToken).scaledBalanceOf(address(this)).mul(liquidityIndex));
+        // console.log("IScaledBalanceToken(aToken).scaledBalanceOf(address(this)).mul(liquidityIndex).mul(shares)", IScaledBalanceToken(aToken).scaledBalanceOf(address(this)).mul(liquidityIndex).mul(shares));
+        // console.log("IScaledBalanceToken(aToken).scaledBalanceOf(address(this)).mul(liquidityIndex).mul(shares).div(IERC20(aToken).balanceOf(address(this)))", IScaledBalanceToken(aToken).scaledBalanceOf(address(this)).mul(liquidityIndex).mul(shares).div(IERC20(aToken).balanceOf(address(this))));
+
     }
 
     function getSharesForTokens(uint256 amount, address asset)
@@ -251,7 +260,14 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
         override
         returns (uint256 shares)
     {
+        // console.log("amount, asset (before)", amount, asset);
+        // console.log("amount.mul(1e18)", amount.mul(1e18));
+        // console.log("getTokensForShares(1e18, asset)", getTokensForShares(1e18, asset));
+
         shares = (amount.mul(1e18)).div(getTokensForShares(1e18, asset));
+        
+        // console.log("amount.mul(1e18))", amount.mul(1e18));
+        // console.log("amount.mul(1e18)).div(getTokensForShares(1e18, asset)", amount.mul(1e18).div(getTokensForShares(1e18, asset)));
     }
 
     function _depositETH(uint256 amount)
@@ -277,13 +293,18 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
         internal
         returns (address aToken, uint256 sharesReceived)
     {
+        console.log("asset", asset);
         aToken = liquidityToken(asset);
+        console.log("aToken", aToken);
 
         uint256 aTokensBefore = IERC20(aToken).balanceOf(address(this));
-
+        console.log("aTokensBefore", aTokensBefore);
+        
         address lendingPool =
             ILendingPoolAddressesProvider(lendingPoolAddressesProvider)
                 .getLendingPool();
+
+        console.log("lendingPool", lendingPool);
 
         //approve collateral to vault
         IERC20(asset).approve(lendingPool, amount);
@@ -296,9 +317,11 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
             referralCode
         );
 
+        console.log("aTokenAfter", IERC20(aToken).balanceOf(address(this)));
         sharesReceived = IERC20(aToken).balanceOf(address(this)).sub(
             aTokensBefore
         );
+        console.log("sharesReceived", sharesReceived);
     }
 
     function _withdrawETH(uint256 amount) internal returns (uint256 received) {
