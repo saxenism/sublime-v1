@@ -171,11 +171,8 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
             require(msg.value == amount, "Invest: ETH amount");
             (investedTo, sharesReceived) = _depositETH(amount);
         } else {
-            console.log("In lock tokens");
             IERC20(asset).safeTransferFrom(user, address(this), amount);
-            console.log("Tokens to be locked received");
             (investedTo, sharesReceived) = _depositERC20(asset, amount);
-            console.log("out lock tokens");
         }
 
         emit LockedTokens(user, investedTo, sharesReceived);
@@ -280,28 +277,16 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
         internal
         returns (address aToken, uint256 sharesReceived)
     {
-        console.log("ERC20 deposit to yeild started");
         aToken = liquidityToken(asset);
-        console.log("Liquidity token  for", asset, "is", aToken);
-        uint256 aTokensBefore;
-        try IERC20(aToken).balanceOf(address(this)) returns (uint256 tokensBefore) {
-            aTokensBefore = tokensBefore;
-        } catch Error(string memory reason) {
-            console.log(reason);
-        }
-        // uint256 aTokensBefore = IERC20(aToken).balanceOf(address(this));
-        console.log("aTokensBefore  is", aTokensBefore);
+        uint256 aTokensBefore = IERC20(aToken).balanceOf(address(this));
 
         address lendingPool =
             ILendingPoolAddressesProvider(lendingPoolAddressesProvider)
                 .getLendingPool();
-        
-        console.log("lending pool is", lendingPool);
 
         //approve collateral to vault
         IERC20(asset).approve(lendingPool, amount);
 
-        console.log("Approved to vault", amount);
         //lock collateral in vault
         AaveLendingPool(lendingPool).deposit(
             asset,
@@ -309,7 +294,6 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
             address(this),
             referralCode
         );
-        console.log("Deposited to aave", IERC20(aToken).balanceOf(address(this)));
 
         sharesReceived = IERC20(aToken).balanceOf(address(this)).sub(
             aTokensBefore

@@ -45,6 +45,7 @@ import { PoolToken } from "../../typechain/PoolToken";
 import { Repayments } from "../../typechain/Repayments";
 import { ContractTransaction } from "@ethersproject/contracts";
 import { getContractAddress } from "@ethersproject/address";
+import { IYield } from "@typechain/IYield";
 
 describe("Pool Borrow Withdrawal stage", async () => {
     let savingsAccount: SavingsAccount;
@@ -169,8 +170,12 @@ describe("Pool Borrow Withdrawal stage", async () => {
             .connect(admin)
             .setfeedAddress(
                 Contracts.LINK,
+                ChainLinkAggregators["LINK/USD"]
+            );
+        await priceOracle
+            .connect(admin)
+            .setfeedAddress(
                 Contracts.DAI,
-                ChainLinkAggregators["LINK/USD"],
                 ChainLinkAggregators["DAI/USD"]
             );
 
@@ -235,8 +240,10 @@ describe("Pool Borrow Withdrawal stage", async () => {
         let poolToken: PoolToken;
         let collateralToken: ERC20;
         let borrowToken: ERC20;
+        let amount: BigNumber;
 
         describe("Amount lent < minBorrowAmount at the end of collection period", async () => {
+            let poolStrategy: IYield;
             beforeEach(async () => {
                 let deployHelper: DeployHelper = new DeployHelper(borrower);
                 collateralToken = await deployHelper.mock.getMockERC20(
@@ -246,6 +253,7 @@ describe("Pool Borrow Withdrawal stage", async () => {
                 borrowToken = await deployHelper.mock.getMockERC20(
                     Contracts.LINK
                 );
+                poolStrategy = await deployHelper.mock.getYield(compoundYield.address);
     
                 const salt = sha256(Buffer.from("borrower"+Math.random()*10000000));
     
@@ -253,7 +261,7 @@ describe("Pool Borrow Withdrawal stage", async () => {
                     borrower.address,
                     Contracts.LINK,
                     Contracts.DAI,
-                    compoundYield.address,
+                    poolStrategy.address,
                     poolFactory.address,
                     salt,
                     poolImpl.address,
@@ -275,7 +283,6 @@ describe("Pool Borrow Withdrawal stage", async () => {
                     _noOfRepaymentIntervals,
                     _collateralAmount,
                 } = createPoolParams;
-    
                 await collateralToken
                     .connect(admin)
                     .transfer(borrower.address, _collateralAmount); // Transfer quantity to borrower
@@ -296,7 +303,7 @@ describe("Pool Borrow Withdrawal stage", async () => {
                         _borrowRate,
                         _repaymentInterval,
                         _noOfRepaymentIntervals,
-                        compoundYield.address,
+                        poolStrategy.address,
                         _collateralAmount,
                         false,
                         salt
@@ -308,7 +315,7 @@ describe("Pool Borrow Withdrawal stage", async () => {
     
                 pool = await deployHelper.pool.getPool(generatedPoolAddress);
 
-                const amount = createPoolParams._minborrowAmount.sub(10);
+                amount = createPoolParams._minborrowAmount.sub(10);
                 await borrowToken.connect(admin).transfer(
                     lender.address,
                     amount
@@ -341,12 +348,35 @@ describe("Pool Borrow Withdrawal stage", async () => {
 
             it("Borrower can't withdraw", async () => {
                 await expect(
-                    pool.connect(lender).withdrawBorrowedAmount()
+                    pool.connect(borrower).withdrawBorrowedAmount()
                 ).to.revertedWith("");
+            });
+            return;
+
+            it("Borrower can cancel pool without penality", async () => {
+                const collateralBalanceBorrowerSavings = await savingsAccount.userLockedBalance(borrower.address, collateralToken.address, poolStrategy.address);
+                const collateralBalancePoolSavings = await savingsAccount.userLockedBalance(pool.address, collateralToken.address, poolStrategy.address);
+                const { baseLiquidityShares } = await pool.poolVars();
+                await expect(
+                    pool.connect(lender).cancelPool()
+                ).to.revertedWith("CP2");
+                await pool.connect(borrower).cancelPool();
+                const collateralBalanceBorrowerSavingsAfter = await savingsAccount.userLockedBalance(borrower.address, collateralToken.address, poolStrategy.address);
+                const collateralBalancePoolSavingsAfter = await savingsAccount.userLockedBalance(pool.address, collateralToken.address, poolStrategy.address);
+                console.log(collateralBalanceBorrowerSavingsAfter.toString(), collateralBalanceBorrowerSavings.toString(), baseLiquidityShares.toString());
+                assert(
+                    collateralBalanceBorrowerSavingsAfter.sub(collateralBalanceBorrowerSavings).toString() == baseLiquidityShares.toString(),
+                    `Borrower didn't receive collateral back correctly Actual: ${collateralBalanceBorrowerSavingsAfter.sub(collateralBalanceBorrowerSavings).toString()}, Expected: ${baseLiquidityShares.toString()}`
+                );
+                assert(
+                    collateralBalancePoolSavings.sub(collateralBalancePoolSavingsAfter).toString() == baseLiquidityShares.toString(),
+                    `Pool shares didn't decrease correctly`
+                );
             });
         })
 
         describe("Amount lent > minBorrowAmount at the end of collection period", async () => {
+            let poolStrategy: IYield;
             beforeEach(async () => {
                 let deployHelper: DeployHelper = new DeployHelper(borrower);
                 collateralToken = await deployHelper.mock.getMockERC20(
@@ -356,6 +386,7 @@ describe("Pool Borrow Withdrawal stage", async () => {
                 borrowToken = await deployHelper.mock.getMockERC20(
                     Contracts.LINK
                 );
+                poolStrategy = await deployHelper.mock.getYield(compoundYield.address);
     
                 const salt = sha256(Buffer.from("borrower"+Math.random()*10000000));
     
@@ -363,7 +394,7 @@ describe("Pool Borrow Withdrawal stage", async () => {
                     borrower.address,
                     Contracts.LINK,
                     Contracts.DAI,
-                    compoundYield.address,
+                    poolStrategy.address,
                     poolFactory.address,
                     salt,
                     poolImpl.address,
@@ -407,7 +438,7 @@ describe("Pool Borrow Withdrawal stage", async () => {
                             _borrowRate,
                             _repaymentInterval,
                             _noOfRepaymentIntervals,
-                            compoundYield.address,
+                            poolStrategy.address,
                             _collateralAmount,
                             false,
                             salt
@@ -481,9 +512,85 @@ describe("Pool Borrow Withdrawal stage", async () => {
                     `Savings account balance of pool not changing correctly. Expected: ${borrowAssetBalancePoolSavingsAfter.toString()} Actual: ${borrowAssetBalancePoolSavings.sub(tokensLentAfter).toString()}`
                 );
             });
+            return;
+
+            it("Borrower can cancel pool with penality before withdrawing", async () => {
+                const collateralBalanceBorrowerSavings = await savingsAccount.userLockedBalance(borrower.address, collateralToken.address, poolStrategy.address);
+                const collateralBalancePoolSavings = await savingsAccount.userLockedBalance(pool.address, collateralToken.address, poolStrategy.address);
+                const { baseLiquidityShares } = await pool.poolVars();
+                await expect(
+                    pool.connect(lender).cancelPool()
+                ).to.revertedWith("CP2");
+                await pool.connect(borrower).cancelPool();
+                const collateralBalanceBorrowerSavingsAfter = await savingsAccount.userLockedBalance(borrower.address, collateralToken.address, poolStrategy.address);
+                const collateralBalancePoolSavingsAfter = await savingsAccount.userLockedBalance(pool.address, collateralToken.address, poolStrategy.address);
+                const penality = baseLiquidityShares.mul(testPoolFactoryParams._poolCancelPenalityFraction).mul(await poolToken.totalSupply()).div(createPoolParams._poolSize).div(10**8);
+                const collateralAfterPenality = baseLiquidityShares.sub(penality);
+                console.log(collateralBalanceBorrowerSavingsAfter.toString(), collateralBalanceBorrowerSavings.toString(), collateralAfterPenality.toString());
+                assert(
+                    collateralBalanceBorrowerSavingsAfter.sub(collateralBalanceBorrowerSavings).toString() == collateralAfterPenality.toString(),
+                    `Borrower didn't receive collateral back correctly Actual: ${collateralBalanceBorrowerSavingsAfter.sub(collateralBalanceBorrowerSavings).toString()}, Expected: ${baseLiquidityShares.toString()}`
+                );
+                assert(
+                    collateralBalancePoolSavings.sub(collateralBalancePoolSavingsAfter).toString() == collateralAfterPenality.toString(),
+                    `Pool shares didn't decrease correctly`
+                );
+            });
+
+            it("Borrower cannot cancel pool twice", async () => {
+                await pool.connect(borrower).cancelPool();
+                await expect(
+                    pool.connect(borrower).cancelPool()
+                ).to.revertedWith("CP1");
+            });
+
+            it("Pool tokens are not transferrable after pool cancel", async () => {
+                await pool.connect(borrower).cancelPool();
+                const balance = await poolToken.balanceOf(lender.address);
+                await expect(
+                    poolToken.connect(lender).transfer(lender1.address, balance)
+                ).to.be.revertedWith("ERC20Pausable: token transfer while paused");
+            });
+
+            it("Once pool is cancelled anyone can liquidate penality", async () => {
+
+            });
+
+            it("Pool cancellation once liquidated cannot be liquidated again", async () => {
+
+            });
+
+            it("Lender who withdraws lent amount before pool cancel penality doesn't get share of cancel penality", async () => {
+
+            });
+
+            it("Lender who withdraws lent amount after pool cancel penality gets share of cancel penality", async () => {
+
+            });
+
+            it("Non withdrawal Cancel - anyone can cancel pool", async () => {
+
+            });
+
+            it("Non withdrawal Cancel - pool cancellation will penalize borrower", async () => {
+
+            });
+
+            it("Non withdrawal Cancel - Annyone can liquidate penality", async () => {
+
+            });
+
+            it("Non withdrawal Cancel - Before penality Liquidation, no rewards for lender", async () => {
+
+            });
+
+            it("Non withdrawal Cancel - After penality Liquidation, rewards for lender", async () => {
+
+            });
         })
 
         describe("Amount lent == minBorrowAmount at the end of collection period", async () => {
+            let poolStrategy: IYield;
             beforeEach(async () => {
                 let deployHelper: DeployHelper = new DeployHelper(borrower);
                 collateralToken = await deployHelper.mock.getMockERC20(
@@ -493,6 +600,7 @@ describe("Pool Borrow Withdrawal stage", async () => {
                 borrowToken = await deployHelper.mock.getMockERC20(
                     Contracts.LINK
                 );
+                poolStrategy = await deployHelper.mock.getYield(compoundYield.address);
     
                 const salt = sha256(Buffer.from("borrower"+Math.random()*10000000));
     
@@ -500,7 +608,7 @@ describe("Pool Borrow Withdrawal stage", async () => {
                     borrower.address,
                     Contracts.LINK,
                     Contracts.DAI,
-                    compoundYield.address,
+                    poolStrategy.address,
                     poolFactory.address,
                     salt,
                     poolImpl.address,
@@ -544,7 +652,7 @@ describe("Pool Borrow Withdrawal stage", async () => {
                             _borrowRate,
                             _repaymentInterval,
                             _noOfRepaymentIntervals,
-                            compoundYield.address,
+                            poolStrategy.address,
                             _collateralAmount,
                             false,
                             salt
@@ -613,6 +721,7 @@ describe("Pool Borrow Withdrawal stage", async () => {
         })
 
         describe("Amount lent == amountRequested at the end of collection period", async () => {
+            let poolStrategy: IYield;
             beforeEach(async () => {
                 let deployHelper: DeployHelper = new DeployHelper(borrower);
                 collateralToken = await deployHelper.mock.getMockERC20(
@@ -622,6 +731,7 @@ describe("Pool Borrow Withdrawal stage", async () => {
                 borrowToken = await deployHelper.mock.getMockERC20(
                     Contracts.LINK
                 );
+                poolStrategy = await deployHelper.mock.getYield(compoundYield.address);
     
                 const salt = sha256(Buffer.from("borrower"+Math.random()*10000000));
     
@@ -629,7 +739,7 @@ describe("Pool Borrow Withdrawal stage", async () => {
                     borrower.address,
                     Contracts.LINK,
                     Contracts.DAI,
-                    compoundYield.address,
+                    poolStrategy.address,
                     poolFactory.address,
                     salt,
                     poolImpl.address,
@@ -673,7 +783,7 @@ describe("Pool Borrow Withdrawal stage", async () => {
                             _borrowRate,
                             _repaymentInterval,
                             _noOfRepaymentIntervals,
-                            compoundYield.address,
+                            poolStrategy.address,
                             _collateralAmount,
                             false,
                             salt
@@ -698,7 +808,6 @@ describe("Pool Borrow Withdrawal stage", async () => {
                     amount
                 );
                 await pool.connect(lender).lend(lender.address, amount, false);
-                console.log("lender balance", (await poolToken.balanceOf(lender.address)).toString(), amount.toString());
 
                 const { loanStartTime } = await pool.poolConstants();
                 await blockTravel(network, parseInt(loanStartTime.add(1).toString()));

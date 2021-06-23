@@ -104,14 +104,12 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
             amount != 0,
             "SavingsAccount::_deposit Amount must be greater than zero"
         );
-        console.log("depositing into strategy", strategy);
 
         if (strategy != address(0)) {
             sharesReceived = _depositToYield(amount, asset, strategy);
         } else {
             sharesReceived = amount;
             if (asset != address(0)) {
-                console.log("deposit in savings account", IERC20(asset).allowance(msg.sender, address(this)));
                 IERC20(asset).safeTransferFrom(
                     msg.sender,
                     address(this),
@@ -143,13 +141,11 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
                 amount
             );
         } else {
-            console.log("About to lock tokens");
             sharesReceived = IYield(strategy).lockTokens(
                 msg.sender,
                 asset,
                 amount
             );
-            console.log("tokens locked");
         }
     }
 

@@ -56,19 +56,18 @@ contract Repayments is RepaymentStorage, IRepayment {
         uint256 loanStartTime,
         address lentAsset
     ) external override onlyValidPool {
-        console.log("Initializing repayment");
-        // repaymentDetails[msg.sender].gracePenaltyRate = gracePenaltyRate;
-        // repaymentDetails[msg.sender].gracePeriodFraction = gracePeriodFraction;
-        // repaymentDetails[msg.sender]
-        //     .numberOfTotalRepayments = numberOfTotalRepayments;
-        // repaymentDetails[msg.sender].loanDuration = repaymentInterval.mul(
-        //     numberOfTotalRepayments
-        // );
-        // repaymentDetails[msg.sender].repaymentInterval = repaymentInterval;
-        // repaymentDetails[msg.sender].borrowRate = borrowRate;
-        // repaymentDetails[msg.sender].loanStartTime = loanStartTime;
-        // repaymentDetails[msg.sender].repayAsset = lentAsset;
-        // repaymentDetails[msg.sender].savingsAccount = savingsAccount;
+        repaymentDetails[msg.sender].gracePenaltyRate = gracePenaltyRate;
+        repaymentDetails[msg.sender].gracePeriodFraction = gracePeriodFraction;
+        repaymentDetails[msg.sender]
+            .numberOfTotalRepayments = numberOfTotalRepayments;
+        repaymentDetails[msg.sender].loanDuration = repaymentInterval.mul(
+            numberOfTotalRepayments
+        );
+        repaymentDetails[msg.sender].repaymentInterval = repaymentInterval;
+        repaymentDetails[msg.sender].borrowRate = borrowRate;
+        repaymentDetails[msg.sender].loanStartTime = loanStartTime;
+        repaymentDetails[msg.sender].repayAsset = lentAsset;
+        repaymentDetails[msg.sender].savingsAccount = savingsAccount;
     }
 
     function calculateRepayAmount(address poolID)
