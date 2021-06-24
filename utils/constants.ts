@@ -23,21 +23,21 @@ export const DAI_Yearn_Protocol_Address =
 
 export const aLink = '0xa06bC25B5805d5F8d82847D191Cb4Af5A3e873E0';
 
-const collateralRatio = BigNumber.from(60000000);
-const poolSize = BigNumber.from('6000000000000000');
+const collateralRatio = BigNumber.from(60).mul(BigNumber.from(10).pow(28));
+const poolSize = BigNumber.from("6000000000000000");
 
 export const createPoolParams = {
-    _poolSize: poolSize,
-    _borrowAmountRequested: depositValueToTest,
-    _minborrowAmount: BigNumber.from('1000000000000000'),
-    _idealCollateralRatio: collateralRatio,
-    _collateralRatio: collateralRatio,
-    _borrowRate: BigNumber.from(5),
-    _repaymentInterval: BigNumber.from(100),
-    _noOfRepaymentIntervals: BigNumber.from(25),
-    _collateralAmount: BigNumber.from('300000000000000000'),
-    _loanWithdrawalDuration: BigNumber.from(15000000),
-    _collectionPeriod: BigNumber.from(5000000),
+  _poolSize: poolSize,
+  _borrowAmountRequested: depositValueToTest,
+  _minborrowAmount: BigNumber.from("1000000000000000"),
+  _idealCollateralRatio: collateralRatio,
+  _collateralRatio: collateralRatio,
+  _borrowRate: BigNumber.from(5).mul(BigNumber.from(10).pow(28)),
+  _repaymentInterval: BigNumber.from(100),
+  _noOfRepaymentIntervals: BigNumber.from(25),
+  _collateralAmount: BigNumber.from("300000000000000000"),
+  _loanWithdrawalDuration: BigNumber.from(15000000),
+  _collectionPeriod: BigNumber.from(5000000),
 };
 
 // address _borrowTokenType,
@@ -47,19 +47,19 @@ export const createPoolParams = {
 // bytes32 _salt
 
 export const testPoolFactoryParams = {
-    _collectionPeriod: BigNumber.from(10000),
-    _matchCollateralRatioInterval: BigNumber.from(200),
-    _marginCallDuration: BigNumber.from(300),
-    _collateralVolatilityThreshold: BigNumber.from(20000000),
-    _gracePeriodPenaltyFraction: BigNumber.from(5000000),
-    _liquidatorRewardFraction: BigNumber.from(15000000),
-    _poolInitFuncSelector: '0x272edaf2',
-    _poolTokenInitFuncSelector: '0x077f224a',
-    _poolCancelPenalityFraction: BigNumber.from(10000000),
+  _collectionPeriod: BigNumber.from(10000),
+  _matchCollateralRatioInterval: BigNumber.from(200),
+  _marginCallDuration: BigNumber.from(300),
+  _collateralVolatilityThreshold: BigNumber.from(20).mul(BigNumber.from(10).pow(28)),
+  _gracePeriodPenaltyFraction: BigNumber.from(5).mul(BigNumber.from(10).pow(28)),
+  _liquidatorRewardFraction: BigNumber.from(15).mul(BigNumber.from(10).pow(28)),
+  _poolInitFuncSelector: "0x272edaf2",
+  _poolTokenInitFuncSelector: "0x077f224a",
+  _poolCancelPenalityFraction: BigNumber.from(10).mul(BigNumber.from(10).pow(28))
 };
 
 export const repaymentParams = {
-    votingPassRatio: 50000000,
+  "votingPassRatio": BigNumber.from(10).pow(28).mul(50)
 };
 
 // Pool Factory inputs tro be manually added

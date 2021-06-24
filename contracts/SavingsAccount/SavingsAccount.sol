@@ -231,9 +231,9 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
             "SavingsAccount::withdraw Amount must be greater than zero"
         );
 
-        // if (strategy != address(0)) {
-        //     amount = IYield(strategy).getSharesForTokens(amount, asset);
-        // }
+        if (strategy != address(0)) {
+            amount = IYield(strategy).getSharesForTokens(amount, asset);
+        }
 
         // TODO not considering yield generated, needs to be updated later
         userLockedBalance[msg.sender][asset][strategy] = userLockedBalance[
@@ -272,9 +272,9 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
             "SavingsAccount::withdrawFrom allowance limit exceeding"
         );
 
-        // if (strategy != address(0)) {
-        //     amount = IYield(strategy).getSharesForTokens(amount, asset);
-        // }
+        if (strategy != address(0)) {
+            amount = IYield(strategy).getSharesForTokens(amount, asset);
+        }
 
         //reduce sender's balance
         userLockedBalance[from][asset][strategy] = userLockedBalance[from][

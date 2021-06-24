@@ -36,11 +36,18 @@ contract PriceOracle is Initializable, OwnableUpgradeable, IPriceOracle {
         );
         int256 price1;
         int256 price2;
-        (, price1, , , ) = AggregatorV3Interface(_feedData1.oracle).latestRoundData();
-        (, price2, , , ) = AggregatorV3Interface(_feedData2.oracle).latestRoundData();
+        (, price1, , , ) = AggregatorV3Interface(_feedData1.oracle)
+            .latestRoundData();
+        (, price2, , , ) = AggregatorV3Interface(_feedData2.oracle)
+            .latestRoundData();
 
-        uint256 price = uint256(price1).mul(10**_feedData2.decimals).mul(10**18).div(uint256(price2)).div(10**_feedData1.decimals);
-        return (price, 18);
+        uint256 price =
+            uint256(price1)
+                .mul(10**_feedData2.decimals)
+                .mul(10**30)
+                .div(uint256(price2))
+                .div(10**_feedData1.decimals);
+        return (price, 30);
     }
 
     function doesFeedExist(address[] calldata tokens)
@@ -49,23 +56,20 @@ contract PriceOracle is Initializable, OwnableUpgradeable, IPriceOracle {
         override
         returns (bool)
     {
-        for(uint256 i=0; i < tokens.length; i++) {
-            if(feedAddresses[tokens[i]].oracle == address(0)) {
+        for (uint256 i = 0; i < tokens.length; i++) {
+            if (feedAddresses[tokens[i]].oracle == address(0)) {
                 return false;
             }
         }
         return true;
     }
 
-    function setfeedAddress(
-        address token,
-        address priceOracle
-    ) external onlyOwner {
+    function setfeedAddress(address token, address priceOracle)
+        external
+        onlyOwner
+    {
         uint256 priceOracleDecimals =
             AggregatorV3Interface(priceOracle).decimals();
-        feedAddresses[token] = PriceData(
-            priceOracle,
-            priceOracleDecimals
-        );
+        feedAddresses[token] = PriceData(priceOracle, priceOracleDecimals);
     }
 }
