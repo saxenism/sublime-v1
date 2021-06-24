@@ -70,27 +70,57 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     PoolConstants public poolConstants;
     PoolVars public poolVars;
 
-    /// @notice Emitted when pool is cancelled either on borrower request or insufficient funds collected
+    /*
+    * @notice Emitted when pool is cancelled either on borrower request or insufficient funds collected
+    */
     event OpenBorrowPoolCancelled();
 
-    /// @notice Emitted when pool is terminated by admin
+    /*
+    * @notice Emitted when pool is terminated by admin
+    */
     event OpenBorrowPoolTerminated();
 
-    /// @notice Emitted when pool is closed after repayments are complete
+    /*
+    * @notice Emitted when pool is closed after repayments are complete
+    */
     event OpenBorrowPoolClosed();
 
+    // TODO confirm - are borrower and sharesReceived necessary?
+    /*
+    * @notice emitted when borrower posts collateral
+    * @param borrower address of the borrower
+    * @param amount amount denominated in collateral asset
+    * @param sharesReceived shares received after transferring collaterla to pool savings strategy
+    */
     event CollateralAdded(
         address borrower,
         uint256 amount,
         uint256 sharesReceived
     );
+
+    // TODO confirm - are borrower and sharesReceived necessary?
+    /*
+    * @notice emitted when borrower posts collateral after a margin call
+    * @param borrower address of the borrower
+    * @param lender lender who margin called
+    * @param amount amount denominated in collateral asset
+    * @param sharesReceived shares received after transferring collaterla to pool savings strategy
+    */
     event MarginCallCollateralAdded(
         address borrower,
         address lender,
         uint256 amount,
         uint256 sharesReceived
     );
+
+    /*
+    * @notice emitted when borrower withdraws excess collateral
+    * @param borrower address of borrower
+    * @param amount amount of collateral withdrawn
+    */
     event CollateralWithdrawn(address borrower, uint256 amount);
+
+    
     event LiquiditySupplied(uint256 amountSupplied, address lenderAddress);
     event AmountBorrowed(uint256 amount);
     event LiquidityWithdrawn(uint256 amount, address lenderAddress);
