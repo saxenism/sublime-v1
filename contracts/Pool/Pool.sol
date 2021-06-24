@@ -692,7 +692,8 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         // uint256 _due = calculateRepaymentWithdrawable(msg.sender);
 
         //gets amount through liquidity shares
-        uint256 _balance = poolToken.balanceOf(msg.sender);
+        uint256 _actualBalance = poolToken.balanceOf(msg.sender);
+        uint256 _toTransfer = _actualBalance;
 
         if (_loanStatus == LoanStatus.DEFAULTED) {
             uint256 _totalAsset;
@@ -705,11 +706,11 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             }
 
             //assuming their will be no tokens in pool in any case except liquidation (to be checked) or we should store the amount in liquidate()
-            _balance = _balance.mul(_totalAsset).div(poolToken.totalSupply());
+            _toTransfer = _toTransfer.mul(_totalAsset).div(poolToken.totalSupply());
         }
 
         if(_loanStatus == LoanStatus.CANCELLED) {
-            _balance = _balance.add(_balance.mul(poolVars.penalityLiquidityAmount).div(poolToken.totalSupply()));
+            _toTransfer = _toTransfer.add(_toTransfer.mul(poolVars.penalityLiquidityAmount).div(poolToken.totalSupply()));
         }
 
         // _due = _balance.add(_due);
@@ -722,13 +723,13 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         //transfer repayment
         _withdrawRepayment(msg.sender);
         //to add transfer if not included in above (can be transferred with liquidity)
-
-        poolToken.burn(msg.sender, _balance);
+        console.log(_toTransfer, _actualBalance);
+        poolToken.burn(msg.sender, _actualBalance);
         //transfer liquidity provided
-        _tokenTransfer(poolConstants.borrowAsset, msg.sender, _balance);
+        _tokenTransfer(poolConstants.borrowAsset, msg.sender, _toTransfer);
 
         // TODO: Something wrong in the below event. Please have a look
-        emit LiquidityWithdrawn(_balance, msg.sender);
+        emit LiquidityWithdrawn(_toTransfer, msg.sender);
     }
 
     /**
