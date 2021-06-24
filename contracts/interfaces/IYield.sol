@@ -21,6 +21,8 @@ interface IYield {
      **/
     event UnlockedTokens(address investedTo, uint256 collateralReceived);
 
+    event UnlockedShares(address asset, uint256 sharesReleased);
+
     /**
      * @dev Used to get liquidity token address from asset address
      * @param asset the address of underlying token
@@ -53,6 +55,10 @@ interface IYield {
     function unlockTokens(address asset, uint256 amount)
         external
         returns (uint256 tokensReceived);
+
+    function unlockShares(address asset, uint256 amount)
+        external
+        returns (uint256 received);
 
     /**
      * @dev Used to get amount of underlying tokens for current number of shares

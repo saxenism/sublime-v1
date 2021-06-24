@@ -18,35 +18,55 @@ contract PriceOracle is Initializable, OwnableUpgradeable, IPriceOracle {
         OwnableUpgradeable.__Ownable_init();
         OwnableUpgradeable.transferOwnership(_admin);
     }
- 
+
     function getLatestPrice(address num, address den)
         public
-        override
         view
+        override
         returns (uint256, uint256)
     {
-        PriceData memory _feedData = feedAddresses[keccak256(abi.encodePacked(num, den))];
-        require(_feedData.oracle != address(0), "PriceOracle::getLatestPrice - Price Feed doesn't exist");
+        PriceData memory _feedData =
+            feedAddresses[keccak256(abi.encodePacked(num, den))];
+        require(
+            _feedData.oracle != address(0),
+            "PriceOracle::getLatestPrice - Price Feed doesn't exist"
+        );
         int256 price;
-        (, price, , , ) = AggregatorV3Interface(_feedData.oracle).latestRoundData();
+        (, price, , , ) = AggregatorV3Interface(_feedData.oracle)
+            .latestRoundData();
         return (uint256(price), _feedData.decimals);
     }
 
-    function doesFeedExist(address btoken, address ctoken) external view override returns(bool) {
-        return (
-            feedAddresses[keccak256(abi.encodePacked(btoken, ctoken))].oracle != address(0) 
-            && feedAddresses[keccak256(abi.encodePacked(ctoken, btoken))].oracle != address(0)
-        );
+    function doesFeedExist(address btoken, address ctoken)
+        external
+        view
+        override
+        returns (bool)
+    {
+        return (feedAddresses[keccak256(abi.encodePacked(btoken, ctoken))]
+            .oracle !=
+            address(0) &&
+            feedAddresses[keccak256(abi.encodePacked(ctoken, btoken))].oracle !=
+            address(0));
     }
 
-    function setfeedAddress(address btoken, address ctoken, address priceOracle1, address priceOracle2) external onlyOwner {
-        uint256 priceOracle1Decimals = AggregatorV3Interface(priceOracle1).decimals();
-        feedAddresses[
-            keccak256(abi.encodePacked(btoken, ctoken))
-        ] =  PriceData(priceOracle1, priceOracle1Decimals);
-        uint256 priceOracle2Decimals = AggregatorV3Interface(priceOracle2).decimals();
-        feedAddresses[
-            keccak256(abi.encodePacked(ctoken, btoken))
-        ] = PriceData(priceOracle2, priceOracle2Decimals);
+    function setfeedAddress(
+        address btoken,
+        address ctoken,
+        address priceOracle1,
+        address priceOracle2
+    ) external onlyOwner {
+        uint256 priceOracle1Decimals =
+            AggregatorV3Interface(priceOracle1).decimals();
+        feedAddresses[keccak256(abi.encodePacked(btoken, ctoken))] = PriceData(
+            priceOracle1,
+            priceOracle1Decimals
+        );
+        uint256 priceOracle2Decimals =
+            AggregatorV3Interface(priceOracle2).decimals();
+        feedAddresses[keccak256(abi.encodePacked(ctoken, btoken))] = PriceData(
+            priceOracle2,
+            priceOracle2Decimals
+        );
     }
 }

@@ -7,7 +7,7 @@ contract RepaymentStorage is OwnableUpgradeable {
     address internal _owner;
     IPoolFactory poolFactory;
     address savingsAccount;
-    
+
     enum LoanStatus {
         COLLECTION, //denotes collection period
         ACTIVE, // denotes the active loan

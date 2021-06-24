@@ -258,7 +258,6 @@ contract Repayments is RepaymentStorage, IRepayment {
         
     }*/
 
-
     //event LoanExtensionRequest(address poolID);
 
     /*function requestExtension(address poolID)
@@ -271,7 +270,6 @@ contract Repayments is RepaymentStorage, IRepayment {
 
         emit LoanExtensionRequest(poolID);
     }*/
-
 
     /*function voteOnExtension(address poolID,
                              address voter,

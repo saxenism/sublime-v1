@@ -21,4 +21,7 @@ artifacts
 .openzeppelin
 
 config/address.json
-typechain
+typechain/
+*.log
+
+flatten
