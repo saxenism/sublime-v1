@@ -45,5 +45,5 @@ interface IPool {
 
     function getTotalSupply() external view returns (uint256);
 
-    function closeLoan() external;
+    function closeLoan() external payable;
 }

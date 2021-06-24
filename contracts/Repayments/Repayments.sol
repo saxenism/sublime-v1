@@ -100,14 +100,15 @@ contract Repayments is RepaymentStorage, IRepayment {
 
     function repayInterest(address _poolID, uint256 _amount) public payable isPoolInitialized {
 
-        uint256 _loanStatus = IPool(_poolID).getLoanStatus();
+        IPool _pool = IPool(_poolID);
+        uint256 _loanStatus = _pool.getLoanStatus();
         require(_loanStatus == 1,
                 "Repayments:repayInterest Pool should be active.");
 
         require(repaymentDetails[_poolID].repaymentOverdue == 0,
                 "Repayments:repayInterest Repayment overdue unpaid.");
 
-        uint256 _activePrincipal = IPool(_poolID).getTotalSupply();
+        uint256 _activePrincipal = _pool.getTotalSupply();
 
         uint256 _interestPerSecond = _activePrincipal
                                      .mul(repaymentDetails[_poolID].borrowRate)
@@ -138,7 +139,8 @@ contract Repayments is RepaymentStorage, IRepayment {
 
     function repayPrincipal(address payable _poolID, uint256 _amount) public payable isPoolInitialized {
 
-        uint256 _loanStatus = IPool(_poolID).getLoanStatus();
+        IPool _pool = IPool(_poolID);
+        uint256 _loanStatus = _pool.getLoanStatus();
         require(_loanStatus == 1,
                 "Repayments:repayPrincipal Pool should be active");
 
@@ -148,7 +150,7 @@ contract Repayments is RepaymentStorage, IRepayment {
         require(repaymentDetails[_poolID].loanDuration == repaymentDetails[_poolID].loanDurationCovered,
                 "Repayments:repayPrincipal Unpaid interest");
 
-        uint256 _activePrincipal = IPool(_poolID).getTotalSupply();
+        uint256 _activePrincipal = _pool.getTotalSupply();
         require(_amount == _activePrincipal,
                 "Repayments:repayPrincipal Amount should match the principal");
 
@@ -168,7 +170,8 @@ contract Repayments is RepaymentStorage, IRepayment {
 
     function repayOverdue(address _poolID, uint256 _amount) public payable isPoolInitialized {
 
-        uint256 _loanStatus = IPool(_poolID).getLoanStatus();
+        IPool _pool = IPool(_poolID);
+        uint256 _loanStatus = _pool.getLoanStatus();
         require(_loanStatus == 1,
                 "Repayments:repayPrincipal Pool should be active");
         uint256 _repaymentOverdue = repaymentDetails[_poolID].repaymentOverdue;
