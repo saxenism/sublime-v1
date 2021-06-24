@@ -723,7 +723,6 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         //transfer repayment
         _withdrawRepayment(msg.sender);
         //to add transfer if not included in above (can be transferred with liquidity)
-        console.log(_toTransfer, _actualBalance);
         poolToken.burn(msg.sender, _actualBalance);
         //transfer liquidity provided
         _tokenTransfer(poolConstants.borrowAsset, msg.sender, _toTransfer);
