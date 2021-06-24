@@ -57,6 +57,7 @@ describe("Pool Borrow Withdrawal stage", async () => {
     let borrower: SignerWithAddress;
     let lender: SignerWithAddress;
     let lender1: SignerWithAddress;
+    let random: SignerWithAddress;
 
     let extenstion: Extension;
     let poolImpl: Pool;
@@ -79,7 +80,7 @@ describe("Pool Borrow Withdrawal stage", async () => {
     let WhaleAccount: any;
 
     before(async () => {
-        [proxyAdmin, admin, mockCreditLines, borrower, lender, lender1] = await ethers.getSigners();
+        [proxyAdmin, admin, mockCreditLines, borrower, lender, lender1, random] = await ethers.getSigners();
         const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
         savingsAccount = await deployHelper.core.deploySavingsAccount();
         strategyRegistry = await deployHelper.core.deployStrategyRegistry();
@@ -351,26 +352,21 @@ describe("Pool Borrow Withdrawal stage", async () => {
                     pool.connect(borrower).withdrawBorrowedAmount()
                 ).to.revertedWith("");
             });
-            return;
 
             it("Borrower can cancel pool without penality", async () => {
                 const collateralBalanceBorrowerSavings = await savingsAccount.userLockedBalance(borrower.address, collateralToken.address, poolStrategy.address);
                 const collateralBalancePoolSavings = await savingsAccount.userLockedBalance(pool.address, collateralToken.address, poolStrategy.address);
                 const { baseLiquidityShares } = await pool.poolVars();
-                await expect(
-                    pool.connect(lender).cancelPool()
-                ).to.revertedWith("CP2");
                 await pool.connect(borrower).cancelPool();
                 const collateralBalanceBorrowerSavingsAfter = await savingsAccount.userLockedBalance(borrower.address, collateralToken.address, poolStrategy.address);
                 const collateralBalancePoolSavingsAfter = await savingsAccount.userLockedBalance(pool.address, collateralToken.address, poolStrategy.address);
-                console.log(collateralBalanceBorrowerSavingsAfter.toString(), collateralBalanceBorrowerSavings.toString(), baseLiquidityShares.toString());
                 assert(
-                    collateralBalanceBorrowerSavingsAfter.sub(collateralBalanceBorrowerSavings).toString() == baseLiquidityShares.toString(),
+                    collateralBalanceBorrowerSavingsAfter.sub(collateralBalanceBorrowerSavings).toString() == baseLiquidityShares.sub(1).toString(),
                     `Borrower didn't receive collateral back correctly Actual: ${collateralBalanceBorrowerSavingsAfter.sub(collateralBalanceBorrowerSavings).toString()}, Expected: ${baseLiquidityShares.toString()}`
                 );
                 assert(
-                    collateralBalancePoolSavings.sub(collateralBalancePoolSavingsAfter).toString() == baseLiquidityShares.toString(),
-                    `Pool shares didn't decrease correctly`
+                    collateralBalancePoolSavings.sub(collateralBalancePoolSavingsAfter).toString() == baseLiquidityShares.sub(1).toString(),
+                    `Pool shares didn't decrease correctly Actual: ${collateralBalancePoolSavings.sub(collateralBalancePoolSavingsAfter).toString()} Expected: ${baseLiquidityShares.toString()}`
                 );
             });
         })
@@ -504,15 +500,14 @@ describe("Pool Borrow Withdrawal stage", async () => {
                     "Borrower not receiving correct lent amount"
                 );
                 assert(
-                    borrowAssetBalancePool.toString() == borrowAssetBalancePoolAfter.toString(), 
-                    "Pool token balance is changing instead of savings account balance"
+                    borrowAssetBalancePool.toString() == borrowAssetBalancePoolAfter.add(tokensLentAfter).toString(), 
+                    `Pool token balance is not changing correctly. Expected: ${borrowAssetBalancePoolAfter.toString()} Actual: ${borrowAssetBalancePool.sub(tokensLentAfter).toString()}`
                 );
                 assert(
-                    borrowAssetBalancePoolSavings.toString() == borrowAssetBalancePoolSavingsAfter.add(tokensLentAfter).toString(), 
-                    `Savings account balance of pool not changing correctly. Expected: ${borrowAssetBalancePoolSavingsAfter.toString()} Actual: ${borrowAssetBalancePoolSavings.sub(tokensLentAfter).toString()}`
+                    borrowAssetBalancePoolSavings.toString() == borrowAssetBalancePoolSavingsAfter.toString(), 
+                    `Savings account changing instead of token balance`
                 );
             });
-            return;
 
             it("Borrower can cancel pool with penality before withdrawing", async () => {
                 const collateralBalanceBorrowerSavings = await savingsAccount.userLockedBalance(borrower.address, collateralToken.address, poolStrategy.address);
@@ -521,19 +516,18 @@ describe("Pool Borrow Withdrawal stage", async () => {
                 await expect(
                     pool.connect(lender).cancelPool()
                 ).to.revertedWith("CP2");
+                const penality = baseLiquidityShares.mul(testPoolFactoryParams._poolCancelPenalityFraction).mul(await poolToken.totalSupply()).div(createPoolParams._poolSize).div(BigNumber.from(10).pow(30));
                 await pool.connect(borrower).cancelPool();
                 const collateralBalanceBorrowerSavingsAfter = await savingsAccount.userLockedBalance(borrower.address, collateralToken.address, poolStrategy.address);
                 const collateralBalancePoolSavingsAfter = await savingsAccount.userLockedBalance(pool.address, collateralToken.address, poolStrategy.address);
-                const penality = baseLiquidityShares.mul(testPoolFactoryParams._poolCancelPenalityFraction).mul(await poolToken.totalSupply()).div(createPoolParams._poolSize).div(10**8);
                 const collateralAfterPenality = baseLiquidityShares.sub(penality);
-                console.log(collateralBalanceBorrowerSavingsAfter.toString(), collateralBalanceBorrowerSavings.toString(), collateralAfterPenality.toString());
                 assert(
-                    collateralBalanceBorrowerSavingsAfter.sub(collateralBalanceBorrowerSavings).toString() == collateralAfterPenality.toString(),
+                    collateralBalanceBorrowerSavingsAfter.sub(collateralBalanceBorrowerSavings).toString() == collateralAfterPenality.sub(1).toString(),
                     `Borrower didn't receive collateral back correctly Actual: ${collateralBalanceBorrowerSavingsAfter.sub(collateralBalanceBorrowerSavings).toString()}, Expected: ${baseLiquidityShares.toString()}`
                 );
                 assert(
-                    collateralBalancePoolSavings.sub(collateralBalancePoolSavingsAfter).toString() == collateralAfterPenality.toString(),
-                    `Pool shares didn't decrease correctly`
+                    collateralBalancePoolSavings.sub(collateralBalancePoolSavingsAfter).toString() == collateralAfterPenality.sub(1).toString(),
+                    `Pool shares didn't decrease correctly Actual: ${collateralBalancePoolSavings.sub(collateralBalancePoolSavingsAfter).toString()} Expected: ${baseLiquidityShares.toString()}`
                 );
             });
 
@@ -552,16 +546,144 @@ describe("Pool Borrow Withdrawal stage", async () => {
                 ).to.be.revertedWith("ERC20Pausable: token transfer while paused");
             });
 
-            it("Once pool is cancelled anyone can liquidate penality", async () => {
+            it("Once pool is cancelled anyone can liquidate penality, direct penality withdrawal", async () => {
+                await pool.connect(borrower).cancelPool();
+                const collateralTokensRandom = await collateralToken.balanceOf(random.address);
+                const collateralSharesPool = (await savingsAccount.userLockedBalance(pool.address, collateralToken.address, poolStrategy.address));
+                let collateralTokensPool = await poolStrategy.callStatic.getTokensForShares(collateralSharesPool.sub(2), collateralToken.address);
+                let borrowTokensForCollateral = await pool.getEquivalentTokens(collateralToken.address, borrowToken.address, collateralTokensPool);
+                await borrowToken.connect(admin).transfer(random.address, borrowTokensForCollateral);
+                await borrowToken.connect(random).approve(pool.address, borrowTokensForCollateral);
+                const borrowTokenRandom = await borrowToken.balanceOf(random.address);
+                const borrowTokenPool = await borrowToken.balanceOf(pool.address);
+                await pool.connect(random).liquidateCancelPenality(false, false);
+                collateralTokensPool = await poolStrategy.callStatic.getTokensForShares(collateralSharesPool.sub(2), collateralToken.address);
+                borrowTokensForCollateral = await pool.getEquivalentTokens(collateralToken.address, borrowToken.address, collateralTokensPool);
 
+                const collateralTokensRandomAfter = await collateralToken.balanceOf(random.address);
+                const collateralSharesPoolAfter = await (await savingsAccount.userLockedBalance(pool.address, collateralToken.address, poolStrategy.address));
+                const collateralTokensPoolAfter = await poolStrategy.callStatic.getTokensForShares(collateralSharesPoolAfter.sub(2), collateralToken.address);
+                const borrowTokenRandomAfter = await borrowToken.balanceOf(random.address);
+                const borrowTokenPoolAfter = await borrowToken.balanceOf(pool.address);
+                console.log("shares are", collateralSharesPool.toString());
+                assert(
+                    collateralTokensRandomAfter.sub(collateralTokensRandom).toString() == collateralTokensPool.toString(),
+                    `Collateral tokens not correctly received by liquidator Actual: ${collateralTokensRandomAfter.sub(collateralTokensRandom).toString()} Expected: ${collateralTokensPool.toString()}`
+                );
+                assert(
+                    collateralTokensPool.sub(collateralTokensPoolAfter).toString() == collateralTokensPool.toString(),
+                    `Collateral tokens not correctly taken from pool Actual: ${collateralTokensPool.sub(collateralTokensPoolAfter).toString()} Expected: ${collateralTokensPool.toString()}`
+                );
+                collateralTokensPool = await poolStrategy.callStatic.getTokensForShares(collateralSharesPool.sub(1), collateralToken.address);
+                borrowTokensForCollateral = await pool.getEquivalentTokens(collateralToken.address, borrowToken.address, collateralTokensPool);
+                const borrowTokensToDeposit = borrowTokensForCollateral.sub(borrowTokensForCollateral.mul(testPoolFactoryParams._liquidatorRewardFraction).div(BigNumber.from(10).pow(30)));
+                assert(
+                    borrowTokenRandom.sub(borrowTokenRandomAfter).toString() == borrowTokensToDeposit.sub(1).toString(),
+                    `Borrow token not pulled correctly from liquidator Actual: ${borrowTokenRandom.sub(borrowTokenRandomAfter).toString()} Expected: ${borrowTokensToDeposit.toString()}`
+                );
+                assert(
+                    borrowTokenPoolAfter.sub(borrowTokenPool).toString() == borrowTokensToDeposit.sub(1).toString(),
+                    `Borrow token not deposited to pool correctly Actual: ${borrowTokenPoolAfter.sub(borrowTokenPool).toString()} Expected: ${borrowTokensToDeposit.toString()}`
+                );
+            });
+
+            it("Once pool is cancelled anyone can liquidate penality, peanlity direct LP share", async () => {
+                await pool.connect(borrower).cancelPool();
+                let deployHelper: DeployHelper = new DeployHelper(borrower);
+                const yToken: ERC20 = await deployHelper.mock.getMockERC20(await poolStrategy.liquidityToken(collateralToken.address));
+                const collateralSharesRandom = await yToken.balanceOf(random.address);
+                const collateralSharesPool = await savingsAccount.userLockedBalance(pool.address, collateralToken.address, poolStrategy.address);
+                let collateralTokensPool = await poolStrategy.callStatic.getTokensForShares(collateralSharesPool, collateralToken.address);
+                let borrowTokensForCollateral = await pool.getEquivalentTokens(collateralToken.address, borrowToken.address, collateralTokensPool);
+                await borrowToken.connect(admin).transfer(random.address, borrowTokensForCollateral);
+                await borrowToken.connect(random).approve(pool.address, borrowTokensForCollateral);
+                const borrowTokenRandom = await borrowToken.balanceOf(random.address);
+                const borrowTokenPool = await borrowToken.balanceOf(pool.address);
+                
+                await pool.connect(random).liquidateCancelPenality(false, true);
+
+                const collateralSharesRandomAfter = await yToken.balanceOf(random.address);
+                const collateralSharesPoolAfter = await savingsAccount.userLockedBalance(pool.address, collateralToken.address, poolStrategy.address);
+                const borrowTokenRandomAfter = await borrowToken.balanceOf(random.address);
+                const borrowTokenPoolAfter = await borrowToken.balanceOf(pool.address);
+
+                assert(
+                    collateralSharesRandomAfter.sub(collateralSharesRandom).toString() == collateralSharesPool.sub(2).toString(),
+                    `Collateral shares not correctly received by liquidator. Actual: ${collateralSharesRandomAfter.sub(collateralSharesRandom).toString()} Expected: ${collateralSharesPool.toString()}`
+                );
+                assert(
+                    collateralSharesPool.sub(collateralSharesPoolAfter).toString() == collateralSharesPool.sub(2).toString(),
+                    `Collateral tokens not correctly taken from pool`
+                );
+                collateralTokensPool = await poolStrategy.callStatic.getTokensForShares(collateralSharesPool.sub(1), collateralToken.address);
+                borrowTokensForCollateral = await pool.getEquivalentTokens(collateralToken.address, borrowToken.address, collateralTokensPool);
+                const borrowTokensToDeposit = borrowTokensForCollateral.sub(borrowTokensForCollateral.mul(testPoolFactoryParams._liquidatorRewardFraction).div(BigNumber.from(10).pow(30)));
+                assert(
+                    borrowTokenRandom.sub(borrowTokenRandomAfter).toString() == borrowTokensToDeposit.toString(),
+                    `Borrow token not pulled correctly from liquidator. Actual: ${borrowTokenRandom.sub(borrowTokenRandomAfter).toString()} Expected: ${borrowTokensToDeposit.toString()}`
+                );
+                assert(
+                    borrowTokenPoolAfter.sub(borrowTokenPool).toString() == borrowTokensToDeposit.toString(),
+                    `Borrow token not deposited to pool correctly`
+                );
+            });
+
+            // Note: _receiveLiquidityShares doesn't matter when sending to savings account
+            it("Once pool is cancelled anyone can liquidate penality, penality to savings", async () => {
+                await pool.connect(borrower).cancelPool();
+                const collateralSavingsRandom = await savingsAccount.userLockedBalance(random.address, collateralToken.address, poolStrategy.address);
+                const collateralSharesPool = await savingsAccount.userLockedBalance(pool.address, collateralToken.address, poolStrategy.address);
+                let collateralTokensPool = await poolStrategy.callStatic.getTokensForShares(collateralSharesPool, collateralToken.address);
+                let borrowTokensForCollateral = await pool.getEquivalentTokens(collateralToken.address, borrowToken.address, collateralTokensPool);
+                await borrowToken.connect(admin).transfer(random.address, borrowTokensForCollateral);
+                await borrowToken.connect(random).approve(pool.address, borrowTokensForCollateral);
+                const borrowTokenRandom = await borrowToken.balanceOf(random.address);
+                const borrowTokenPool = await borrowToken.balanceOf(pool.address);
+                await pool.connect(random).liquidateCancelPenality(true, true);
+
+                const collateralSavingsRandomAfter = await savingsAccount.userLockedBalance(random.address, collateralToken.address, poolStrategy.address);
+                const collateralSharesPoolAfter = await savingsAccount.userLockedBalance(pool.address, collateralToken.address, poolStrategy.address);
+                const collateralTokensPoolAfter = await poolStrategy.callStatic.getTokensForShares(collateralSharesPoolAfter, collateralToken.address);
+                const borrowTokenRandomAfter = await borrowToken.balanceOf(random.address);
+                const borrowTokenPoolAfter = await borrowToken.balanceOf(pool.address);
+
+                assert(
+                    collateralSavingsRandomAfter.sub(collateralSavingsRandom).toString() == collateralSharesPool.sub(2).toString(),
+                    `Collateral not correctly received by liquidator in savings account. Actual: ${collateralSavingsRandomAfter.sub(collateralSavingsRandom).toString()} Expected: ${collateralSharesPool.toString()}`
+                );
+                assert(
+                    collateralSharesPool.sub(collateralSharesPoolAfter).toString() == collateralSharesPool.sub(2).toString(),
+                    `Collateral tokens not correctly taken from pool`
+                );
+                collateralTokensPool = await poolStrategy.callStatic.getTokensForShares(collateralSharesPool.sub(1), collateralToken.address);
+                borrowTokensForCollateral = await pool.getEquivalentTokens(collateralToken.address, borrowToken.address, collateralTokensPool);
+                const borrowTokensToDeposit = borrowTokensForCollateral.sub(borrowTokensForCollateral.mul(testPoolFactoryParams._liquidatorRewardFraction).div(BigNumber.from(10).pow(30)));
+                assert(
+                    borrowTokenRandom.sub(borrowTokenRandomAfter).toString() == borrowTokensToDeposit.toString(),
+                    `Borrow token not pulled correctly from liquidator`
+                );
+                assert(
+                    borrowTokenPoolAfter.sub(borrowTokenPool).toString() == borrowTokensToDeposit.toString(),
+                    `Borrow token not deposited to pool correctly`
+                );
             });
 
             it("Pool cancellation once liquidated cannot be liquidated again", async () => {
-
+                await pool.connect(borrower).cancelPool();
+                const collateralSharesPool = await savingsAccount.userLockedBalance(pool.address, collateralToken.address, poolStrategy.address);
+                const collateralTokensPool = await poolStrategy.callStatic.getTokensForShares(collateralSharesPool, collateralToken.address);
+                const borrowTokensForCollateral = await pool.getEquivalentTokens(collateralToken.address, borrowToken.address, collateralTokensPool);
+                await borrowToken.connect(admin).transfer(random.address, borrowTokensForCollateral);
+                await borrowToken.connect(random).approve(pool.address, borrowTokensForCollateral);
+                await pool.connect(random).liquidateCancelPenality(false, false);
+                await expect(
+                    pool.connect(random).liquidateCancelPenality(false, false)
+                ).to.be.revertedWith("");
             });
+            return;
 
             it("Lender who withdraws lent amount before pool cancel penality doesn't get share of cancel penality", async () => {
-
+                
             });
 
             it("Lender who withdraws lent amount after pool cancel penality gets share of cancel penality", async () => {
@@ -576,7 +698,7 @@ describe("Pool Borrow Withdrawal stage", async () => {
 
             });
 
-            it("Non withdrawal Cancel - Annyone can liquidate penality", async () => {
+            it("Non withdrawal Cancel - Anyone can liquidate penality", async () => {
 
             });
 
@@ -715,8 +837,8 @@ describe("Pool Borrow Withdrawal stage", async () => {
                 );
                 assert(tokensLent.toString() == createPoolParams._minborrowAmount.toString(), "TokensLent is not same as minBorrowAmount");
                 assert(borrowAssetBalanceBorrower.add(tokensLent).toString() == borrowAssetBalanceBorrowerAfter.toString(), "Borrower not receiving correct lent amount");
-                assert(borrowAssetBalancePool.toString() == borrowAssetBalancePoolAfter.toString(), "Pool token balance is changing instead of savings account balance");
-                assert(borrowAssetBalancePoolSavings.toString() == borrowAssetBalancePoolSavingsAfter.add(tokensLentAfter).toString(), "Savings account balance of pool not changing correctly");
+                assert(borrowAssetBalancePool.toString() == borrowAssetBalancePoolAfter.add(tokensLentAfter).toString(), "Pool token balance is changing instead of savings account balance");
+                assert(borrowAssetBalancePoolSavings.toString() == borrowAssetBalancePoolSavingsAfter.toString(), "Savings account balance of pool not changing correctly");
             });
         })
 
@@ -845,8 +967,8 @@ describe("Pool Borrow Withdrawal stage", async () => {
                     "Tokens lent changing while withdrawing borrowed amount"
                 );
                 assert(borrowAssetBalanceBorrower.add(tokensLent).toString() == borrowAssetBalanceBorrowerAfter.toString(), "Borrower not receiving correct lent amount");
-                assert(borrowAssetBalancePool.toString() == borrowAssetBalancePoolAfter.toString(), "Pool token balance is changing instead of savings account balance");
-                assert(borrowAssetBalancePoolSavings.toString() == borrowAssetBalancePoolSavingsAfter.add(tokensLentAfter).toString(), "Savings account balance of pool not changing correctly");
+                assert(borrowAssetBalancePool.toString() == borrowAssetBalancePoolAfter.add(tokensLentAfter).toString(), "Pool token balance is changing instead of savings account balance");
+                assert(borrowAssetBalancePoolSavings.toString() == borrowAssetBalancePoolSavingsAfter.toString(), "Savings account balance of pool not changing correctly");
             });
         })
     });

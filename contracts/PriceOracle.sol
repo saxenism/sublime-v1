@@ -39,8 +39,8 @@ contract PriceOracle is Initializable, OwnableUpgradeable, IPriceOracle {
         (, price1, , , ) = AggregatorV3Interface(_feedData1.oracle).latestRoundData();
         (, price2, , , ) = AggregatorV3Interface(_feedData2.oracle).latestRoundData();
 
-        uint256 price = uint256(price1).mul(10**_feedData2.decimals).mul(10**18).div(uint256(price2)).div(10**_feedData1.decimals);
-        return (price, 18);
+        uint256 price = uint256(price1).mul(10**_feedData2.decimals).mul(10**30).div(uint256(price2)).div(10**_feedData1.decimals);
+        return (price, 30);
     }
 
     function doesFeedExist(address[] calldata tokens)
