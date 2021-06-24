@@ -123,6 +123,11 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         _;
     }
 
+    modifier OnlyRepaymentImpl {
+        require(msg.sender == IPoolFactory(PoolFactory).repaymentImpl(), "25");
+        _;
+    }
+
     function initialize(
         uint256 _borrowAmountRequested,
         uint256 _minborrowAmount,
@@ -668,7 +673,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         emit OpenBorrowPoolTerminated();
     }
 
-    function closeLoan() external payable OnlyBorrower(msg.sender) {
+    function closeLoan() external override payable OnlyBorrower(msg.sender) {
         require(poolVars.loanStatus == LoanStatus.ACTIVE, "22");
         require(poolVars.nextDuePeriod == 0, "23");
 
@@ -1088,13 +1093,13 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             );
     }
 
-    function interestPerSecond(uint256 _principle)
+    function interestPerSecond(uint256 _principal)
         public
         view
         returns (uint256)
     {
         uint256 _interest =
-            ((_principle).mul(poolConstants.borrowRate)).div(365 days);
+            ((_principal).mul(poolConstants.borrowRate)).div(365 days);
         return _interest;
     }
 
