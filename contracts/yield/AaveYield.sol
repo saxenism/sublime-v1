@@ -278,7 +278,6 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
         returns (address aToken, uint256 sharesReceived)
     {
         aToken = liquidityToken(asset);
-
         uint256 aTokensBefore = IERC20(aToken).balanceOf(address(this));
 
         address lendingPool =

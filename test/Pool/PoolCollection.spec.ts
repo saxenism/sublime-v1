@@ -165,8 +165,12 @@ describe("Pool Collection stage", async () => {
             .connect(admin)
             .setfeedAddress(
                 Contracts.LINK,
+                ChainLinkAggregators["LINK/USD"]
+            );
+        await priceOracle
+            .connect(admin)
+            .setfeedAddress(
                 Contracts.DAI,
-                ChainLinkAggregators["LINK/USD"],
                 ChainLinkAggregators["DAI/USD"]
             );
 
