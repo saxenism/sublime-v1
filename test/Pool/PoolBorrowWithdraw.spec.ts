@@ -1164,15 +1164,14 @@ describe('Pool Borrow Withdrawal stage', async () => {
                 );
                 assert(
                     borrowAssetBalancePool.toString() ==
-                        borrowAssetBalancePoolAfter.toString(),
-                    'Pool token balance is changing instead of savings account balance'
+                        borrowAssetBalancePoolAfter.add(tokensLentAfter).toString(),
+                    'Pool token balance is not changing correctly'
                 );
                 assert(
                     borrowAssetBalancePoolSavings.toString() ==
                         borrowAssetBalancePoolSavingsAfter
-                            .add(tokensLentAfter)
                             .toString(),
-                    'Savings account balance of pool not changing correctly'
+                    'Savings account balance of pool changing instead of token balance'
                 );
                 assert(tokensLent.toString() == createPoolParams._minborrowAmount.toString(), "TokensLent is not same as minBorrowAmount");
                 assert(borrowAssetBalanceBorrower.add(tokensLent).toString() == borrowAssetBalanceBorrowerAfter.toString(), "Borrower not receiving correct lent amount");
@@ -1349,15 +1348,14 @@ describe('Pool Borrow Withdrawal stage', async () => {
                 );
                 assert(
                     borrowAssetBalancePool.toString() ==
-                        borrowAssetBalancePoolAfter.toString(),
-                    'Pool token balance is changing instead of savings account balance'
+                        borrowAssetBalancePoolAfter.add(tokensLentAfter).toString(),
+                    'Pool token balance not changing correctly'
                 );
                 assert(
                     borrowAssetBalancePoolSavings.toString() ==
                         borrowAssetBalancePoolSavingsAfter
-                            .add(tokensLentAfter)
                             .toString(),
-                    'Savings account balance of pool not changing correctly'
+                    'Savings account balance of pool is changing instead of token balance'
                 );
                 assert(borrowAssetBalanceBorrower.add(tokensLent).toString() == borrowAssetBalanceBorrowerAfter.toString(), "Borrower not receiving correct lent amount");
                 assert(borrowAssetBalancePool.toString() == borrowAssetBalancePoolAfter.add(tokensLentAfter).toString(), "Pool token balance is changing instead of savings account balance");

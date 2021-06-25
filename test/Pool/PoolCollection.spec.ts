@@ -14,6 +14,7 @@ import {
     createPoolParams,
     ChainLinkAggregators,
     OperationalAmounts,
+    repaymentParams,
 } from '../../utils/constants';
 import DeployHelper from '../../utils/deploys';
 
@@ -34,6 +35,7 @@ import { PoolFactory } from '../../typechain/PoolFactory';
 import { ERC20 } from '../../typechain/ERC20';
 import { PriceOracle } from '../../typechain/PriceOracle';
 import { Extension } from '../../typechain/Extension';
+import { IYield } from '@typechain/IYield';
 
 import { Contracts } from '../../existingContracts/compound.json';
 import { sha256 } from '@ethersproject/sha2';
@@ -52,6 +54,7 @@ describe('Pool Collection stage', async () => {
     let borrower: SignerWithAddress;
     let lender: SignerWithAddress;
     let lender1: SignerWithAddress;
+    let random: SignerWithAddress;
 
     let extenstion: Extension;
     let poolImpl: Pool;
@@ -74,8 +77,7 @@ describe('Pool Collection stage', async () => {
     let WhaleAccount: any;
 
     before(async () => {
-        [proxyAdmin, admin, mockCreditLines, borrower, lender, lender1] =
-            await ethers.getSigners();
+        [proxyAdmin, admin, mockCreditLines, borrower, lender, lender1, random] = await ethers.getSigners();
         const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
         savingsAccount = await deployHelper.core.deploySavingsAccount();
         strategyRegistry = await deployHelper.core.deployStrategyRegistry();
@@ -208,15 +210,24 @@ describe('Pool Collection stage', async () => {
             );
         await poolFactory
             .connect(admin)
-            .updateSupportedBorrowTokens(Contracts.DAI, true);
+            .updateSupportedBorrowTokens(Contracts.LINK, true);
 
         await poolFactory
             .connect(admin)
-            .updateSupportedCollateralTokens(Contracts.LINK, true);
+            .updateSupportedCollateralTokens(Contracts.DAI, true);
 
         poolImpl = await deployHelper.pool.deployPool();
         poolTokenImpl = await deployHelper.pool.deployPoolToken();
         repaymentImpl = await deployHelper.pool.deployRepayments();
+
+        await repaymentImpl
+            .connect(admin)
+            .initialize(
+                admin.address,
+                poolFactory.address,
+                repaymentParams.votingPassRatio,
+                savingsAccount.address
+            );
 
         await poolFactory
             .connect(admin)
@@ -232,23 +243,30 @@ describe('Pool Collection stage', async () => {
         let poolToken: PoolToken;
         let collateralToken: ERC20;
         let borrowToken: ERC20;
+        let poolStrategy: IYield;
+
         beforeEach(async () => {
             let deployHelper: DeployHelper = new DeployHelper(borrower);
             collateralToken = await deployHelper.mock.getMockERC20(
-                Contracts.LINK
+                Contracts.DAI
             );
 
-            borrowToken = await deployHelper.mock.getMockERC20(Contracts.DAI);
+            borrowToken = await deployHelper.mock.getMockERC20(
+                Contracts.LINK
+            );
+            poolStrategy = await deployHelper.mock.getYield(
+                compoundYield.address
+            );
 
             const salt = sha256(
-                Buffer.from('borrower' + Math.random() * 1000000)
+                Buffer.from('borrower' + Math.random() * 10000000)
             );
 
             let generatedPoolAddress: Address = await getPoolAddress(
                 borrower.address,
-                Contracts.DAI,
                 Contracts.LINK,
-                aaveYield.address,
+                Contracts.DAI,
+                poolStrategy.address,
                 poolFactory.address,
                 salt,
                 poolImpl.address,
@@ -273,7 +291,6 @@ describe('Pool Collection stage', async () => {
                 _noOfRepaymentIntervals,
                 _collateralAmount,
             } = createPoolParams;
-
             await collateralToken
                 .connect(admin)
                 .transfer(borrower.address, _collateralAmount); // Transfer quantity to borrower
@@ -282,38 +299,30 @@ describe('Pool Collection stage', async () => {
                 .connect(borrower)
                 .approve(generatedPoolAddress, _collateralAmount);
 
-            await expect(
-                poolFactory
-                    .connect(borrower)
-                    .createPool(
-                        _poolSize,
-                        _minborrowAmount,
-                        Contracts.DAI,
-                        Contracts.LINK,
-                        _collateralRatio,
-                        _borrowRate,
-                        _repaymentInterval,
-                        _noOfRepaymentIntervals,
-                        aaveYield.address,
-                        _collateralAmount,
-                        false,
-                        salt
-                    )
-            )
-                .to.emit(poolFactory, 'PoolCreated')
-                .withArgs(generatedPoolAddress, borrower.address, newPoolToken);
+            await poolFactory
+                .connect(borrower)
+                .createPool(
+                    _poolSize,
+                    _minborrowAmount,
+                    Contracts.LINK,
+                    Contracts.DAI,
+                    _collateralRatio,
+                    _borrowRate,
+                    _repaymentInterval,
+                    _noOfRepaymentIntervals,
+                    poolStrategy.address,
+                    _collateralAmount,
+                    false,
+                    salt
+                );
 
             poolToken = await deployHelper.pool.getPoolToken(newPoolToken);
-
-            expect(await poolToken.name()).eq('Open Borrow Pool Tokens');
-            expect(await poolToken.symbol()).eq('OBPT');
-            expect(await poolToken.decimals()).eq(18);
 
             pool = await deployHelper.pool.getPool(generatedPoolAddress);
         });
 
         it('Lend Tokens directly', async () => {
-            const amount = OperationalAmounts._amountLent.div(10);
+            const amount = createPoolParams._poolSize.div(10);
             const poolTokenBalanceBefore = await poolToken.balanceOf(
                 lender.address
             );
@@ -354,17 +363,17 @@ describe('Pool Collection stage', async () => {
         });
 
         it('Lend Tokens from savings account by depositing with same account in savingsAccount', async () => {
-            const amount = OperationalAmounts._amountLent.div(10);
+            const amount = createPoolParams._poolSize.div(10);
             await borrowToken.connect(admin).transfer(lender.address, amount);
             await borrowToken
                 .connect(lender)
-                .approve(aaveYield.address, amount);
+                .approve(savingsAccount.address, amount);
             await savingsAccount
                 .connect(lender)
                 .depositTo(
                     amount,
                     borrowToken.address,
-                    aaveYield.address,
+                    zeroAddress,
                     lender.address
                 );
 
@@ -409,17 +418,17 @@ describe('Pool Collection stage', async () => {
         });
 
         it('Lend Tokens from savings account by depositing and lending with different account in savingsAccount', async () => {
-            const amount = OperationalAmounts._amountLent.div(10);
+            const amount = createPoolParams._poolSize.div(10);
             await borrowToken.connect(admin).transfer(lender1.address, amount);
             await borrowToken
                 .connect(lender1)
-                .approve(aaveYield.address, amount);
+                .approve(savingsAccount.address, amount);
             await savingsAccount
                 .connect(lender1)
                 .depositTo(
                     amount,
                     borrowToken.address,
-                    aaveYield.address,
+                    zeroAddress,
                     lender1.address
                 );
 

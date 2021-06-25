@@ -264,7 +264,8 @@ describe('Test Savings Account (with ERC20 Token)', async () => {
         });
     });
 
-    describe('# When Aave STRATEGY is preferred', async () => {
+    // skip aave integration
+    describe.skip('# When Aave STRATEGY is preferred', async () => {
         let randomAccount: SignerWithAddress;
         let userAccount: SignerWithAddress;
         let aaveYield: AaveYield;

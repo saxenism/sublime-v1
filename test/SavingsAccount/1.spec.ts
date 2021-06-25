@@ -170,7 +170,8 @@ describe('Test Savings Account (with ETH)', async () => {
         });
     });
 
-    describe('#When AaveYield is the strategy', async () => {
+    // Aave integration is skipped for now
+    describe.skip('#When AaveYield is the strategy', async () => {
         let randomAccount: SignerWithAddress;
         let userAccount: SignerWithAddress;
         let withdrawAccount: SignerWithAddress;
@@ -356,7 +357,7 @@ describe('Test Savings Account (with ETH)', async () => {
         });
     });
 
-    describe('#When YearnYield is the strategy', async () => {
+    describe.only('#When YearnYield is the strategy', async () => {
         let randomAccount: SignerWithAddress;
         let userAccount: SignerWithAddress;
         let withdrawAccount: SignerWithAddress;
@@ -445,6 +446,7 @@ describe('Test Savings Account (with ETH)', async () => {
                 });
 
                 await incrementChain(network, 12000);
+                console.log(sharesReceivedWithYearn.toString())
                 const sharesToWithdraw = BigNumber.from(
                     sharesReceivedWithYearn
                 ).div(2);
@@ -461,14 +463,14 @@ describe('Test Savings Account (with ETH)', async () => {
                 )
                     .mul(sharesToWithdraw)
                     .div('1000000000000000000');
-                // console.log({expectedEthToBeReleased, sharesToWithdraw: sharesToWithdraw.toString()});
+                console.log({expectedEthToBeReleased: expectedEthToBeReleased.toString(), sharesToWithdraw: sharesToWithdraw.toString()});
 
                 await expect(
                     savingsAccount
                         .connect(randomAccount)
                         .withdraw(
                             withdrawAccount.address,
-                            sharesToWithdraw,
+                            expectedEthToBeReleased,
                             zeroAddress,
                             yearnYield.address,
                             false,
