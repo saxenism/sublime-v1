@@ -156,13 +156,11 @@ describe("Pool", async () => {
     priceOracle = await deployHelper.helper.deployPriceOracle();
     await priceOracle.connect(admin).initialize(admin.address);
     await priceOracle
-      .connect(admin)
-      .setfeedAddress(
-        Contracts.LINK,
-        Contracts.DAI,
-        ChainLinkAggregators["LINK/USD"],
-        ChainLinkAggregators["DAI/USD"]
-      );
+            .connect(admin)
+            .setfeedAddress(Contracts.LINK, ChainLinkAggregators['LINK/USD']);
+    await priceOracle
+        .connect(admin)
+        .setfeedAddress(Contracts.DAI, ChainLinkAggregators['DAI/USD']);
   });
 
   describe("Use Pool", async () => {
@@ -186,6 +184,7 @@ describe("Pool", async () => {
         _matchCollateralRatioInterval,
         _poolInitFuncSelector,
         _poolTokenInitFuncSelector,
+        _poolCancelPenalityFraction
       } = testPoolFactoryParams;
       await poolFactory
         .connect(admin)
@@ -203,7 +202,8 @@ describe("Pool", async () => {
           _liquidatorRewardFraction,
           priceOracle.address,
           savingsAccount.address,
-          extenstion.address
+          extenstion.address,
+          _poolCancelPenalityFraction
         );
       poolImpl = await deployHelper.pool.deployPool();
       poolTokenImpl = await deployHelper.pool.deployPoolToken();
