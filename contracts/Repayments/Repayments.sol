@@ -77,20 +77,19 @@ contract Repayments is RepaymentStorage, IRepayment {
     function getInterestDueThisPeriod(address _poolID) 
         public
         view
-        override
         returns (uint256)
     {
-        uint256 activePrincipal = IPool(poolID).getTotalSupply();
+        uint256 activePrincipal = IPool(_poolID).getTotalSupply();
 
         uint256 interestPerSecond =
-            activePrincipal.mul(repaymentConstants[poolID].borrowRate).div(
+            activePrincipal.mul(repaymentConstants[_poolID].borrowRate).div(
                 yearInSeconds
             );
 
         uint256 interestDueTillPeriodEnd =
             interestPerSecond.mul(
-                (repaymentConstants[poolID].repaymentInterval).sub(
-                    repaymentVars[poolID].repaymentPeriodCovered
+                (repaymentConstants[_poolID].repaymentInterval).sub(
+                    repaymentVars[_poolID].repaymentPeriodCovered
                 )
             ).div(10**30); // multiplying exponents
 
@@ -106,13 +105,12 @@ contract Repayments is RepaymentStorage, IRepayment {
     function getRepaymentIntervalsCovered(address _poolID) 
         public 
         view 
-        override
         returns (uint256)
     {
-        uint256 activePrincipal = IPool(poolID).getTotalSupply();
+        uint256 activePrincipal = IPool(_poolID).getTotalSupply();
 
         uint256 interestPerSecond =
-            activePrincipal.mul(repaymentConstants[poolID].borrowRate).div(
+            activePrincipal.mul(repaymentConstants[_poolID].borrowRate).div(
                 yearInSeconds
             );
 
@@ -127,7 +125,6 @@ contract Repayments is RepaymentStorage, IRepayment {
     function getOngoingLoanInterval(address _poolID) 
         public 
         view 
-        override
         returns (uint256)
     {
         uint256 _loanStartTime = repaymentConstants[_poolID].loanStartTime;
@@ -141,14 +138,13 @@ contract Repayments is RepaymentStorage, IRepayment {
     function isGracePenaltyApplicable(address _poolID) 
         public 
         view 
-        override
         returns (bool)
     {
         uint256 _loanStartTime = repaymentConstants[_poolID].loanStartTime;
         uint256 _repaymentInterval = repaymentConstants[_poolID].repaymentInterval;
         uint256 _currentTime = block.timestamp;
 
-        uint256 _currentLoanInterval = getOngoingLoanInterval(address _poolID);
+        uint256 _currentLoanInterval = getOngoingLoanInterval(_poolID);
         uint256 _currentLoanIntervalEndTime = _loanStartTime
                                                 .add((_currentLoanInterval.mul(_repaymentInterval).div(10**30))); // multiplying exponents
         uint256 _loanDurationCovered = repaymentVars[_poolID].loanDurationCovered;
@@ -168,15 +164,15 @@ contract Repayments is RepaymentStorage, IRepayment {
 
     function didBorrowerDefault(address _poolID) 
         public 
-        view 
-        override 
+        view  
         returns (bool)
     {
         uint256 _currentTime = block.timestamp;
-        bool _isLoanExtensionActive = repaymentConstants[_poolID].isLoanExtensionActive;
+        bool _isLoanExtensionActive = repaymentVars[_poolID].isLoanExtensionActive;
         uint256 _repaymentInterval = repaymentConstants[_poolID].repaymentInterval;
+        uint256 _loanStartTime = repaymentConstants[_poolID].loanStartTime;
 
-        uint256 _currentLoanInterval = getOngoingLoanInterval(address _poolID);
+        uint256 _currentLoanInterval = getOngoingLoanInterval(_poolID);
         uint256 _currentLoanIntervalEndTime = _loanStartTime
                                                 .add((_currentLoanInterval.mul(_repaymentInterval).div(10**30))); // multiplying exponents
         uint256 _loanDurationCovered = repaymentVars[_poolID].loanDurationCovered;
@@ -247,7 +243,7 @@ contract Repayments is RepaymentStorage, IRepayment {
                 _amountRequired = _amountRequired.add(repaymentVars[_poolID].repaymentOverdue);
             }
             else {
-                uint256 _repaymentOverdue = repaymentDetails[_poolID].repaymentOverdue;
+                uint256 _repaymentOverdue = repaymentVars[_poolID].repaymentOverdue;
                 repaymentVars[_poolID].repaymentOverdue = _repaymentOverdue.sub(_amount);
                 //repayOverdue(_poolID, _amount);
                 _amount = 0;
@@ -286,7 +282,7 @@ contract Repayments is RepaymentStorage, IRepayment {
         if (_asset == address(0)) {
             require(_amountRequired <= msg.value,
                     "Repayments::repayAmount amount does not match message value.");
-            _poolID.transfer(_amountRequired);
+            payable(address(_poolID)).transfer(_amountRequired);
         } 
         else {
             IERC20(_asset).transferFrom(msg.sender, _poolID, _amountRequired);

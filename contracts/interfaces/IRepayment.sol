@@ -11,10 +11,12 @@ interface IRepayment {
         address lentAsset
     ) external;
 
+    /*
     function calculateRepayAmount(address poolID)
         external
         view
         returns (uint256);
+    */
 
     function getTotalRepaidAmount(address poolID)
         external
