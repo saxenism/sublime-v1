@@ -95,13 +95,13 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
      * @param _borrowRate It is the Interest Rate at which Credit Line is approved
      * @return uint256 interest per second for the given parameters
      */
-    function calculateInterestPerSecond(uint256 _principal, uint256 _borrowRate)
+    function calculateInterest(uint256 _principal, uint256 _borrowRate, uint256 _timeElapsed)
         public
         pure
         returns (uint256)
     {
         uint256 _interest =
-            (_principal.mul(_borrowRate)).div(100).div(yearInSeconds);
+            (_principal.mul(_borrowRate).mul(_timeElapsed)).div(10**30).div(yearInSeconds);
         return _interest;
     }
 
@@ -116,18 +116,17 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         view
         returns (uint256)
     {
-        uint256 _timeElapsed =
-            (block.timestamp).sub(
-                creditLineUsage[creditLineHash].lastPrincipalUpdateTime
-            );
+        uint256 _lastPrincipleUpdateTime = creditLineUsage[creditLineHash].lastPrincipalUpdateTime;
+        if(_lastPrincipleUpdateTime == 0) return 0;
+        uint256 _timeElapsed = (block.timestamp).sub(_lastPrincipleUpdateTime);
         uint256 _interestAccrued =
-            calculateInterestPerSecond(
+            calculateInterest(
                 creditLineUsage[creditLineHash]
                     .principal,
                 creditLineInfo[creditLineHash]
-                    .borrowRate
-            )
-                .mul(_timeElapsed);
+                    .borrowRate,
+                _timeElapsed
+            );
         return _interestAccrued;
     }
 
