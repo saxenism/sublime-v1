@@ -2,14 +2,11 @@
 pragma solidity 0.7.0;
 
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-
 import "@openzeppelin/contracts/math/SafeMath.sol";
-
 import "./RepaymentStorage.sol";
 import "../interfaces/IPool.sol";
 import "../interfaces/IRepayment.sol";
 import "../interfaces/ISavingsAccount.sol";
-
 import "hardhat/console.sol";
 
 contract Repayments is RepaymentStorage, IRepayment {
@@ -60,8 +57,6 @@ contract Repayments is RepaymentStorage, IRepayment {
         uint256 loanStartTime,
         address lentAsset
     ) external override onlyValidPool {
-        repaymentDetails[msg.sender].gracePenaltyRate = gracePenaltyRate;
-        repaymentDetails[msg.sender].gracePeriodFraction = gracePeriodFraction;
         repaymentDetails[msg.sender]
             .numberOfTotalRepayments = numberOfTotalRepayments;
         repaymentDetails[msg.sender].loanDuration = repaymentInterval.mul(
@@ -72,6 +67,7 @@ contract Repayments is RepaymentStorage, IRepayment {
         repaymentDetails[msg.sender].loanStartTime = loanStartTime;
         repaymentDetails[msg.sender].repayAsset = lentAsset;
         repaymentDetails[msg.sender].savingsAccount = savingsAccount;
+        repaymentDetails[msg.sender].nextRepayDeadline = loanStartTime.add(repaymentInterval);
     }
 
     function calculateRepayAmount(address poolID)
@@ -142,9 +138,6 @@ contract Repayments is RepaymentStorage, IRepayment {
     function repayPrincipal(address payable _poolID, uint256 _amount) public payable isPoolInitialized {
 
         IPool _pool = IPool(_poolID);
-        uint256 _loanStatus = _pool.getLoanStatus();
-        require(_loanStatus == 1,
-                "Repayments:repayPrincipal Pool should be active");
 
         require(repaymentDetails[_poolID].repaymentOverdue == 0,
                 "Repayments:repayPrincipal Repayment overdue unpaid");
@@ -210,14 +203,9 @@ contract Repayments is RepaymentStorage, IRepayment {
         return repaymentDetails[poolID].totalRepaidAmount;
     }
 
-    /*
-    function getRepaymentOverdue(address poolID) external view override returns(uint256) {
-        return repaymentDetails[poolID].repaymentOverdue;
-    }
-    */
     function repaymentExtended(address poolID) external override {
         require(
-            msg.sender == IPoolFactory(PoolFactory).owner(),
+            msg.sender == IPoolFactory(PoolFactory).extension(),
             "Repayments::repaymentExtended - Invalid caller"
         );
 
@@ -250,62 +238,4 @@ contract Repayments is RepaymentStorage, IRepayment {
             repaymentDetails[poolID].repaymentOverdue
         );
     }
-
-    // function TotalDueamountLeft() public view{
-    //     uint256 intervalsLeft = totalNumberOfRepayments-calculateCurrentPeriod();
-    //     return(intervalLeft.mul(amountPerPeriod()));
-    // }
-
-    /*function requestExtension(uint256 extensionVoteEndTime)
-        external isPoolInitialized
-        returns (uint256)
-    {
-        
-    }*/
-
-    //event LoanExtensionRequest(address poolID);
-
-    /*function requestExtension(address poolID)
-        external isPoolInitialized
-    {
-        require(repaymentDetails[poolID].extensionsGranted > extensionVoteEndTime,
-                "Borrower : Extension period has ended.");
-
-        repaymentDetails[poolID].extensionRequested = true;
-
-        emit LoanExtensionRequest(poolID);
-    }*/
-
-    /*function voteOnExtension(address poolID,
-                             address voter,
-                             uint256 votingPower,
-                             uint256 extensionAcceptanceThreshold)
-        external 
-        isPoolInitialized 
-        returns (uint256, uint256) {
-        
-        require()
-
-    }
-
-    function resultOfVoting(
-        uint256 totalExtensionSupport,
-        uint256 extensionVoteEndTime,
-        uint256 totalSupply,
-        uint256 nextDuePeriod
-    ) external isPoolInitialized returns (uint256) {
-        
-    }
-
-    function updatePoolFactory(address _poolFactory) external onlyOwner {
-        poolFactory = IPoolFactory(_poolFactory);
-    }
-
-    function updateVotingExtensionlength(uint256 _votingExtensionPeriod) external onlyOwner {
-        votingExtensionlength = _votingExtensionPeriod;
-    }
-
-    function updateVotingPassRatio(uint256 _votingPassRatio) external onlyOwner {
-        votingPassRatio = _votingPassRatio;
-    }*/
 }

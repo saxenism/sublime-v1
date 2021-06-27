@@ -280,7 +280,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
                     _strategy
                 );
         } else {
-            return _pullTokens(_asset, _amount, _from, _to);
+            return _transferTokens(_asset, _amount, _from, _to);
         }
     }
 
@@ -292,7 +292,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         address _asset,
         address _strategy
     ) internal returns (uint256 _sharesReceived) {
-        _pullTokens(_asset, _amount, _from, _to);
+        _transferTokens(_asset, _amount, _from, _to);
         uint256 _ethValue;
         if (_asset == address(0)) {
             _ethValue = _amount;
@@ -362,13 +362,17 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         }
     }
 
-    function _pullTokens(
+    function _transferTokens(
         address _asset,
         uint256 _amount,
         address _from,
         address _to
     ) internal returns (uint256) {
         if (_asset == address(0)) {
+            if(_from == address(this)) {
+                payable(_to).transfer(_amount);
+                return _amount;
+            }
             require(msg.value >= _amount, "");
             if (_to != address(this)) {
                 payable(_to).transfer(_amount);
@@ -378,7 +382,11 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             }
             return _amount;
         }
-        IERC20(_asset).transferFrom(_from, _to, _amount);
+        if(_from == address(this)) {
+            IERC20(_asset).transfer(_to, _amount);
+        } else {
+            IERC20(_asset).transferFrom(_from, _to, _amount);
+        }
         return _amount;
     }
 
@@ -498,7 +506,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         IExtension(_poolFactory.extension()).initializePoolExtension(
             _repaymentInterval
         );
-        IERC20(poolConstants.borrowAsset).transfer(msg.sender, _tokensLent);
+        _transferTokens(poolConstants.borrowAsset, _tokensLent, address(this), msg.sender);
 
         delete poolConstants.loanWithdrawalDeadline;
         emit AmountBorrowed(_tokensLent);
@@ -658,11 +666,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
                 _poolFactory,
                 IPoolFactory(_poolFactory).liquidatorRewardFraction()
             );
-        IERC20(poolConstants.borrowAsset).transferFrom(
-            msg.sender,
-            address(this),
-            _liquidationTokens
-        );
+        _transferTokens(poolConstants.borrowAsset, _liquidationTokens, msg.sender, address(this));
         poolVars.penalityLiquidityAmount = _liquidationTokens;
         _withdraw(
             _toSavingsAccount,
@@ -682,14 +686,13 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         emit OpenBorrowPoolTerminated();
     }
 
-    function closeLoan() external override payable OnlyBorrower(msg.sender) {
+    function closeLoan() external override payable OnlyRepaymentImpl {
         require(poolVars.loanStatus == LoanStatus.ACTIVE, "22");
-        require(poolVars.nextDuePeriod == 0, "23");
 
         uint256 _principleToPayback = poolToken.totalSupply();
         address _borrowAsset = poolConstants.borrowAsset;
 
-        _pullTokens(
+        _transferTokens(
             _borrowAsset,
             _principleToPayback,
             msg.sender,
@@ -760,7 +763,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         //to add transfer if not included in above (can be transferred with liquidity)
         poolToken.burn(msg.sender, _actualBalance);
         //transfer liquidity provided
-        _tokenTransfer(poolConstants.borrowAsset, msg.sender, _toTransfer);
+        _transferTokens(poolConstants.borrowAsset, _toTransfer, address(this), msg.sender);
 
         // TODO: Something wrong in the below event. Please have a look
         emit LiquidityWithdrawn(_toTransfer, msg.sender);
@@ -1109,23 +1112,6 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         return (poolVars.loanStatus);
     }
 
-    function getNextDueTimeIfBorrower(address _borrower)
-        external
-        view
-        override
-        OnlyBorrower(_borrower)
-        returns (uint256)
-    {
-        return getNextDueTime();
-    }
-
-    function getNextDueTime() public view returns (uint256) {
-        return
-            (poolVars.nextDuePeriod.mul(poolConstants.repaymentInterval)).add(
-                poolConstants.loanStartTime
-            );
-    }
-
     function interestPerSecond(uint256 _principal)
         public
         view
@@ -1183,18 +1169,16 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             return;
         }
 
-        IERC20(poolConstants.borrowAsset).transfer(
-            msg.sender,
-            _amountToWithdraw
+        _transferTokens(
+            poolConstants.borrowAsset,
+            _amountToWithdraw,
+            address(this),
+            _lender
         );
 
         lenders[_lender].interestWithdrawn = lenders[_lender]
             .interestWithdrawn
             .add(_amountToWithdraw);
-    }
-
-    function getNextDuePeriod() external view override returns (uint256) {
-        return poolVars.nextDuePeriod;
     }
 
     function getMarginCallEndTime(address _lender)
@@ -1220,31 +1204,8 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         return (_poolToken.balanceOf(_lender), _poolToken.totalSupply());
     }
 
-    function grantExtension()
-        external
-        override
-        onlyExtension
-        returns (uint256)
-    {
-        uint256 _nextDuePeriod = poolVars.nextDuePeriod.add(1);
-        poolVars.nextDuePeriod = _nextDuePeriod;
-        return _nextDuePeriod;
-    }
-
     function getLoanStatus() public view override returns (uint256) {
         return uint256(poolVars.loanStatus);
-    }
-
-    function _tokenTransfer(
-        address _token,
-        address _to,
-        uint256 _amount
-    ) internal returns (uint256) {
-        if (_token != address(0)) {
-            IERC20(poolConstants.borrowAsset).safeTransfer(_to, _amount);
-        } else {
-            payable(_to).transfer(_amount);
-        }
     }
 
     receive() external payable {

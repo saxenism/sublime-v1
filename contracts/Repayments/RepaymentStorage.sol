@@ -24,8 +24,6 @@ contract RepaymentStorage is OwnableUpgradeable {
 
     struct RepaymentDetails {
         uint256 numberOfTotalRepayments; // using it to check if RepaymentDetails Exists as repayment Interval!=0 in any case
-        uint256 gracePenaltyRate;
-        uint256 gracePeriodFraction;
         uint256 totalRepaidAmount;
         uint256 loanDuration;
         uint256 repaymentInterval;
@@ -33,11 +31,10 @@ contract RepaymentStorage is OwnableUpgradeable {
         uint256 repaymentOverdue;
         bool isLoanExtensionActive;
         uint256 borrowRate;
-        uint256 repaymentDetails;
         uint256 loanStartTime;
         address repayAsset;
         address savingsAccount;
-
+        uint256 nextRepayDeadline;
         uint256 loanDurationCovered;
     }
 
