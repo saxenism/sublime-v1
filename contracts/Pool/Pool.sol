@@ -422,7 +422,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     ) external payable override {
         require(poolVars.loanStatus == LoanStatus.ACTIVE, "9");
 
-        require(lenders[_lender].marginCallEndTime >= block.timestamp, "10");
+        require(getMarginCallEndTime(_lender) >= block.timestamp, "10");
 
         require(_amount != 0, "11");
 
@@ -573,8 +573,8 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         uint256 _amount
     ) public override {
         require(msg.sender == address(poolToken));
-        require(lenders[_from].marginCallEndTime == 0, "18");
-        require(lenders[_to].marginCallEndTime == 0, "19");
+        require(getMarginCallEndTime(_from) == 0, "18");
+        require(getMarginCallEndTime(_to) == 0, "19");
 
         //Withdraw repayments for user
         _withdrawRepayment(_from);
@@ -776,6 +776,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         require(poolVars.loanStatus == LoanStatus.ACTIVE, "4");
 
         IPoolFactory _poolFactory = IPoolFactory(PoolFactory);
+        require(getMarginCallEndTime(msg.sender) != 0, "RMC1");
         require(
             poolConstants.idealCollateralRatio >
                 getCurrentCollateralRatio(msg.sender).add(
@@ -973,7 +974,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             "27"
         );
         uint256 _marginCallEndTime = lenders[_lender].marginCallEndTime;
-        require(_marginCallEndTime != 0, "No margin call has been called.");
+        require(getMarginCallEndTime(_lender) != 0, "No margin call has been called.");
         require(_marginCallEndTime < block.timestamp, "28");
 
         require(
@@ -1198,12 +1199,17 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     }
 
     function getMarginCallEndTime(address _lender)
-        external
+        public
         view
         override
         returns (uint256)
     {
-        return lenders[_lender].marginCallEndTime;
+        uint256 _marginCallDuration = IPoolFactory(PoolFactory).marginCallDuration();
+        uint256 _marginCallEndTime = lenders[_lender].marginCallEndTime;
+        if(block.timestamp > _marginCallEndTime.add(_marginCallDuration.mul(2))) {
+            _marginCallEndTime = 0;
+        }
+        return _marginCallEndTime;
     }
 
     function getTotalSupply() public view override returns (uint256) {
