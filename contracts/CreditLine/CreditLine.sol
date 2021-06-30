@@ -10,6 +10,7 @@ import "../interfaces/IPriceOracle.sol";
 import "../interfaces/IYield.sol";
 import "../interfaces/IRepayment.sol";
 import "../interfaces/ISavingsAccount.sol";
+import "../SavingsAccount/SavingsAccountUtil.sol";
 import "../interfaces/IStrategyRegistry.sol";
 
 /**
@@ -190,33 +191,29 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
                     _asset,
                     _strategyList[_index]
                 );
-            if (_liquidityShares != 0) {
-                uint256 _tokenInStrategy = _liquidityShares;
-                if (_strategyList[_index] != address(0)) {
-                    _tokenInStrategy = IYield(_strategyList[_index])
-                        .getTokensForShares(_liquidityShares, _asset);
-                }
+            if(_liquidityShares == 0) {
+                continue;
+            }
+            uint256 _tokenInStrategy = _liquidityShares;
+            if (_strategyList[_index] != address(0)) {
+                _tokenInStrategy = IYield(_strategyList[_index])
+                    .getTokensForShares(_liquidityShares, _asset);
+            }
 
-                if (_activeAmount.add(_tokenInStrategy) >= _amount) {
-                    uint256 _tokensToTransfer = (_amount.sub(_activeAmount));
-                    _savingsAccount.transferFrom(
-                        _asset,
-                        _sender,
-                        _recipient,
-                        _strategyList[_index],
-                        _tokensToTransfer
-                    );
-                    return;
-                } else {
-                    _activeAmount = _activeAmount.add(_tokenInStrategy);
-                    _savingsAccount.transferFrom(
-                        _asset,
-                        _sender,
-                        _recipient,
-                        _strategyList[_index],
-                        _tokenInStrategy
-                    );
-                }
+            uint256 _tokensToTransfer = _tokenInStrategy;
+            if (_activeAmount.add(_tokenInStrategy) >= _amount) {
+                _tokensToTransfer = (_amount.sub(_activeAmount));
+            }
+            _activeAmount = _activeAmount.add(_tokensToTransfer);
+            _savingsAccount.transferFrom(
+                _asset,
+                _sender,
+                _recipient,
+                _strategyList[_index],
+                _tokensToTransfer
+            );
+            if (_amount == _activeAmount) {
+                return;
             }
         }
         revert("CreditLine::transferFromSavingAccount - Insufficient balance");
@@ -447,7 +444,6 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         ISavingsAccount _savingsAccount =
             ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
         uint256 _activeAmount;
-        uint256 _tokenInStrategy;
         for (uint256 _index = 0; _index < _strategyList.length; _index++) {
             uint256 _liquidityShares =
                 _savingsAccount.userLockedBalance(
@@ -459,36 +455,25 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
                 uint256 tokenInStrategy = _liquidityShares;
                 if (_strategyList[_index] != address(0)) {
                     tokenInStrategy = IYield(_strategyList[_index])
-                        .getTokensForShares(_liquidityShares, _asset); //TODO might not pass since yield is included in tokenInStrategy
+                        .getTokensForShares(_liquidityShares, _asset);
                 }
                 uint256 _tokensToTransfer = tokenInStrategy;
-                if (_activeAmount.add(_tokenInStrategy) >= _amountInTokens) {
+                if (_activeAmount.add(tokenInStrategy) >= _amountInTokens) {
                     _tokensToTransfer = (_amountInTokens.sub(_activeAmount));
-                    _savingsAccount.withdrawFrom(
-                        _lender,
-                        address(this),
-                        _tokensToTransfer,
-                        _asset,
-                        _strategyList[_index],
-                        false
-                    );
-                    //_savingsAccount.transferFrom(_asset, _sender, _recipient, _strategyList[_index], _sharesToTransfer);
-                    // collateralShareInStrategy[_creditLineHash][_strategyList[_index]] = collateralShareInStrategy[_creditLineHash][_strategyList[_index]]
-                    //                                                                     .add(_sharesToTransfer);
-                } else {
-                    _activeAmount = _activeAmount.add(_tokenInStrategy);
-                    _savingsAccount.withdrawFrom(
-                        _lender,
-                        address(this),
-                        _tokensToTransfer,
-                        _asset,
-                        _strategyList[_index],
-                        false
-                    );
+                    _activeAmount = _activeAmount.add(_tokensToTransfer);
                 }
-                //_savingsAccount.transferFrom(_asset, _sender, _recipient, _strategyList[_index], _liquidityShares);
-                // collateralShareInStrategy[_creditLineHash][_strategyList[_index]] = collateralShareInStrategy[_creditLineHash][_strategyList[_index]]
-                //                                                                     .add(_liquidityShares);
+                _activeAmount = _activeAmount.add(_tokensToTransfer);
+                _savingsAccount.withdrawFrom(
+                    _lender,
+                    address(this),
+                    _tokensToTransfer,
+                    _asset,
+                    _strategyList[_index],
+                    false
+                );
+                if(_activeAmount == _amountInTokens) {
+                    return;
+                }
             }
         }
         require(_activeAmount == _amountInTokens, "insufficient balance");
@@ -641,8 +626,6 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
             creditLineUsage[creditLineHash].totalInterestRepaid.add(
                 repayAmount
             );
-        // check requried for correct token type
-        //uint256 _currentDebt = calculateCurrentDebt(creditLineHash);
         require(
             _totalDebt >= repayAmount,
             "CreditLine: Repay amount is greater than debt."
@@ -793,38 +776,40 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         for (uint256 index = 0; index < _strategyList.length; index++) {
             uint256 liquidityShares =
                 collateralShareInStrategy[creditLineHash][_strategyList[index]];
-            if (liquidityShares > 0) {
-                uint256 _tokenInStrategy = liquidityShares;
-                if (_strategyList[index] != address(0)) {
-                    _tokenInStrategy = IYield(_strategyList[index])
-                        .getTokensForShares(liquidityShares, _asset);
-                }
-                _activeAmount = _activeAmount.add(_tokenInStrategy);
-                if (_activeAmount > _amountInTokens) {
-                    liquidityShares = liquidityShares.sub(
-                        (_activeAmount.sub(_amountInTokens))
-                            .mul(liquidityShares)
-                            .div(_tokenInStrategy)
-                    );
-                }
-                collateralShareInStrategy[creditLineHash][
-                    _strategyList[index]
-                ] = collateralShareInStrategy[creditLineHash][
-                    _strategyList[index]
-                ]
-                    .sub(liquidityShares);
-                ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount())
-                    .withdraw(
-                    msg.sender,
-                    liquidityShares,
-                    _asset,
-                    _strategyList[index],
-                    false
-                );
+            if (liquidityShares == 0) {
+                continue;
+            }
+            uint256 _tokenInStrategy = liquidityShares;
+            if (_strategyList[index] != address(0)) {
+                _tokenInStrategy = IYield(_strategyList[index])
+                    .getTokensForShares(liquidityShares, _asset);
+            }
+            uint256 _tokensToTransfer = _tokenInStrategy;
+            if (_activeAmount.add(_tokenInStrategy) > _amountInTokens) {
+                _tokensToTransfer = _amountInTokens.sub(_activeAmount);
 
-                if (_activeAmount == _amountInTokens) {
-                    return;
-                }
+                liquidityShares = liquidityShares
+                        .mul(_tokensToTransfer)
+                        .div(_tokenInStrategy);
+            }
+            _activeAmount = _activeAmount.add(_tokensToTransfer);
+            collateralShareInStrategy[creditLineHash][
+                _strategyList[index]
+            ] = collateralShareInStrategy[creditLineHash][
+                _strategyList[index]
+            ]
+                .sub(liquidityShares);
+            ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount())
+                .withdraw(
+                msg.sender,
+                _tokensToTransfer,
+                _asset,
+                _strategyList[index],
+                false
+            );
+
+            if (_activeAmount == _amountInTokens) {
+                return;
             }
         }
         revert("insufficient collateral");
