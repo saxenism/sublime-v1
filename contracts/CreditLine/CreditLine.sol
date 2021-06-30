@@ -96,13 +96,15 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
      * @param _borrowRate It is the Interest Rate at which Credit Line is approved
      * @return uint256 interest per second for the given parameters
      */
-    function calculateInterest(uint256 _principal, uint256 _borrowRate, uint256 _timeElapsed)
-        public
-        pure
-        returns (uint256)
-    {
+    function calculateInterest(
+        uint256 _principal,
+        uint256 _borrowRate,
+        uint256 _timeElapsed
+    ) public pure returns (uint256) {
         uint256 _interest =
-            (_principal.mul(_borrowRate).mul(_timeElapsed)).div(10**30).div(yearInSeconds);
+            (_principal.mul(_borrowRate).mul(_timeElapsed)).div(10**30).div(
+                yearInSeconds
+            );
         return _interest;
     }
 
@@ -117,15 +119,14 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         view
         returns (uint256)
     {
-        uint256 _lastPrincipleUpdateTime = creditLineUsage[creditLineHash].lastPrincipalUpdateTime;
-        if(_lastPrincipleUpdateTime == 0) return 0;
+        uint256 _lastPrincipleUpdateTime =
+            creditLineUsage[creditLineHash].lastPrincipalUpdateTime;
+        if (_lastPrincipleUpdateTime == 0) return 0;
         uint256 _timeElapsed = (block.timestamp).sub(_lastPrincipleUpdateTime);
         uint256 _interestAccrued =
             calculateInterest(
-                creditLineUsage[creditLineHash]
-                    .principal,
-                creditLineInfo[creditLineHash]
-                    .borrowRate,
+                creditLineUsage[creditLineHash].principal,
+                creditLineInfo[creditLineHash].borrowRate,
                 _timeElapsed
             );
         return _interestAccrued;
@@ -191,7 +192,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
                     _asset,
                     _strategyList[_index]
                 );
-            if(_liquidityShares == 0) {
+            if (_liquidityShares == 0) {
                 continue;
             }
             uint256 _tokenInStrategy = _liquidityShares;
@@ -307,6 +308,10 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         address _collateralAsset,
         bool _requestByLender
     ) internal returns (bytes32 creditLineHash) {
+        require(
+            _lender != _borrower,
+            "Lender and Borrower cannot be same addresses"
+        );
         CreditLineCounter = CreditLineCounter + 1; // global counter to generate ID
         bytes32 _creditLineHash =
             keccak256(abi.encodePacked(CreditLineCounter));
@@ -471,7 +476,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
                     _strategyList[_index],
                     false
                 );
-                if(_activeAmount == _amountInTokens) {
+                if (_activeAmount == _amountInTokens) {
                     return;
                 }
             }
@@ -788,16 +793,14 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
             if (_activeAmount.add(_tokenInStrategy) > _amountInTokens) {
                 _tokensToTransfer = _amountInTokens.sub(_activeAmount);
 
-                liquidityShares = liquidityShares
-                        .mul(_tokensToTransfer)
-                        .div(_tokenInStrategy);
+                liquidityShares = liquidityShares.mul(_tokensToTransfer).div(
+                    _tokenInStrategy
+                );
             }
             _activeAmount = _activeAmount.add(_tokensToTransfer);
             collateralShareInStrategy[creditLineHash][
                 _strategyList[index]
-            ] = collateralShareInStrategy[creditLineHash][
-                _strategyList[index]
-            ]
+            ] = collateralShareInStrategy[creditLineHash][_strategyList[index]]
                 .sub(liquidityShares);
             ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount())
                 .withdraw(
