@@ -31,4 +31,6 @@ interface IRepayment {
         external
         view
         returns (uint256, uint256);
+
+    function getOngoingLoanInterval(address poolID) external view returns(uint256);
 }

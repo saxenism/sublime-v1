@@ -28,6 +28,7 @@ contract RepaymentStorage is OwnableUpgradeable {
         uint256 repaymentOverdue;
         bool isLoanExtensionActive;
         uint256 loanDurationCovered;
+        uint256 nextDuePeriod;
     }
 
     struct RepaymentConstants {

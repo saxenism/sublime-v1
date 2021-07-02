@@ -20,6 +20,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         uint256 max;
     }
 
+    // TODO contract addresses should end with Impl
     bytes4 public poolInitFuncSelector; //  bytes4(keccak256("initialize(uint256,address,address,address,uint256,uint256,uint256,uint256,bool)"))
     bytes4 public poolTokenInitFuncSelector;
     address public poolImpl;

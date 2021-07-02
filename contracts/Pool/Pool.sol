@@ -1093,6 +1093,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
                 .div(10**30);
     }
 
+    // TODO - check, similar to didBorrowerDefault in Repayments.sol
     function checkRepayment() public returns (LoanStatus) {
         IPoolFactory _poolFactory = IPoolFactory(PoolFactory);
         uint256 _gracePeriodPenaltyFraction =
@@ -1220,14 +1221,38 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         return (_poolToken.balanceOf(_lender), _poolToken.totalSupply());
     }
 
+    // TODO add event emit
+    function updateNextDuePeriodAfterRepayment(uint256 _nextDuePeriod) 
+        external 
+        override 
+        returns (uint256)
+    {
+        require(msg.sender == IPoolFactory(PoolFactory).repaymentImpl(), "37");
+        poolVars.nextDuePeriod = _nextDuePeriod;
+    }
+
+    /*
+    // TODO maybe an alternative name would make sense, currently shares name with impl from Extension.sol
     function grantExtension()
         external
         override
         onlyExtension
         returns (uint256)
     {
-        uint256 _nextDuePeriod = poolVars.nextDuePeriod.add(1);
+        uint256 _nextDuePeriod = poolVars.nextDuePeriod.add(1); // TODO should we be adding 10**30?
         poolVars.nextDuePeriod = _nextDuePeriod;
+        return _nextDuePeriod;
+    }
+    */
+    // TODO add event emit
+    function updateNextRepaymentPeriodAfterExtension()
+        external 
+        override 
+        returns (uint256)
+    {
+        require(msg.sender == IPoolFactory(PoolFactory).extension(), "38");
+        uint256 _nextRepaymentPeriod = poolVars.nextDuePeriod.add(10**30); // TODO verify - adding 10**30 to add 1
+        poolVars.nextRepaymentPeriod = _nextDuePeriod;
         return _nextDuePeriod;
     }
 

@@ -72,6 +72,7 @@ contract Repayments is RepaymentStorage, IRepayment {
         repaymentConstants[msg.sender].loanStartTime = loanStartTime;
         repaymentConstants[msg.sender].repayAsset = lentAsset;
         repaymentConstants[msg.sender].savingsAccount = savingsAccount;
+        repaymentVars[msg.sender].nextDuePeriod = loanStartTime.add(repaymentInterval);
     }
 
     function getInterestDueThisPeriod(address _poolID) 
@@ -123,7 +124,8 @@ contract Repayments is RepaymentStorage, IRepayment {
     }
 
     function getOngoingLoanInterval(address _poolID) 
-        public 
+        external 
+        override  
         view 
         returns (uint256)
     {
@@ -171,16 +173,17 @@ contract Repayments is RepaymentStorage, IRepayment {
         bool _isLoanExtensionActive = repaymentVars[_poolID].isLoanExtensionActive;
         uint256 _repaymentInterval = repaymentConstants[_poolID].repaymentInterval;
         uint256 _loanStartTime = repaymentConstants[_poolID].loanStartTime;
+        uint256 _gracePeriodFraction = repaymentConstants[_poolID].gracePeriodFraction;
 
         uint256 _currentLoanInterval = getOngoingLoanInterval(_poolID);
         uint256 _currentLoanIntervalEndTime = _loanStartTime
                                                 .add((_currentLoanInterval.mul(_repaymentInterval).div(10**30))); // multiplying exponents
         uint256 _loanDurationCovered = repaymentVars[_poolID].loanDurationCovered;
 
-        if (_currentTime > _currentLoanIntervalEndTime.add(gracePeriodFraction.mul(_repaymentInterval)) &&
+        if (_currentTime > _currentLoanIntervalEndTime.add(_gracePeriodFraction.mul(_repaymentInterval).div(10**30)) &&
             _loanStartTime.add(_loanDurationCovered) < _currentLoanIntervalEndTime &&
-            _isLoanExtensionActive == false
-        ) {
+            _isLoanExtensionActive == false) // 1st condition checks current time vs interval end time, 2nd condition checks if interval interest has already been repaid
+        {
             return true;
         }
 
@@ -233,19 +236,15 @@ contract Repayments is RepaymentStorage, IRepayment {
 
         // First pay off the overdue
         if(repaymentVars[_poolID].repaymentOverdue != 0) {
-            if (_amount > repaymentVars[_poolID].repaymentOverdue) {
-
+            if (_amount >= repaymentVars[_poolID].repaymentOverdue) {
                 repaymentVars[_poolID].repaymentOverdue = 0;
-
-                //repayOverdue(_poolID, repaymentVars[_poolID].repaymentOverdue);
-
                 _amount = _amount.sub(repaymentVars[_poolID].repaymentOverdue);
                 _amountRequired = _amountRequired.add(repaymentVars[_poolID].repaymentOverdue);
+                repaymentVars[_poolID].isLoanExtensionActive = false; // deactivate loan extension flag
             }
             else {
                 uint256 _repaymentOverdue = repaymentVars[_poolID].repaymentOverdue;
                 repaymentVars[_poolID].repaymentOverdue = _repaymentOverdue.sub(_amount);
-                //repayOverdue(_poolID, _amount);
                 _amount = 0;
                 _amountRequired = _amountRequired.add(_amount);
             }
@@ -255,11 +254,11 @@ contract Repayments is RepaymentStorage, IRepayment {
         if(_amount != 0) {
             uint256 _activePrincipal = _pool.getTotalSupply();
             uint256 _interestPerSecond = _activePrincipal
-                                     .mul(repaymentConstants[_poolID].borrowRate)
-                                     .div(yearInSeconds);
+                                        .mul(repaymentConstants[_poolID].borrowRate)
+                                        .div(yearInSeconds);
 
             uint256 _loanDurationLeft = repaymentConstants[_poolID].loanDuration
-                                    .sub(repaymentVars[_poolID].loanDurationCovered);
+                                        .sub(repaymentVars[_poolID].loanDurationCovered);
 
             uint256 _interestLeft = _interestPerSecond.mul(_loanDurationLeft).div(10**30); // multiplying exponents
 
@@ -271,10 +270,14 @@ contract Repayments is RepaymentStorage, IRepayment {
                 _amountRequired = _amountRequired.add(_amount);
             }
             else {
-                repaymentVars[_poolID].loanDurationCovered = repaymentConstants[_poolID].loanDuration;
+                repaymentVars[_poolID].loanDurationCovered = repaymentConstants[_poolID].loanDuration; // full interest repaid
                 _amount = _amount.sub(_interestLeft);
                 _amountRequired = _amountRequired.add(_interestLeft);
             }
+
+            uint256 _nextDuePeriod = (repaymentVars[_poolID].loanDurationCovered.mul(10**30).div(repaymentConstants[_poolID].repaymentInterval)).add(10**30); // dividing exps, adding 1 b/c next due period is one ahead period covered
+            repaymentVars[_poolID].nextDuePeriod = _nextDuePeriod;
+            _pool.updateNextDuePeriod(_nextDuePeriod);
         }
         
         address _asset = repaymentConstants[_poolID].repayAsset;
