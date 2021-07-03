@@ -128,11 +128,12 @@ contract Repayments is RepaymentStorage, IRepayment {
         return _instalmentsCompleted;
     }
 
+    /*
     function updateLoanExtensionPeriod(address _poolID, uint256 _period) 
         external 
     {
         repaymentVars[_poolID].loanExtensionPeriod = _period;
-    }
+    }*/
 
     function getNextInstalmentDeadline(address _poolID) 
         public 
