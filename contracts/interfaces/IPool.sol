@@ -27,8 +27,6 @@ interface IPool {
 
     //function borrower() external returns(address);
 
-    function getNextDuePeriod() external returns (uint256);
-
     function getMarginCallEndTime(address _lender) external returns (uint256);
 
     function getNextDueTimeIfBorrower(address _borrower)

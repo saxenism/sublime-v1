@@ -25,7 +25,7 @@ contract Extension is Initializable, IExtension {
     IPoolFactory poolFactory;
 
     event ExtensionRequested(uint256 extensionVoteEndTime);
-    event ExtensionPassed();
+    event ExtensionPassed(uint256 loanInterval);
     event LenderVoted(
         address lender,
         uint256 totalExtensionSupport,
