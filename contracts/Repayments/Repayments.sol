@@ -249,6 +249,20 @@ contract Repayments is RepaymentStorage, IRepayment {
 */
     // TODO need to add grace penalty
 
+    function getInterestLeft(address _poolID) 
+        public 
+        view 
+        returns (uint256)
+    {
+        IPool _pool = IPool(_poolID);
+        uint256 _interestPerSecond = getInterestPerSecond((_poolID));
+        uint256 _loanDurationLeft = repaymentConstants[_poolID].loanDuration.sub(repaymentVars[_poolID].loanDurationCovered);
+        uint256 _interestLeft = _interestPerSecond.mul(_loanDurationLeft).div(10**30); // multiplying exponents
+
+        return _interestLeft;
+        
+    }
+
     function repayAmount(address _poolID, uint256 _amount) public payable isPoolInitialized {
         IPool _pool = IPool(_poolID);
 
@@ -276,15 +290,16 @@ contract Repayments is RepaymentStorage, IRepayment {
 
         // Second pay off the interest
         if(_amount != 0) {
-            uint256 _activePrincipal = _pool.getTotalSupply();
-            uint256 _interestPerSecond = _activePrincipal
-                                        .mul(repaymentConstants[_poolID].borrowRate)
-                                        .div(yearInSeconds);
+            //uint256 _activePrincipal = _pool.getTotalSupply();
+            //uint256 _interestPerSecond = _activePrincipal
+            //                            .mul(repaymentConstants[_poolID].borrowRate)
+            //                            .div(yearInSeconds);
 
-            uint256 _loanDurationLeft = repaymentConstants[_poolID].loanDuration
-                                        .sub(repaymentVars[_poolID].loanDurationCovered);
+            //uint256 _loanDurationLeft = repaymentConstants[_poolID].loanDuration
+            //                            .sub(repaymentVars[_poolID].loanDurationCovered);
+            uint256 _interestPerSecond = getInterestPerSecond(_poolID);
 
-            uint256 _interestLeft = _interestPerSecond.mul(_loanDurationLeft).div(10**30); // multiplying exponents
+            uint256 _interestLeft = getInterestLeft(_poolID); //_interestPerSecond.mul(_loanDurationLeft).div(10**30); // multiplying exponents
             bool _isBorrowerLate = isGracePenaltyApplicable(_poolID);
 
             // adding grace penalty if applicable
