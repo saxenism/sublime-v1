@@ -51,9 +51,6 @@ contract Extension is Initializable, IExtension {
         poolInfo[msg.sender].repaymentInterval = _repaymentInterval;
     }
 
-    /*
-    * @notice 
-    */
     function requestExtension(address _pool) external {
         uint256 _repaymentInterval = poolInfo[_pool].repaymentInterval;
         require(_repaymentInterval != 0);
@@ -77,7 +74,7 @@ contract Extension is Initializable, IExtension {
         uint256 _nextDueTime =
             IPool(_pool).getNextDueTimeIfBorrower(msg.sender);
         _extensionVoteEndTime = (_nextDueTime).add(_gracePeriod);
-        poolInfo[_pool].extensionVoteEndTime = _extensionVoteEndTime; // TODO this makes extension request single use
+        poolInfo[_pool].extensionVoteEndTime = _extensionVoteEndTime; // TODO this makes extension request single use, ideally need to reset extensionVoteEndTime if vote doesnt cross threshold
         emit ExtensionRequested(_extensionVoteEndTime);
     }
 
@@ -118,7 +115,7 @@ contract Extension is Initializable, IExtension {
 
         if (
             ((_extensionSupport)) >=
-            (_totalSupply.mul(_votingPassRatio)).div(100000000)
+            (_totalSupply.mul(_votingPassRatio)).div(10**30)
         ) {
             grantExtension(_pool);
             // TODO: probably delete the lastVoteTime as that is not needed in future
@@ -129,11 +126,10 @@ contract Extension is Initializable, IExtension {
         IPoolFactory _poolFactory = poolFactory;
 
         uint256 _currentLoanInterval = IRepayment(_poolFactory.repaymentImpl()).getCurrentLoanInterval(_pool);
-        //uint256 _currentLoanInterval = IRepayment(_poolFactory.repaymentImpl()).getCurrentLoanInterval(_pool);
         poolInfo[_pool].periodWhenExtensionIsPassed = _currentLoanInterval;
         poolInfo[_pool].extensionVoteEndTime = block.timestamp; // voting is over
 
-        IRepayment(_poolFactory.repaymentImpl()).repaymentExtended(_pool, _currentLoanInterval);
+        IRepayment(_poolFactory.repaymentImpl()).instalmentDeadlineExtended(_pool, _currentLoanInterval);
 
         emit ExtensionPassed(_currentLoanInterval);
     }

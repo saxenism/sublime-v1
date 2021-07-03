@@ -128,11 +128,12 @@ contract Repayments is RepaymentStorage, IRepayment {
         return _instalmentsCompleted;
     }
 
+    /*
     function updateLoanExtensionPeriod(address _poolID, uint256 _period) 
         external 
     {
         repaymentVars[_poolID].loanExtensionPeriod = _period;
-    }
+    }*/
 
     function getNextInstalmentDeadline(address _poolID) 
         public 
@@ -400,7 +401,7 @@ contract Repayments is RepaymentStorage, IRepayment {
         return repaymentVars[poolID].repaymentOverdue;
     }
     */
-    function repaymentExtended(address _poolID, uint256 _period) external override {
+    function instalmentDeadlineExtended(address _poolID, uint256 _period) external override {
         require(
             msg.sender == IPoolFactory(PoolFactory).owner(),
             "Repayments::repaymentExtended - Invalid caller"
