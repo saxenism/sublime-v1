@@ -892,10 +892,15 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         bool _toSavingsAccount,
         bool _recieveLiquidityShare
     ) external payable nonReentrant {
-        LoanStatus _currentPoolStatus;
+        LoanStatus _currentPoolStatus = poolVars.loanStatus;
         address _poolFactory = PoolFactory;
-        if (poolVars.loanStatus != LoanStatus.DEFAULTED) {
-            _currentPoolStatus = checkRepayment();
+        if (
+            _currentPoolStatus != LoanStatus.DEFAULTED &&
+            IRepayment(IPoolFactory(_poolFactory).repaymentImpl())
+                .didBorrowerDefault(address(this))
+        ) {
+            _currentPoolStatus = LoanStatus.DEFAULTED;
+            poolVars.loanStatus = _currentPoolStatus;
         }
         require(
             _currentPoolStatus == LoanStatus.DEFAULTED,
@@ -1096,20 +1101,21 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
                 .div(10**30);
     }
 
-    function checkRepayment() public returns (LoanStatus) {
-        IPoolFactory _poolFactory = IPoolFactory(PoolFactory);
-        uint256 _gracePeriodPenaltyFraction =
-            _poolFactory.gracePeriodPenaltyFraction();
-        uint256 _defaultDeadline =
-            getNextDueTime().add(
-                _gracePeriodPenaltyFraction.mul(poolConstants.repaymentInterval)
+    function getNextDueTimeIfBorrower(address _borrower)
+        external
+        view
+        override
+        OnlyBorrower(_borrower)
+        returns (uint256)
+    {
+        return getNextDueTime();
+    }
+
+    function getNextDueTime() public view returns (uint256) {
+        return
+            (poolVars.nextDuePeriod.mul(poolConstants.repaymentInterval)).add(
+                poolConstants.loanStartTime
             );
-        if (block.timestamp > _defaultDeadline) {
-            poolVars.loanStatus = LoanStatus.DEFAULTED;
-            IExtension(_poolFactory.extension()).closePoolExtension();
-            return (LoanStatus.DEFAULTED);
-        }
-        return (poolVars.loanStatus);
     }
 
     function interestPerSecond(uint256 _principal)
@@ -1203,6 +1209,41 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         IPoolToken _poolToken = poolToken;
         return (_poolToken.balanceOf(_lender), _poolToken.totalSupply());
     }
+
+    // TODO Is this necessary? getNextInstalmentDeadline() in Repayments.sol returns the next deadline
+    /*function updateNextDuePeriodAfterRepayment(uint256 _nextDuePeriod) 
+        external 
+        override 
+        returns (uint256)
+    {
+        require(msg.sender == IPoolFactory(PoolFactory).repaymentImpl(), "37");
+        poolVars.nextDuePeriod = _nextDuePeriod;
+    }*/
+
+    /*
+    // TODO maybe an alternative name would make sense, currently shares name with impl from Extension.sol
+    function grantExtension()
+        external
+        override
+        onlyExtension
+        returns (uint256)
+    {
+        uint256 _nextDuePeriod = poolVars.nextDuePeriod.add(1); // TODO should we be adding 10**30?
+        poolVars.nextDuePeriod = _nextDuePeriod;
+        return _nextDuePeriod;
+    }
+    */
+    // TODO Is this necessary? getNextInstalmentDeadline() in Repayments.sol returns the next deadline
+    /*function updateNextRepaymentPeriodAfterExtension()
+        external 
+        override 
+        returns (uint256)
+    {
+        require(msg.sender == IPoolFactory(PoolFactory).extension(), "38");
+        uint256 _nextRepaymentPeriod = poolVars.nextDuePeriod.add(10**30); // TODO verify - adding 10**30 to add 1
+        poolVars.nextRepaymentPeriod = _nextDuePeriod;
+        return _nextDuePeriod;
+    }*/
 
     function getLoanStatus() public view override returns (uint256) {
         return uint256(poolVars.loanStatus);

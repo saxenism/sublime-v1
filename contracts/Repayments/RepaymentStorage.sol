@@ -22,21 +22,30 @@ contract RepaymentStorage is OwnableUpgradeable {
     uint256 gracePeriodFraction; // fraction of the repayment interval
     uint256 public constant yearInSeconds = 365 days;
 
-    struct RepaymentDetails {
-        uint256 numberOfTotalRepayments; // using it to check if RepaymentDetails Exists as repayment Interval!=0 in any case
+    struct RepaymentVars {
         uint256 totalRepaidAmount;
-        uint256 loanDuration;
-        uint256 repaymentInterval;
         uint256 repaymentPeriodCovered;
         uint256 repaymentOverdue;
         bool isLoanExtensionActive;
+        uint256 loanDurationCovered;
+        uint256 nextDuePeriod;
+        uint256 nInstalmentsFullyPaid;
+        uint256 loanExtensionPeriod; // period for which the extension was granted, ie, if loanExtensionPeriod is 7 * 10**30, 7th instalment can be repaid by 8th instalment deadline
+    }
+
+    struct RepaymentConstants {
+        uint256 numberOfTotalRepayments; // using it to check if RepaymentDetails Exists as repayment Interval!=0 in any case
+        uint256 gracePenaltyRate;
+        uint256 gracePeriodFraction;
+        uint256 loanDuration;
+        uint256 repaymentInterval;
         uint256 borrowRate;
+        //uint256 repaymentDetails;
         uint256 loanStartTime;
         address repayAsset;
         address savingsAccount;
-        uint256 nextRepayDeadline;
-        uint256 loanDurationCovered;
     }
 
-    mapping(address => RepaymentDetails) repaymentDetails;
+    mapping(address => RepaymentVars) repaymentVars;
+    mapping(address => RepaymentConstants) repaymentConstants;
 }
