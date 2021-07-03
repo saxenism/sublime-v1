@@ -682,7 +682,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         emit OpenBorrowPoolTerminated();
     }
 
-    function closeLoan() external override payable OnlyBorrower(msg.sender) {
+    function closeLoan() external payable override OnlyBorrower(msg.sender) {
         require(poolVars.loanStatus == LoanStatus.ACTIVE, "22");
         require(poolVars.nextDuePeriod == 0, "23");
 
@@ -892,8 +892,9 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         LoanStatus _currentPoolStatus = poolVars.loanStatus;
         address _poolFactory = PoolFactory;
         if (
-            _currentPoolStatus != LoanStatus.DEFAULTED && 
-            IRepayment(IPoolFactory(_poolFactory).repaymentImpl()).didBorrowerDefault(address(this))
+            _currentPoolStatus != LoanStatus.DEFAULTED &&
+            IRepayment(IPoolFactory(_poolFactory).repaymentImpl())
+                .didBorrowerDefault(address(this))
         ) {
             _currentPoolStatus = LoanStatus.DEFAULTED;
             poolVars.loanStatus = _currentPoolStatus;
