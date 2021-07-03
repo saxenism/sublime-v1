@@ -401,7 +401,7 @@ contract Repayments is RepaymentStorage, IRepayment {
         return repaymentVars[poolID].repaymentOverdue;
     }
     */
-    function repaymentExtended(address _poolID, uint256 _period) external override {
+    function instalmentDeadlineExtended(address _poolID, uint256 _period) external override {
         require(
             msg.sender == IPoolFactory(PoolFactory).owner(),
             "Repayments::repaymentExtended - Invalid caller"

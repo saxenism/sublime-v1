@@ -129,7 +129,7 @@ contract Extension is Initializable, IExtension {
         poolInfo[_pool].periodWhenExtensionIsPassed = _currentLoanInterval;
         poolInfo[_pool].extensionVoteEndTime = block.timestamp; // voting is over
 
-        IRepayment(_poolFactory.repaymentImpl()).repaymentExtended(_pool, _currentLoanInterval);
+        IRepayment(_poolFactory.repaymentImpl()).instalmentDeadlineExtended(_pool, _currentLoanInterval);
 
         emit ExtensionPassed(_currentLoanInterval);
     }
