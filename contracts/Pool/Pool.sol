@@ -1221,15 +1221,15 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         return (_poolToken.balanceOf(_lender), _poolToken.totalSupply());
     }
 
-    // TODO add event emit
-    function updateNextDuePeriodAfterRepayment(uint256 _nextDuePeriod) 
+    // TODO Is this necessary? getNextInstalmentDeadline() in Repayments.sol returns the next deadline
+    /*function updateNextDuePeriodAfterRepayment(uint256 _nextDuePeriod) 
         external 
         override 
         returns (uint256)
     {
         require(msg.sender == IPoolFactory(PoolFactory).repaymentImpl(), "37");
         poolVars.nextDuePeriod = _nextDuePeriod;
-    }
+    }*/
 
     /*
     // TODO maybe an alternative name would make sense, currently shares name with impl from Extension.sol
@@ -1244,8 +1244,8 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         return _nextDuePeriod;
     }
     */
-    // TODO add event emit
-    function updateNextRepaymentPeriodAfterExtension()
+    // TODO Is this necessary? getNextInstalmentDeadline() in Repayments.sol returns the next deadline
+    /*function updateNextRepaymentPeriodAfterExtension()
         external 
         override 
         returns (uint256)
@@ -1254,7 +1254,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         uint256 _nextRepaymentPeriod = poolVars.nextDuePeriod.add(10**30); // TODO verify - adding 10**30 to add 1
         poolVars.nextRepaymentPeriod = _nextDuePeriod;
         return _nextDuePeriod;
-    }
+    }*/
 
     function getLoanStatus() public view override returns (uint256) {
         return uint256(poolVars.loanStatus);

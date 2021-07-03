@@ -37,7 +37,7 @@ interface IPool {
         returns (uint256);
 
     //function grantExtension() external returns (uint256); adding updateNextDuePeriodAfterExtension() for replacement
-    function updateNextDuePeriodAfterExtension() external returns (uint256);
+    //function updateNextDuePeriodAfterExtension() external returns (uint256);
 
     function getBalanceDetails(address _lender)
         external

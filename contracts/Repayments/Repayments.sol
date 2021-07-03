@@ -73,8 +73,10 @@ contract Repayments is RepaymentStorage, IRepayment {
         repaymentConstants[msg.sender].repayAsset = lentAsset;
         repaymentConstants[msg.sender].savingsAccount = savingsAccount;
         repaymentVars[msg.sender].nextDuePeriod = loanStartTime.add(repaymentInterval);
+        repaymentVars[msg.sender].nInstalmentsFullyPaid = 0;
     }
 
+    // TODO Not getting used. Is this necessary?
     function getInterestDueThisPeriod(address _poolID) 
         public
         view
@@ -103,27 +105,73 @@ contract Repayments is RepaymentStorage, IRepayment {
     * @param _poolID address of the pool
     */
 
-    function getRepaymentIntervalsCovered(address _poolID) 
+    function getInterestPerSecond(address _poolID) 
         public 
         view 
         returns (uint256)
     {
-        uint256 activePrincipal = IPool(_poolID).getTotalSupply();
+        uint256 _activePrincipal = IPool(_poolID).getTotalSupply();
+        uint256 _interestPerSecond = _activePrincipal.mul(repaymentConstants[_poolID].borrowRate).div(yearInSeconds);
+        return _interestPerSecond;
+    }
 
-        uint256 interestPerSecond =
-            activePrincipal.mul(repaymentConstants[_poolID].borrowRate).div(
-                yearInSeconds
-            );
-
+    function getInstalmentsCompleted(address _poolID) 
+        public 
+        view 
+        returns (uint256)
+    {
         uint256 _repaymentInterval = repaymentConstants[_poolID].repaymentInterval;
         uint256 _loanDurationCovered = repaymentVars[_poolID].loanDurationCovered;
 
-        uint256 _repaymentIntervalsCovered = _loanDurationCovered.mul(10**30).div(_repaymentInterval); // dividing exponents
+        uint256 _instalmentsCompleted = _loanDurationCovered.mul(10**30).div(_repaymentInterval); // dividing exponents, returns whole number rounded down
 
-        return _repaymentIntervalsCovered;
+        return _instalmentsCompleted;
     }
 
-    function getOngoingLoanInterval(address _poolID) 
+    function updateLoanExtensionPeriod(address _poolID, uint256 _period) 
+        external 
+    {
+        repaymentVars[_poolID].loanExtensionPeriod = _period;
+    }
+
+    function getNextInstalmentDeadline(address _poolID) 
+        public 
+        view 
+        returns (uint256) 
+    {
+        uint256 _instalmentsCompleted = getInstalmentsCompleted(_poolID);
+        uint256 _loanExtensionPeriod = repaymentVars[_poolID].loanExtensionPeriod;
+        uint256 _repaymentInterval = repaymentConstants[_poolID].repaymentInterval;
+        uint256 _loanStartTime = repaymentConstants[_poolID].loanStartTime;
+        uint256 _nextInstalmentDeadline;
+
+        uint256 _ extensions on impro
+
+        if (_loanExtensionPeriod > _instalmentsCompleted) {
+            _nextInstalmentDeadline = ((_instalmentsCompleted.add(2.mul(10**30)))
+                                                .mul(_repaymentInterval))
+                                                .add(_loanStartTime);
+        }
+
+        else {
+            _nextInstalmentDeadline = ((_instalmentsCompleted.add(10**30))
+                                                .mul(_repaymentInterval))
+                                                .add(_loanStartTime);
+        }
+
+        return _nextInstalmentDeadline;
+    }
+    
+    function getCurrentInstalmentInterval(address _poolID) 
+        public 
+        view 
+        returns (uint256)
+    {
+        uint256 _instalmentsCompleted = getInstalmentsCompleted(_poolID);
+        return _instalmentsCompleted.add(10**30);
+    }
+
+    function getCurrentLoanInterval(address _poolID) 
         external 
         override  
         view 
@@ -132,9 +180,9 @@ contract Repayments is RepaymentStorage, IRepayment {
         uint256 _loanStartTime = repaymentConstants[_poolID].loanStartTime;
         uint256 _currentTime = block.timestamp;
         uint256 _repaymentInterval = repaymentConstants[_poolID].repaymentInterval;
-        uint256 _ongoingInterval = ((_currentTime.sub(_loanStartTime)).mul(10**30).div(_repaymentInterval)).add(10**30); // TODO add 10**30 to add 1 - check
+        uint256 _currentInterval = ((_currentTime.sub(_loanStartTime)).mul(10**30).div(_repaymentInterval)).add(10**30); // TODO add 10**30 to add 1 - check
 
-        return _ongoingInterval;
+        return _currentInterval;
     }
 
     function isGracePenaltyApplicable(address _poolID) 
@@ -142,27 +190,19 @@ contract Repayments is RepaymentStorage, IRepayment {
         view 
         returns (bool)
     {
-        uint256 _loanStartTime = repaymentConstants[_poolID].loanStartTime;
+        //uint256 _loanStartTime = repaymentConstants[_poolID].loanStartTime;
         uint256 _repaymentInterval = repaymentConstants[_poolID].repaymentInterval;
         uint256 _currentTime = block.timestamp;
+        uint256 _gracePeriodFraction = repaymentConstants[_poolID].gracePeriodFraction;
+        uint256 _nextInstalmentDeadline = getNextInstalmentDeadline(_poolID);
+        uint256 _gracePeriodDeadline = _nextInstalmentDeadline.add(_gracePeriodFraction.mul(_repaymentInterval));
 
-        uint256 _currentLoanInterval = getOngoingLoanInterval(_poolID);
-        uint256 _currentLoanIntervalEndTime = _loanStartTime
-                                                .add((_currentLoanInterval.mul(_repaymentInterval).div(10**30))); // multiplying exponents
-        uint256 _loanDurationCovered = repaymentVars[_poolID].loanDurationCovered;
+        require(_currentTime <= _gracePeriodDeadline, "Borrower has defaulted");
 
-        
-        if (_currentTime > _currentLoanIntervalEndTime && 
-            _loanStartTime.add(_loanDurationCovered) < _currentLoanIntervalEndTime) {
-            return true;
-        }
-        else {
-            return false;
-        }
+        if (_currentTime <= _nextInstalmentDeadline) return false;
+
+        else return true;
     }
-
-    // TODO need to recheck the conditions of defualt
-    // TODO case where borrower is defaulting even if loan extension is active
 
     function didBorrowerDefault(address _poolID) 
         public 
@@ -170,26 +210,10 @@ contract Repayments is RepaymentStorage, IRepayment {
         returns (bool)
     {
         uint256 _currentTime = block.timestamp;
-        bool _isLoanExtensionActive = repaymentVars[_poolID].isLoanExtensionActive;
-        uint256 _repaymentInterval = repaymentConstants[_poolID].repaymentInterval;
-        uint256 _loanStartTime = repaymentConstants[_poolID].loanStartTime;
-        uint256 _gracePeriodFraction = repaymentConstants[_poolID].gracePeriodFraction;
+        uint256 _instalmentDeadline = getNextInstalmentDeadline(_poolID);
 
-        uint256 _currentLoanInterval = getOngoingLoanInterval(_poolID);
-        uint256 _currentLoanIntervalEndTime = _loanStartTime
-                                                .add((_currentLoanInterval.mul(_repaymentInterval).div(10**30))); // multiplying exponents
-        uint256 _loanDurationCovered = repaymentVars[_poolID].loanDurationCovered;
-
-        if (_currentTime > _currentLoanIntervalEndTime.add(_gracePeriodFraction.mul(_repaymentInterval).div(10**30)) &&
-            _loanStartTime.add(_loanDurationCovered) < _currentLoanIntervalEndTime &&
-            _isLoanExtensionActive == false) // 1st condition checks current time vs interval end time, 2nd condition checks if interval interest has already been repaid
-        {
-            return true;
-        }
-
-        else {
-            return false;
-        }
+        if (_currentTime > _instalmentDeadline) return true;
+        else return false;
 
     }
 
@@ -261,6 +285,13 @@ contract Repayments is RepaymentStorage, IRepayment {
                                         .sub(repaymentVars[_poolID].loanDurationCovered);
 
             uint256 _interestLeft = _interestPerSecond.mul(_loanDurationLeft).div(10**30); // multiplying exponents
+            bool _isBorrowerLate = isGracePenaltyApplicable(_poolID);
+
+            // adding grace penalty if applicable
+            if (_isBorrowerLate) {
+                uint256 _penalty = repaymentConstants[_poolID].gracePenaltyRate.mul(_interestLeft).div(10**30);
+                _interestLeft = _interestLeft.add(_penalty);
+            }
 
             if (_amount < _interestLeft) {
                 uint256 _loanDurationCovered = _amount.mul(10**30).div(_interestPerSecond); // dividing exponents
@@ -278,6 +309,7 @@ contract Repayments is RepaymentStorage, IRepayment {
             uint256 _nextDuePeriod = (repaymentVars[_poolID].loanDurationCovered.mul(10**30).div(repaymentConstants[_poolID].repaymentInterval)).add(10**30); // dividing exps, adding 1 b/c next due period is one ahead period covered
             repaymentVars[_poolID].nextDuePeriod = _nextDuePeriod;
             _pool.updateNextDuePeriod(_nextDuePeriod);
+            
         }
         
         address _asset = repaymentConstants[_poolID].repayAsset;
@@ -300,7 +332,7 @@ contract Repayments is RepaymentStorage, IRepayment {
     }
 
     
-
+    // TODO should this be calling closeLoan() or the other way around?
     function repayPrincipal(address payable _poolID, uint256 _amount) public payable isPoolInitialized {
 
         IPool _pool = IPool(_poolID);
@@ -352,28 +384,29 @@ contract Repayments is RepaymentStorage, IRepayment {
         return repaymentVars[poolID].repaymentOverdue;
     }
     */
-    function repaymentExtended(address poolID) external override {
+    function repaymentExtended(address _poolID, uint256 _period) external override {
         require(
             msg.sender == IPoolFactory(PoolFactory).owner(),
             "Repayments::repaymentExtended - Invalid caller"
         );
 
-        repaymentVars[poolID].isLoanExtensionActive = true;
-        uint256 activePrincipal = IPool(poolID).getTotalSupply();
+        repaymentVars[_poolID].isLoanExtensionActive = true;
+        repaymentVars[_poolID].loanExtensionPeriod = _period;
+        uint256 activePrincipal = IPool(_poolID).getTotalSupply();
 
         uint256 interestPerSecond =
-            activePrincipal.mul(repaymentConstants[poolID].borrowRate).div(
+            activePrincipal.mul(repaymentConstants[_poolID].borrowRate).div(
                 yearInSeconds
             );
 
         uint256 _repaymentOverdue =
             (
-                (repaymentConstants[poolID].repaymentInterval).sub(
-                    repaymentVars[poolID].repaymentPeriodCovered
+                (repaymentConstants[_poolID].repaymentInterval).sub(
+                    repaymentVars[_poolID].repaymentPeriodCovered
                 )
             )
                 .mul(interestPerSecond);
-        repaymentVars[poolID].repaymentOverdue = _repaymentOverdue;
+        repaymentVars[_poolID].repaymentOverdue = _repaymentOverdue;
     }
 
     function getInterestCalculationVars(address poolID)

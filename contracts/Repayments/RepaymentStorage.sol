@@ -29,6 +29,8 @@ contract RepaymentStorage is OwnableUpgradeable {
         bool isLoanExtensionActive;
         uint256 loanDurationCovered;
         uint256 nextDuePeriod;
+        uint256 nInstalmentsFullyPaid;
+        uint256 loanExtensionPeriod; // period for which the extension was granted, ie, if loanExtensionPeriod is 7 * 10**30, 7th instalment can be repaid by 8th instalment deadline
     }
 
     struct RepaymentConstants {

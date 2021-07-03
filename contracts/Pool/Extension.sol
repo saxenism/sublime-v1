@@ -63,7 +63,7 @@ contract Extension is Initializable, IExtension {
             "Extension::requestExtension - Extension requested already"
         ); // _extensionVoteEndTime is 0 when no extension is active
 
-        
+
         // This check is required so that borrower doesn't ask for more extension if previously an extension is already granted
         require(
             poolInfo[_pool].periodWhenExtensionIsPassed == MAX_INT,
@@ -128,15 +128,14 @@ contract Extension is Initializable, IExtension {
     function grantExtension(address _pool) internal {
         IPoolFactory _poolFactory = poolFactory;
 
-        uint256 _nextDuePeriod = IPool(_pool).updateNextDuePeriodAfterExtension();
-        uint256 _currentLoanInterval = IRepayment(_poolFactory.repaymentImpl()).getOngoingLoanInterval(_pool);
-
-        poolInfo[_pool].periodWhenExtensionIsPassed = MAX_INT;
+        uint256 _currentLoanInterval = IRepayment(_poolFactory.repaymentImpl()).getCurrentLoanInterval(_pool);
+        //uint256 _currentLoanInterval = IRepayment(_poolFactory.repaymentImpl()).getCurrentLoanInterval(_pool);
+        poolInfo[_pool].periodWhenExtensionIsPassed = _currentLoanInterval;
         poolInfo[_pool].extensionVoteEndTime = block.timestamp; // voting is over
 
-        IRepayment(_poolFactory.repaymentImpl()).repaymentExtended(_pool);
+        IRepayment(_poolFactory.repaymentImpl()).repaymentExtended(_pool, _currentLoanInterval);
 
-        emit ExtensionPassed(_nextDuePeriod);
+        emit ExtensionPassed(_currentLoanInterval);
     }
 
     function closePoolExtension() external override {
