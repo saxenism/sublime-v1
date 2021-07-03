@@ -893,7 +893,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         address _poolFactory = PoolFactory;
         if (
             _currentPoolStatus != LoanStatus.DEFAULTED && 
-            IRepayment(_poolFactory.repaymentImpl()).didBorrowerDefault(address(this))
+            IRepayment(IPoolFactory(_poolFactory).repaymentImpl()).didBorrowerDefault(address(this))
         ) {
             _currentPoolStatus = LoanStatus.DEFAULTED;
             poolVars.loanStatus = _currentPoolStatus;

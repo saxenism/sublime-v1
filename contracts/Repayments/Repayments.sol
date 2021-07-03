@@ -206,8 +206,9 @@ contract Repayments is RepaymentStorage, IRepayment {
     }
 
     function didBorrowerDefault(address _poolID) 
-        public 
+        public
         view  
+        override
         returns (bool)
     {
         uint256 _currentTime = block.timestamp;
