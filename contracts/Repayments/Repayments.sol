@@ -72,7 +72,7 @@ contract Repayments is RepaymentStorage, IRepayment {
         repaymentConstants[msg.sender].loanStartTime = loanStartTime;
         repaymentConstants[msg.sender].repayAsset = lentAsset;
         repaymentConstants[msg.sender].savingsAccount = savingsAccount;
-        repaymentVars[msg.sender].nextDuePeriod = loanStartTime.add(repaymentInterval);
+        //repaymentVars[msg.sender].nextDuePeriod = loanStartTime.add(repaymentInterval); TODO is this necessary
         repaymentVars[msg.sender].nInstalmentsFullyPaid = 0;
     }
 
@@ -145,10 +145,10 @@ contract Repayments is RepaymentStorage, IRepayment {
         uint256 _loanStartTime = repaymentConstants[_poolID].loanStartTime;
         uint256 _nextInstalmentDeadline;
 
-        uint256 _ extensions on impro
+        //uint256 _ extensions on impro
 
         if (_loanExtensionPeriod > _instalmentsCompleted) {
-            _nextInstalmentDeadline = ((_instalmentsCompleted.add(2.mul(10**30)))
+            _nextInstalmentDeadline = ((_instalmentsCompleted.add(10**30).add(10**30))
                                                 .mul(_repaymentInterval))
                                                 .add(_loanStartTime);
         }
@@ -267,8 +267,8 @@ contract Repayments is RepaymentStorage, IRepayment {
                 repaymentVars[_poolID].isLoanExtensionActive = false; // deactivate loan extension flag
             }
             else {
-                uint256 _repaymentOverdue = repaymentVars[_poolID].repaymentOverdue;
-                repaymentVars[_poolID].repaymentOverdue = _repaymentOverdue.sub(_amount);
+                //uint256 _repaymentOverdue = repaymentVars[_poolID].repaymentOverdue;
+                repaymentVars[_poolID].repaymentOverdue = repaymentVars[_poolID].repaymentOverdue.sub(_amount);
                 _amount = 0;
                 _amountRequired = _amountRequired.add(_amount);
             }
@@ -306,9 +306,10 @@ contract Repayments is RepaymentStorage, IRepayment {
                 _amountRequired = _amountRequired.add(_interestLeft);
             }
 
-            uint256 _nextDuePeriod = (repaymentVars[_poolID].loanDurationCovered.mul(10**30).div(repaymentConstants[_poolID].repaymentInterval)).add(10**30); // dividing exps, adding 1 b/c next due period is one ahead period covered
-            repaymentVars[_poolID].nextDuePeriod = _nextDuePeriod;
-            _pool.updateNextDuePeriod(_nextDuePeriod);
+            // TODO commenting because deadline can be retrieved by calling getNextInstalmentDeadline
+            //uint256 _nextDuePeriod = (repaymentVars[_poolID].loanDurationCovered.mul(10**30).div(repaymentConstants[_poolID].repaymentInterval)).add(10**30); // dividing exps, adding 1 b/c next due period is one ahead period covered
+            //repaymentVars[_poolID].nextDuePeriod = _nextDuePeriod;
+            //_pool.updateNextDuePeriod(_nextDuePeriod);
             
         }
         
