@@ -871,10 +871,15 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         bool _toSavingsAccount,
         bool _recieveLiquidityShare
     ) external payable nonReentrant {
-        LoanStatus _currentPoolStatus;
+        LoanStatus _currentPoolStatus = poolVars.loanStatus;
         address _poolFactory = PoolFactory;
-        if (poolVars.loanStatus != LoanStatus.DEFAULTED) {
-            _currentPoolStatus = checkRepayment();
+        if (
+            _currentPoolStatus != LoanStatus.DEFAULTED &&
+            IRepayment(IPoolFactory(_poolFactory).repaymentImpl())
+                .didBorrowerDefault(address(this))
+        ) {
+            _currentPoolStatus = LoanStatus.DEFAULTED;
+            poolVars.loanStatus = _currentPoolStatus;
         }
         require(
             _currentPoolStatus == LoanStatus.DEFAULTED,
@@ -1073,23 +1078,6 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
                 .mul(uint256(10**30).sub(_fraction))
                 .div(10**_decimals)
                 .div(10**30);
-    }
-
-    // TODO - check, similar to didBorrowerDefault in Repayments.sol
-    function checkRepayment() public returns (LoanStatus) {
-        IPoolFactory _poolFactory = IPoolFactory(PoolFactory);
-        uint256 _gracePeriodPenaltyFraction =
-            _poolFactory.gracePeriodPenaltyFraction();
-        uint256 _defaultDeadline =
-            getNextDueTime().add(
-                _gracePeriodPenaltyFraction.mul(poolConstants.repaymentInterval)
-            );
-        if (block.timestamp > _defaultDeadline) {
-            poolVars.loanStatus = LoanStatus.DEFAULTED;
-            IExtension(_poolFactory.extension()).closePoolExtension();
-            return (LoanStatus.DEFAULTED);
-        }
-        return (poolVars.loanStatus);
     }
 
     function getNextDueTimeIfBorrower(address _borrower)

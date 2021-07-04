@@ -34,6 +34,13 @@ interface IRepayment {
 
     //function getOngoingLoanInterval(address poolID) external view returns(uint256);
 
-    function getCurrentLoanInterval(address poolID) external view returns(uint256);
-    function instalmentDeadlineExtended(address _poolID, uint256 _period) external;
+    function getCurrentLoanInterval(address poolID)
+        external
+        view
+        returns (uint256);
+
+    function instalmentDeadlineExtended(address _poolID, uint256 _period)
+        external;
+
+    function didBorrowerDefault(address _poolID) external view returns (bool);
 }
