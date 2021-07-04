@@ -117,17 +117,48 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     */
     event CollateralWithdrawn(address borrower, uint256 amount);
 
-    
+   /*
+   * @notice emitted when lender supplies liquidity to a pool
+   * @param amountSupplied amount that was supplied
+   * @param lenderAddress address of the lender. allows for delegation of lending
+   */
     event LiquiditySupplied(uint256 amountSupplied, address lenderAddress);
+
+    /*
+    * @notice emitted when borrower withdraws loan
+    * @param amount tokens the borrower withdrew
+    */
     event AmountBorrowed(uint256 amount);
+
+    /*
+    * @notice emitted when lender withdraws from borrow pool
+    * @param amount amount that lender withdraws from borrow pool
+    * @param lenderAddress address to which amount is withdrawn
+    */
     event LiquidityWithdrawn(uint256 amount, address lenderAddress);
+
+    /*
+    * @notice emitted when lender exercises a margin/collateral call
+    * @param lenderAddress address of the lender who exercises margin calls
+    */
     event MarginCalled(address lenderAddress);
-    event LoanDefaulted();
+
+    /*
+    * @notice emitted when collateral backing lender is liquidated because of a margin call
+    * @param liquidator address that calls the liquidateLender() function
+    * @param lender lender who initially exercised the margin call
+    * @param _tokenReceived amount received by liquidator denominated in collateral asset
+    */
     event LenderLiquidated(
         address liquidator,
         address lender,
         uint256 _tokenReceived
     );
+
+    /*
+    * @notice emitted when a pool is liquidated for missing repayment
+    * @param liquidator address of the liquidator
+    */
     event PoolLiquidated(address liquidator);
 
     modifier OnlyBorrower(address _user) {
@@ -197,11 +228,20 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             .add(_loanWithdrawalDuration);
     }
 
+    /*
+    * @notice Each pool has a unique pool token deployed by PoolFactory
+    * @param _poolToken address of the PoolToken contract deployed for a loan request
+    */
     function setPoolToken(address _poolToken) external override {
         require(msg.sender == PoolFactory, "6");
         poolToken = IPoolToken(_poolToken);
     }
 
+    /*
+    * @notice add collateral to a pool
+    * @param _amount amount of collateral to be deposited denominated in collateral aseset
+    * @param _transferFromSavingsAccount if true, collateral is transferred from msg.sender's savings account, if false, it is transferred from their wallet
+    */
     function depositCollateral(
         uint256 _amount,
         bool _transferFromSavingsAccount
@@ -210,6 +250,12 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         _depositCollateral(msg.sender, _amount, _transferFromSavingsAccount);
     }
 
+    /*
+    * @notice called when borrow pool is initialized to make initial collateral deposit
+    * @param _borrower address of the borrower
+    * @param _amount amount of collateral getting deposited denominated in collateral asset
+    * @param _transferFromSavingsAccount if true, collateral is transferred from msg.sender's savings account, if false, it is transferred from their wallet
+    */
     function _initialDeposit(
         address _borrower,
         uint256 _amount,
@@ -233,6 +279,12 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         _depositCollateral(_borrower, _amount, _transferFromSavingsAccount);
     }
 
+    /*
+    * @notice internal function used to deposit collateral from _borrower to pool
+    * @param _sender address transferring the collateral
+    * @param _amount amount of collateral to be transferred denominated in collateral asset
+    * @param _transferFromSavingsAccount if true, collateral is transferred from _sender's savings account, if false, it is transferred from _sender's wallet
+    */
     function _depositCollateral(
         address _borrower,
         uint256 _amount,
@@ -254,6 +306,10 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         emit CollateralAdded(_borrower, _amount, _sharesReceived);
     }
 
+    /*
+    * @notice internal function called to make transfer from savings account
+    * @param _savingsAccount
+    */
     function _depositFromSavingsAccount(
         ISavingsAccount _savingsAccount,
         address _from,
@@ -798,6 +854,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
      * @dev It will revert in case collateral ratio is not below expected value
      * or the lender has already called it.
      */
+    // TODO In future, we should make it possible to delegate margin calls
 
     function requestMarginCall() external isLender(msg.sender) {
         require(poolVars.loanStatus == LoanStatus.ACTIVE, "4");
