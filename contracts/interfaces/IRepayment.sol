@@ -43,4 +43,11 @@ interface IRepayment {
         external;
 
     function didBorrowerDefault(address _poolID) external view returns (bool);
+
+    function getGracePeriodFraction() external view returns (uint256);
+
+    function getNextInstalmentDeadline(address _poolID)
+        external
+        view
+        returns (uint256);
 }

@@ -42,6 +42,8 @@ contract Repayments is RepaymentStorage, IRepayment {
         address _owner,
         address _poolFactory,
         uint256 _votingPassRatio,
+        uint256 _gracePenalityRate,
+        uint256 _gracePeriodFraction,
         address _savingsAccount
     ) public initializer {
         // _votingExtensionlength - should enforce conditions with repaymentInterval
@@ -51,6 +53,8 @@ contract Repayments is RepaymentStorage, IRepayment {
         votingPassRatio = _votingPassRatio;
         PoolFactory = _poolFactory;
         savingsAccount = _savingsAccount;
+        gracePenaltyRate = _gracePenalityRate;
+        gracePeriodFraction = _gracePeriodFraction;
     }
 
     function initializeRepayment(
@@ -135,6 +139,7 @@ contract Repayments is RepaymentStorage, IRepayment {
     function getNextInstalmentDeadline(address _poolID)
         public
         view
+        override
         returns (uint256)
     {
         uint256 _instalmentsCompleted = getInstalmentsCompleted(_poolID);
@@ -260,7 +265,6 @@ contract Repayments is RepaymentStorage, IRepayment {
     // TODO need to add grace penalty
 
     function getInterestLeft(address _poolID) public view returns (uint256) {
-        IPool _pool = IPool(_poolID);
         uint256 _interestPerSecond = getInterestPerSecond((_poolID));
         uint256 _loanDurationLeft =
             repaymentConstants[_poolID].loanDuration.sub(
@@ -453,4 +457,7 @@ contract Repayments is RepaymentStorage, IRepayment {
         );
     }
 
+    function getGracePeriodFraction() external view override returns (uint256) {
+        return gracePeriodFraction;
+    }
 }

@@ -60,8 +60,6 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         uint256 baseLiquidityShares;
         uint256 extraLiquidityShares;
         LoanStatus loanStatus;
-        uint256 noOfGracePeriodsTaken;
-        uint256 nextDuePeriod;
         uint256 penalityLiquidityAmount;
     }
 
@@ -684,7 +682,6 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
 
     function closeLoan() external override payable OnlyRepaymentImpl {
         require(poolVars.loanStatus == LoanStatus.ACTIVE, "22");
-        require(poolVars.nextDuePeriod == 0, "23");
 
         uint256 _principleToPayback = poolToken.totalSupply();
         address _borrowAsset = poolConstants.borrowAsset;
@@ -1080,23 +1077,6 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
                 .div(10**30);
     }
 
-    function getNextDueTimeIfBorrower(address _borrower)
-        external
-        view
-        override
-        OnlyBorrower(_borrower)
-        returns (uint256)
-    {
-        return getNextDueTime();
-    }
-
-    function getNextDueTime() public view returns (uint256) {
-        return
-            (poolVars.nextDuePeriod.mul(poolConstants.repaymentInterval)).add(
-                poolConstants.loanStartTime
-            );
-    }
-
     function interestPerSecond(uint256 _principal)
         public
         view
@@ -1162,10 +1142,6 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         lenders[_lender].interestWithdrawn = lenders[_lender]
             .interestWithdrawn
             .add(_amountToWithdraw);
-    }
-
-    function getNextDuePeriod() external view override returns (uint256) {
-        return poolVars.nextDuePeriod;
     }
 
     function getMarginCallEndTime(address _lender)
@@ -1255,5 +1231,9 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             IPriceOracle(IPoolFactory(PoolFactory).priceOracle())
                 .getLatestPrice(_source, _target);
         return _amount.mul(_price).div(10**_decimals);
+    }
+
+    function borrower() view external override returns(address) {
+        return poolConstants.borrower;
     }
 }
