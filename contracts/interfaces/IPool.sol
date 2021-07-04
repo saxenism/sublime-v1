@@ -25,14 +25,9 @@ interface IPool {
 
     function setPoolToken(address _poolToken) external;
 
-    //function borrower() external returns(address);
+    function borrower() external returns (address);
 
     function getMarginCallEndTime(address _lender) external returns (uint256);
-
-    function getNextDueTimeIfBorrower(address _borrower)
-        external
-        view
-        returns (uint256);
 
     //function grantExtension() external returns (uint256); adding updateNextDuePeriodAfterExtension() for replacement
     //function updateNextDuePeriodAfterExtension() external returns (uint256);
