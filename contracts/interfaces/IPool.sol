@@ -25,7 +25,7 @@ interface IPool {
 
     function setPoolToken(address _poolToken) external;
 
-    function borrower() external returns(address);
+    function borrower() external returns (address);
 
     function getMarginCallEndTime(address _lender) external returns (uint256);
 

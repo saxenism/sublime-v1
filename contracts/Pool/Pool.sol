@@ -680,7 +680,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         emit OpenBorrowPoolTerminated();
     }
 
-    function closeLoan() external override payable OnlyRepaymentImpl {
+    function closeLoan() external payable override OnlyRepaymentImpl {
         require(poolVars.loanStatus == LoanStatus.ACTIVE, "22");
 
         uint256 _principleToPayback = poolToken.totalSupply();
@@ -805,10 +805,15 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         uint256 _totalSupply = poolToken.totalSupply();
         uint256 _interestPerPeriod = interestPerPeriod(_balance);
         IPoolFactory _poolFactory = IPoolFactory(PoolFactory);
-        (uint256 _loanDurationCovered, uint256 _interestPerSecond) = IRepayment(_poolFactory.repaymentImpl())
-                                                                    .getInterestCalculationVars(address(this));
+        (uint256 _loanDurationCovered, uint256 _interestPerSecond) =
+            IRepayment(_poolFactory.repaymentImpl()).getInterestCalculationVars(
+                address(this)
+            );
         uint256 _currentBlockTime = block.timestamp;
-        uint256 _interestAccrued = _interestPerSecond.mul(_currentBlockTime.sub(_loanDurationCovered)).div(10**30);
+        uint256 _interestAccrued =
+            _interestPerSecond
+                .mul(_currentBlockTime.sub(_loanDurationCovered))
+                .div(10**30);
 
         return _interestAccrued;
     }
@@ -1233,7 +1238,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         return _amount.mul(_price).div(10**_decimals);
     }
 
-    function borrower() view external override returns(address) {
+    function borrower() external view override returns (address) {
         return poolConstants.borrower;
     }
 }

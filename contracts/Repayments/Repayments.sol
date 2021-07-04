@@ -116,19 +116,24 @@ contract Repayments is RepaymentStorage, IRepayment {
         return _instalmentsCompleted;
     }
 
-    function getInterestDueTillInstalmentDeadline(address _poolID) 
-        public 
-        view 
-        returns (uint256) 
+    function getInterestDueTillInstalmentDeadline(address _poolID)
+        public
+        view
+        returns (uint256)
     {
         uint256 _interestPerSecond = getInterestPerSecond(_poolID);
         uint256 _nextInstalmentDeadline = getNextInstalmentDeadline(_poolID);
-        uint256 _loanDurationCovered = repaymentVars[_poolID].loanDurationCovered;
+        uint256 _loanDurationCovered =
+            repaymentVars[_poolID].loanDurationCovered;
 
-        uint256 _interestDueTillInstalmentDeadline = (_nextInstalmentDeadline.sub(_loanDurationCovered)).mul(_interestPerSecond);
+        uint256 _interestDueTillInstalmentDeadline =
+            (_nextInstalmentDeadline.sub(_loanDurationCovered)).mul(
+                _interestPerSecond
+            );
 
         return _interestDueTillInstalmentDeadline;
     }
+
     /*
     function updateLoanExtensionPeriod(address _poolID, uint256 _period) 
         external 
@@ -276,21 +281,27 @@ contract Repayments is RepaymentStorage, IRepayment {
         return _interestLeft;
     }
 
-    function getInterestOverdue(address _poolID) 
-        public 
-        view 
-        returns (uint256)
-    {
+    function getInterestOverdue(address _poolID) public view returns (uint256) {
         uint256 _instalmentsCompleted = getInstalmentsCompleted(_poolID);
         uint256 _interestPerSecond = getInterestPerSecond(_poolID);
-        uint256 _interestOverdue = (((_instalmentsCompleted.add(10**30)).mul(repaymentConstants[_poolID].repaymentInterval))
-                                    .sub(repaymentVars[_poolID].loanDurationCovered))
-                                    .mul(_interestPerSecond);
+        uint256 _interestOverdue =
+            (
+                (
+                    (_instalmentsCompleted.add(10**30)).mul(
+                        repaymentConstants[_poolID].repaymentInterval
+                    )
+                )
+                    .sub(repaymentVars[_poolID].loanDurationCovered)
+            )
+                .mul(_interestPerSecond);
         return _interestOverdue;
     }
 
-    function repayAmount(address _poolID, uint256 _amount) public payable isPoolInitialized {
-
+    function repayAmount(address _poolID, uint256 _amount)
+        public
+        payable
+        isPoolInitialized
+    {
         IPool _pool = IPool(_poolID);
 
         uint256 _loanStatus = _pool.getLoanStatus();
@@ -303,24 +314,30 @@ contract Repayments is RepaymentStorage, IRepayment {
         uint256 _interestPerSecond = getInterestPerSecond(_poolID);
 
         // First pay off the overdue
-        if(repaymentVars[_poolID].isLoanExtensionActive == true) {
+        if (repaymentVars[_poolID].isLoanExtensionActive == true) {
             uint256 _interestOverdue = getInterestOverdue(_poolID);
 
             if (_amount >= _interestOverdue) {
                 _amount = _amount.sub(_interestOverdue);
                 _amountRequired = _amountRequired.add(_interestOverdue);
                 repaymentVars[_poolID].isLoanExtensionActive = false; // deactivate loan extension flag
-                repaymentVars[_poolID].loanDurationCovered = (getInstalmentsCompleted(_poolID).add(10**30)).mul(repaymentConstants[_poolID].repaymentInterval);
-            }
-            else {
+                repaymentVars[_poolID].loanDurationCovered = (
+                    getInstalmentsCompleted(_poolID).add(10**30)
+                )
+                    .mul(repaymentConstants[_poolID].repaymentInterval);
+            } else {
                 _amount = 0;
                 _amountRequired = _amountRequired.add(_amount);
-                repaymentVars[_poolID].loanDurationCovered = repaymentVars[_poolID].loanDurationCovered.add(_amount.mul(10**30).div(_interestPerSecond));
+                repaymentVars[_poolID].loanDurationCovered = repaymentVars[
+                    _poolID
+                ]
+                    .loanDurationCovered
+                    .add(_amount.mul(10**30).div(_interestPerSecond));
             }
         }
 
         // Second pay off the interest
-        if(_amount != 0) {
+        if (_amount != 0) {
             uint256 _interestLeft = getInterestLeft(_poolID);
             bool _isBorrowerLate = isGracePenaltyApplicable(_poolID);
 
@@ -352,7 +369,6 @@ contract Repayments is RepaymentStorage, IRepayment {
                 _amount = _amount.sub(_interestLeft);
                 _amountRequired = _amountRequired.add(_interestLeft);
             }
-
         }
 
         address _asset = repaymentConstants[_poolID].repayAsset;
@@ -389,8 +405,10 @@ contract Repayments is RepaymentStorage, IRepayment {
             "Repayments:repayPrincipal Pool should be active"
         );
 
-        require(repaymentVars[_poolID].isLoanExtensionActive == false,
-                "Repayments:repayPrincipal Repayment overdue unpaid");
+        require(
+            repaymentVars[_poolID].isLoanExtensionActive == false,
+            "Repayments:repayPrincipal Repayment overdue unpaid"
+        );
 
         require(
             repaymentConstants[_poolID].loanDuration ==
@@ -433,8 +451,10 @@ contract Repayments is RepaymentStorage, IRepayment {
         return repaymentVars[poolID].totalRepaidAmount;
     }
 
-
-    function instalmentDeadlineExtended(address _poolID, uint256 _period) external override {
+    function instalmentDeadlineExtended(address _poolID, uint256 _period)
+        external
+        override
+    {
         require(
             msg.sender == IPoolFactory(PoolFactory).owner(),
             "Repayments::repaymentExtended - Invalid caller"
@@ -451,10 +471,7 @@ contract Repayments is RepaymentStorage, IRepayment {
         returns (uint256, uint256)
     {
         uint256 _interestPerSecond = getInterestPerSecond(_poolID);
-        return (
-            repaymentVars[_poolID].loanDurationCovered,
-            _interestPerSecond
-        );
+        return (repaymentVars[_poolID].loanDurationCovered, _interestPerSecond);
     }
 
     function getGracePeriodFraction() external view override returns (uint256) {
