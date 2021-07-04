@@ -11,6 +11,8 @@ import "../interfaces/Invest/AaveLendingPool.sol";
 import "../interfaces/Invest/IScaledBalanceToken.sol";
 import "../interfaces/Invest/IProtocolDataProvider.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @title Yield contract
  * @notice Implements the functions to lock/unlock tokens into Aave protocol
@@ -276,7 +278,6 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable {
         returns (address aToken, uint256 sharesReceived)
     {
         aToken = liquidityToken(asset);
-
         uint256 aTokensBefore = IERC20(aToken).balanceOf(address(this));
 
         address lendingPool =

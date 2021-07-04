@@ -9,8 +9,10 @@ import { ERC20__factory } from "../../typechain/factories/ERC20__factory";
 import { IWETHGateway__factory } from "../../typechain/factories/IWETHGateway__factory";
 import { IyVault__factory } from "../../typechain/factories/IyVault__factory";
 import { ICEther__factory } from "../../typechain/factories/ICEther__factory";
+import { IYield__factory } from "../../typechain/factories/IYield__factory";
 
 import { Address } from "hardhat-deploy/dist/types";
+import { IYield } from "@typechain/IYield";
 
 export default class DeployMockContracts {
   private _deployerSigner: Signer;
@@ -42,5 +44,12 @@ export default class DeployMockContracts {
 
   public async getMockICEther(cethAddress: Address): Promise<ICEther> {
     return await ICEther__factory.connect(cethAddress, this._deployerSigner);
+  }
+
+  public async getYield(yieldAddress: Address): Promise<IYield> {
+    return await IYield__factory.connect(
+      yieldAddress,
+      this._deployerSigner
+    );
   }
 }

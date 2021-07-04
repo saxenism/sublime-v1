@@ -25,6 +25,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         uint256 max;
     }
 
+    // TODO contract addresses should end with Impl
     bytes4 public poolInitFuncSelector; //  bytes4(keccak256("initialize(uint256,address,address,address,uint256,uint256,uint256,uint256,bool)"))
     bytes4 public poolTokenInitFuncSelector;
     address public poolImpl;
@@ -43,7 +44,6 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     uint256 public override gracePeriodPenaltyFraction;
     uint256 public override liquidatorRewardFraction;
     uint256 public override votingPassRatio;
-    uint256 public override gracePeriodFraction;
     uint256 public override poolCancelPenalityFraction;
 
     /*
@@ -352,6 +352,10 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
             "PoolFactory::createPool - invalid min borrow amount"
         );
         require(
+            collateralVolatilityThreshold <= _collateralRatio,
+            "PoolFactory:createPool - Invalid collateral ratio"
+        );
+        require(
             isBorrowToken[_borrowTokenType],
             "PoolFactory::createPool - Invalid borrow token type"
         );
@@ -359,11 +363,11 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
             isCollateralToken[_collateralTokenType],
             "PoolFactory::createPool - Invalid collateral token type"
         );
+        address[] memory tokens = new address[](2);
+        tokens[0] = _collateralTokenType;
+        tokens[1] = _borrowTokenType;
         require(
-            IPriceOracle(priceOracle).doesFeedExist(
-                _collateralTokenType,
-                _borrowTokenType
-            ),
+            IPriceOracle(priceOracle).doesFeedExist(tokens),
             "PoolFactory::createPool - Price feed doesn't support token pair"
         );
         require(
