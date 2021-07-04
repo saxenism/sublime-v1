@@ -39,7 +39,7 @@ contract Repayments is RepaymentStorage, IRepayment {
         address _owner,
         address _poolFactory,
         uint256 _votingPassRatio,
-        uint256 _gracePenalityRate,
+        uint256 _gracePenaltyRate,
         uint256 _gracePeriodFraction,
         address _savingsAccount
     ) public initializer {
@@ -50,7 +50,7 @@ contract Repayments is RepaymentStorage, IRepayment {
         votingPassRatio = _votingPassRatio;
         PoolFactory = _poolFactory;
         savingsAccount = _savingsAccount;
-        gracePenaltyRate = _gracePenalityRate;
+        gracePenaltyRate = _gracePenaltyRate;
         gracePeriodFraction = _gracePeriodFraction;
     }
 
