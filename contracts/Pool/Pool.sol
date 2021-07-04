@@ -682,7 +682,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         emit OpenBorrowPoolTerminated();
     }
 
-    function closeLoan() external override payable OnlyBorrower(msg.sender) {
+    function closeLoan() external override payable OnlyRepaymentImpl {
         require(poolVars.loanStatus == LoanStatus.ACTIVE, "22");
         require(poolVars.nextDuePeriod == 0, "23");
 
@@ -807,31 +807,13 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     function interestTillNow(uint256 _balance) public view returns (uint256) {
         uint256 _totalSupply = poolToken.totalSupply();
         uint256 _interestPerPeriod = interestPerPeriod(_balance);
-
         IPoolFactory _poolFactory = IPoolFactory(PoolFactory);
+        (uint256 _loanDurationCovered, uint256 _interestPerSecond) = IRepayment(_poolFactory.repaymentImpl())
+                                                                    .getInterestCalculationVars(address(this));
+        uint256 _currentBlockTime = block.timestamp;
+        uint256 _interestAccrued = _interestPerSecond.mul(_currentBlockTime.sub(_loanDurationCovered)).div(10**30);
 
-        (uint256 _repaymentPeriodCovered, uint256 _repaymentOverdue) =
-            IRepayment(_poolFactory.repaymentImpl()).getInterestCalculationVars(
-                address(this)
-            );
-
-        uint256 _interestAccruedThisPeriod =
-            (
-                (block.timestamp).sub(poolConstants.loanStartTime).sub(
-                    _repaymentPeriodCovered.mul(
-                        poolConstants.repaymentInterval
-                    ),
-                    "Nothing to repay"
-                )
-            )
-                .mul(_interestPerPeriod)
-                .div(10**30);
-
-        uint256 _totalInterest =
-            (_interestAccruedThisPeriod.add(_repaymentOverdue))
-                .mul(_balance)
-                .div(_totalSupply);
-        return _totalInterest;
+        return _interestAccrued;
     }
 
     function calculateCollateralRatio(
