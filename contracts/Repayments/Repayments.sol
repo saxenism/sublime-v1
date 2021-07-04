@@ -126,7 +126,7 @@ contract Repayments is RepaymentStorage, IRepayment {
         uint256 _interestDueTillInstalmentDeadline =
             (_nextInstalmentDeadline.sub(_loanDurationCovered)).mul(
                 _interestPerSecond
-            );
+            ).div(10**30);
 
         return _interestDueTillInstalmentDeadline;
     }

@@ -204,7 +204,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     }
 
     function _depositCollateral(
-        address _borrower,
+        address _depositor,
         uint256 _amount,
         bool _transferFromSavingsAccount
     ) internal {
@@ -215,13 +215,13 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
                 poolConstants.collateralAsset,
                 _amount,
                 poolConstants.poolSavingsStrategy,
-                _borrower,
+                _depositor,
                 address(this)
             );
         poolVars.baseLiquidityShares = poolVars.baseLiquidityShares.add(
             _sharesReceived
         );
-        emit CollateralAdded(_borrower, _amount, _sharesReceived);
+        emit CollateralAdded(_depositor, _amount, _sharesReceived);
     }
 
     function _depositFromSavingsAccount(

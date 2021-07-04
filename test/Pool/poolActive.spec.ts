@@ -351,6 +351,7 @@ describe.only("Pool Borrow Active stage", async () => {
                 await pool.connect(borrower).withdrawBorrowedAmount();
                 const { loanStatus } = await pool.poolVars();
                 assert(loanStatus == 1, "Loan is not active");
+                await borrowToken.connect(admin).transfer(random.address, BigNumber.from(10).pow(24));
             });
 
             it("Lender tokens should be transferable", async () => {
@@ -457,72 +458,156 @@ describe.only("Pool Borrow Active stage", async () => {
 
             context("Borrower requests extension", async () => {
                 it("Request extension", async () => {
-                    await extenstion.requestExtension(pool.address);
+                    await expect(
+                        extenstion.connect(random).requestExtension(pool.address)
+                    ).to.be.revertedWith("Not Borrower");
+                    await expect(
+                        extenstion.connect(lender).requestExtension(pool.address)
+                    ).to.be.revertedWith("Not Borrower");
+                    await extenstion.connect(borrower).requestExtension(pool.address);
                 });
                 
                 it("Extension passed", async () => {
-                    await extenstion.requestExtension(pool.address);
+                    await extenstion.connect(borrower).requestExtension(pool.address);
                     await extenstion.connect(lender).voteOnExtension(pool.address);
                     await extenstion.connect(lender1).voteOnExtension(pool.address);
+                    assert(await repaymentImpl.isLoanExtensionActive(), "Extension not active");
                 });
 
                 context("Extension passed", async () => {
                     it("Shouldn't be liquidated for current period", async () => {
-                    
+                        await extenstion.connect(borrower).requestExtension(pool.address);
+                        await extenstion.connect(lender).voteOnExtension(pool.address);
+                        await extenstion.connect(lender1).voteOnExtension(pool.address);
+
+                        await expect(
+                            pool.liquidatePool(false, false, false)
+                        ).to.be.revertedWith("Pool::liquidatePool - No reason to liquidate the pool");
                     });
 
                     it("liquidate if repay less than interest for extended period", async () => {
-                    
+                        await extenstion.connect(borrower).requestExtension(pool.address);
+                        await extenstion.connect(lender).voteOnExtension(pool.address);
+                        await extenstion.connect(lender1).voteOnExtension(pool.address);
+
+                        const interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address);
+                        await repaymentImpl.repayAmount(pool.address, interestForCurrentPeriod.sub(1));
+
+                        const endOfExtension:BigNumber = await repaymentImpl.getNextInstalmentDeadline(pool.address);
+                        await timeTravel(network, parseInt(endOfExtension.add(1).toString()));
+
+                        const collateralShares = (await savingsAccount.userLockedBalance(pool.address, collateralToken.address, poolStrategy.address));
+                        let collateralTokens = await poolStrategy.callStatic.getTokensForShares(collateralShares.sub(2), collateralToken.address);
+                        let borrowTokensForCollateral = await pool.getEquivalentTokens(collateralToken.address, borrowToken.address, collateralTokens);
+                        await borrowToken.connect(admin).transfer(random.address, borrowTokensForCollateral);
+                        await borrowToken.connect(random).approve(pool.address, borrowTokensForCollateral);
+                        await pool.liquidatePool(false, false, false);
                     });
 
                     it("Can't liquidate if repay is more than interest for extended period", async () => {
-                    
+                        await extenstion.connect(borrower).requestExtension(pool.address);
+                        await extenstion.connect(lender).voteOnExtension(pool.address);
+                        await extenstion.connect(lender1).voteOnExtension(pool.address);
+
+                        const interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address);
+                        const endOfExtension:BigNumber = await repaymentImpl.getNextInstalmentDeadline(pool.address);
+                        await borrowToken.connect(random).approve(repaymentImpl.address, interestForCurrentPeriod);
+                        await repaymentImpl.connect(random).repayAmount(pool.address, interestForCurrentPeriod);
+
+                        await timeTravel(network, parseInt(endOfExtension.add(1).toString()));
+
+                        await expect(
+                            pool.liquidatePool(false, false, false)
+                        ).to.be.revertedWith("Pool::liquidatePool - No reason to liquidate the pool");
                     });
 
                     it("Repay interest for period after extension", async () => {
-                    
+                        await extenstion.connect(borrower).requestExtension(pool.address);
+                        await extenstion.connect(lender).voteOnExtension(pool.address);
+                        await extenstion.connect(lender1).voteOnExtension(pool.address);
+
+                        let interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address);
+                        const endOfExtension:BigNumber = await repaymentImpl.getNextInstalmentDeadline(pool.address);
+                        await repaymentImpl.repayAmount(pool.address, interestForCurrentPeriod);
+
+                        await timeTravel(network, parseInt(endOfExtension.add(1).toString()));
+
+                        interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address);
+                        assert(interestForCurrentPeriod.toString() != "0", `Interest not charged correctly. Actual: ${interestForCurrentPeriod.toString()} Expected: 0`);
+                        await borrowToken.connect(random).approve(repaymentImpl.address, interestForCurrentPeriod);
+                        await repaymentImpl.connect(random).repayAmount(pool.address, interestForCurrentPeriod);
                     });
                 });
                 
                 context("Extension failed", async () => {
                     it("Shouldn't be liquidated for current period if interest is repaid", async () => {
-                    
+                        await extenstion.connect(borrower).requestExtension(pool.address);
+                        await extenstion.connect(lender).voteOnExtension(pool.address);
+
+                        const { extensionVoteEndTime } = await extenstion.poolInfo();
+                        await timeTravel(network, parseInt(extensionVoteEndTime.add(1).toString()));
+
+                        let interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address);
+                        await borrowToken.connect(random).approve(repaymentImpl.address, interestForCurrentPeriod);
+                        await repaymentImpl.connect(random).repayAmount(pool.address, interestForCurrentPeriod);
+
+                        await expect(
+                            pool.liquidatePool(false, false, false)
+                        ).to.be.revertedWith("Pool::liquidatePool - No reason to liquidate the pool");
                     });
 
                     it("liquidate if repay is less than interest for current period", async () => {
-                    
-                    });
-                });
-    
-                context("Extension passed exactly with cutoff ", async () => {
-                    it("Shouldn't be liquidated for current period", async () => {
-                    
-                    });
+                        await extenstion.connect(borrower).requestExtension(pool.address);
+                        await extenstion.connect(lender).voteOnExtension(pool.address);
 
-                    it("liquidate if repay less than interest for extended period", async () => {
-                    
-                    });
+                        const interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address);
+                        await repaymentImpl.repayAmount(pool.address, interestForCurrentPeriod.sub(1));
 
-                    it("Can't liquidate if repay is more than interest for extended period", async () => {
-                    
-                    });
+                        const endOfPeriod:BigNumber = await repaymentImpl.getNextInstalmentDeadline(pool.address);
+                        await timeTravel(network, parseInt(endOfPeriod.add(1).toString()));
 
-                    it("Repay interest for period after extension", async () => {
-                    
+                        const collateralShares = (await savingsAccount.userLockedBalance(pool.address, collateralToken.address, poolStrategy.address));
+                        let collateralTokens = await poolStrategy.callStatic.getTokensForShares(collateralShares.sub(2), collateralToken.address);
+                        let borrowTokensForCollateral = await pool.getEquivalentTokens(collateralToken.address, borrowToken.address, collateralTokens);
+                        await borrowToken.connect(admin).transfer(random.address, borrowTokensForCollateral);
+                        await borrowToken.connect(random).approve(pool.address, borrowTokensForCollateral);
+                        await pool.liquidatePool(false, false, false);
                     });
                 });
 
                 context("Can't request another extension",  async () => {
                     it("when extension is requested", async () => {
-
+                        await extenstion.connect(borrower).requestExtension(pool.address);
+                        await expect(
+                            extenstion.connect(borrower).requestExtension(pool.address)
+                        ).to.be.revertedWith("Extension::requestExtension - Extension requested already");
                     });
     
                     it("after an extension passed", async () => {
-    
+                        await extenstion.connect(borrower).requestExtension(pool.address);
+                        await extenstion.connect(lender).voteOnExtension(pool.address);
+                        await extenstion.connect(lender1).voteOnExtension(pool.address);
+
+                        await expect(
+                            extenstion.connect(borrower).requestExtension(pool.address)
+                        ).to.be.revertedWith("Extension::requestExtension: Extension already availed");
                     });
     
                     it("after an extension passed and extended period is complete", async () => {
-    
+                        await extenstion.connect(borrower).requestExtension(pool.address);
+                        await extenstion.connect(lender).voteOnExtension(pool.address);
+                        await extenstion.connect(lender1).voteOnExtension(pool.address);
+
+                        const interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address);
+                        const endOfExtension:BigNumber = await repaymentImpl.getNextInstalmentDeadline(pool.address);
+                        await borrowToken.connect(random).approve(repaymentImpl.address, interestForCurrentPeriod);
+                        await repaymentImpl.connect(random).repayAmount(pool.address, interestForCurrentPeriod);
+
+                        await timeTravel(network, parseInt(endOfExtension.add(1).toString()));
+
+                        await expect(
+                            extenstion.connect(borrower).requestExtension(pool.address)
+                        ).to.be.revertedWith("Extension::requestExtension: Extension already availed");
                     });
                 });
             });

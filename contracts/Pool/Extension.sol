@@ -10,8 +10,6 @@ import "../interfaces/IRepayment.sol";
 
 contract Extension is Initializable, IExtension {
     using SafeMath for uint256;
-
-    uint256 constant MAX_INT = uint256(-1);
     
     struct PoolInfo {
         uint256 periodWhenExtensionIsPassed;
@@ -21,7 +19,7 @@ contract Extension is Initializable, IExtension {
         mapping(address => uint256) lastVoteTime;
     }
 
-    mapping(address => PoolInfo) poolInfo;
+    mapping(address => PoolInfo) public poolInfo;
     IPoolFactory poolFactory;
 
     event ExtensionRequested(uint256 extensionVoteEndTime);
@@ -65,8 +63,8 @@ contract Extension is Initializable, IExtension {
 
         // This check is required so that borrower doesn't ask for more extension if previously an extension is already granted
         require(
-            poolInfo[_pool].periodWhenExtensionIsPassed == MAX_INT,
-            "Extension::requestExtension: you have already been given an extension,No more extension"
+            poolInfo[_pool].periodWhenExtensionIsPassed == 0,
+            "Extension::requestExtension: Extension already availed"
         );
 
         poolInfo[_pool].totalExtensionSupport = 0; // As we can multiple voting every time new voting start we have to make previous votes 0
@@ -121,7 +119,6 @@ contract Extension is Initializable, IExtension {
             (_totalSupply.mul(_votingPassRatio)).div(10**30)
         ) {
             grantExtension(_pool);
-            // TODO: probably delete the lastVoteTime as that is not needed in future
         }
     }
 
