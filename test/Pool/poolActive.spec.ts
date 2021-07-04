@@ -225,7 +225,14 @@ describe.only("Pool Borrow Active stage", async () => {
         poolTokenImpl = await deployHelper.pool.deployPoolToken();
         repaymentImpl = await deployHelper.pool.deployRepayments();
 
-        await repaymentImpl.connect(admin).initialize(admin.address, poolFactory.address, repaymentParams.votingPassRatio, savingsAccount.address);
+        await repaymentImpl.connect(admin).initialize(
+            admin.address, 
+            poolFactory.address, 
+            repaymentParams.votingPassRatio, 
+            repaymentParams.gracePenalityRate, 
+            repaymentParams.gracePeriodFraction, 
+            savingsAccount.address
+        );
 
         await poolFactory
             .connect(admin)
@@ -388,36 +395,66 @@ describe.only("Pool Borrow Active stage", async () => {
 
             context("Borrower should repay interest", async () => {
                 it("Repay interest for first  repay period", async () => {
-                    
+                    const repayAmount = createPoolParams._borrowRate.mul(createPoolParams._borrowAmountRequested).mul(createPoolParams._repaymentInterval).div(60*60*24*356).div(BigNumber.from(10).pow(30))
+                    await borrowToken.connect(random).approve(repaymentImpl.address, repayAmount);
+                    await repaymentImpl.connect(random).repayAmount(pool.address, repayAmount);
                 });
 
-                it("Can't repay for second repayment period in first repay period", async () => {
-                    const repayAmount = await repaymentImpl.calculateRepayAmount(pool.address);
-                    await expect(
-                        repaymentImpl.repayAmount(pool.address, repayAmount)
-                    ).to.be.revertedWith("");
-                });
+                // it("Can't repay for second repayment period in first repay period", async () => {
+                //     // const repayAmount = await repaymentImpl.calculateRepayAmount(pool.address);
+                //     const repayAmount = createPoolParams._borrowRate.mul(createPoolParams._borrowAmountRequested).mul(createPoolParams._repaymentInterval).div(60*60*24*356).div(BigNumber.from(10).pow(30))
+                //     await borrowToken.connect(random).approve(repaymentImpl.address, repayAmount.add(10));
+                //     await expect(
+                //         repaymentImpl.connect(random).repayAmount(pool.address, repayAmount.add(10))
+                //     ).to.be.revertedWith("");
+                // });  
 
                 it("Repay in grace period, with penality", async () => {
+                    const endOfPeriod:BigNumber = await pool.getNextDueTime();
+                    const gracePeriod:BigNumber = repaymentParams.gracePeriodFraction.mul(createPoolParams._repaymentInterval).div(BigNumber.from(10).pow(30));
 
+                    await timeTravel(network, parseInt(endOfPeriod.add(gracePeriod).sub(10).toString()));
+
+                    const repayAmount = createPoolParams._borrowRate.mul(createPoolParams._borrowAmountRequested).mul(createPoolParams._repaymentInterval).div(60*60*24*356).div(BigNumber.from(10).pow(30))
+                    await borrowToken.connect(random).approve(repaymentImpl.address, repayAmount);
+                    await expect(
+                        repaymentImpl.connect(random).repayAmount(pool.address, repayAmount)
+                    ).to.be.revertedWith("");
+                    await repaymentImpl.connect(random).repayAmount(pool.address, repayAmount.add(repayAmount));
                 });
 
                 it("Repay for next period after repayment in grace period", async () => {
-                    
+                    const endOfPeriod:BigNumber = await pool.getNextDueTime();
+
+                    await timeTravel(network, parseInt(endOfPeriod.add(10).toString()));
+
+                    const repayAmount = createPoolParams._borrowRate.mul(createPoolParams._borrowAmountRequested).mul(createPoolParams._repaymentInterval).div(60*60*24*356).div(BigNumber.from(10).pow(30))
+                    await borrowToken.connect(random).approve(repaymentImpl.address, repayAmount);
+                    // TODO: Calculate exact repay amount with penality
+                    await repaymentImpl.connect(random).repayAmount(pool.address, repayAmount.add(repayAmount));
+
+                    await borrowToken.connect(random).approve(repaymentImpl.address, repayAmount);
+                    await repaymentImpl.connect(random).repayAmount(pool.address, repayAmount);
                 });
 
                 it("Can't liquidate in grace period", async () => {
-                
+                    const endOfPeriod:BigNumber = await pool.getNextDueTime();
+
+                    await timeTravel(network, parseInt(endOfPeriod.add(10).toString()));
+
+
                 });
             });
 
             context("Borrower requests extension", async () => {
                 it("Request extension", async () => {
-                
+                    await extenstion.requestExtension(pool.address);
                 });
                 
                 it("Extension passed", async () => {
-                    
+                    await extenstion.requestExtension(pool.address);
+                    await extenstion.connect(lender).voteOnExtension(pool.address);
+                    await extenstion.connect(lender1).voteOnExtension(pool.address);
                 });
 
                 context("Extension passed", async () => {

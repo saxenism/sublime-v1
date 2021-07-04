@@ -60,7 +60,9 @@ export const testPoolFactoryParams = {
 
 
 export const repaymentParams = {
-  "votingPassRatio": BigNumber.from(10).pow(28).mul(50)
+  "votingPassRatio": BigNumber.from(10).pow(28).mul(50),
+  "gracePenalityRate": BigNumber.from(10).mul(BigNumber.from(10).pow(28)),
+  "gracePeriodFraction": BigNumber.from(10).mul(BigNumber.from(10).pow(28)),
 };
 
 // Pool Factory inputs tro be manually added
