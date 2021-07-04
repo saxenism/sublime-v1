@@ -481,7 +481,7 @@ describe.only("Pool Borrow Active stage", async () => {
                         await extenstion.connect(lender1).voteOnExtension(pool.address);
 
                         await expect(
-                            pool.liquidatePool(false, false, false)
+                            await pool.connect(random).liquidatePool(false, false, false)
                         ).to.be.revertedWith("Pool::liquidatePool - No reason to liquidate the pool");
                     });
 
@@ -517,7 +517,7 @@ describe.only("Pool Borrow Active stage", async () => {
                         await timeTravel(network, parseInt(endOfExtension.add(1).toString()));
 
                         await expect(
-                            pool.liquidatePool(false, false, false)
+                            await pool.connect(random).liquidatePool(false, false, false)
                         ).to.be.revertedWith("Pool::liquidatePool - No reason to liquidate the pool");
                     });
 
@@ -552,7 +552,7 @@ describe.only("Pool Borrow Active stage", async () => {
                         await repaymentImpl.connect(random).repayAmount(pool.address, interestForCurrentPeriod);
 
                         await expect(
-                            pool.liquidatePool(false, false, false)
+                            await pool.connect(random).liquidatePool(false, false, false)
                         ).to.be.revertedWith("Pool::liquidatePool - No reason to liquidate the pool");
                     });
 
@@ -571,7 +571,7 @@ describe.only("Pool Borrow Active stage", async () => {
                         let borrowTokensForCollateral = await pool.getEquivalentTokens(collateralToken.address, borrowToken.address, collateralTokens);
                         await borrowToken.connect(admin).transfer(random.address, borrowTokensForCollateral);
                         await borrowToken.connect(random).approve(pool.address, borrowTokensForCollateral);
-                        await pool.liquidatePool(false, false, false);
+                        await pool.connect(random).liquidatePool(false, false, false);
                     });
                 });
 
@@ -614,19 +614,56 @@ describe.only("Pool Borrow Active stage", async () => {
 
             context("Borrower defaulted repayment", async () => {
                 it("Liquidate pool", async () => {
-                    
+                    const endOfPeriod:BigNumber = (await repaymentImpl.getNextInstalmentDeadline(pool.address));
+                    await timeTravel(network, parseInt(endOfPeriod.add(1).toString()));
+
+                    const collateralShares = (await savingsAccount.userLockedBalance(pool.address, collateralToken.address, poolStrategy.address));
+                    let collateralTokens = await poolStrategy.callStatic.getTokensForShares(collateralShares.sub(2), collateralToken.address);
+                    let borrowTokensForCollateral = await pool.getEquivalentTokens(collateralToken.address, borrowToken.address, collateralTokens);
+                    await borrowToken.connect(admin).transfer(random.address, borrowTokensForCollateral);
+                    await borrowToken.connect(random).approve(pool.address, borrowTokensForCollateral);
+                    await pool.connect(random).liquidatePool(false, false, false);
                 });
                 
                 it("Lenders should be able to withdraw repayments till now", async () => {
-                    
+                    const endOfPeriod:BigNumber = (await repaymentImpl.getNextInstalmentDeadline(pool.address));
+                    await timeTravel(network, parseInt(endOfPeriod.add(1).toString()));
+
+                    const collateralShares = (await savingsAccount.userLockedBalance(pool.address, collateralToken.address, poolStrategy.address));
+                    let collateralTokens = await poolStrategy.callStatic.getTokensForShares(collateralShares.sub(2), collateralToken.address);
+                    let borrowTokensForCollateral = await pool.getEquivalentTokens(collateralToken.address, borrowToken.address, collateralTokens);
+                    await borrowToken.connect(admin).transfer(random.address, borrowTokensForCollateral);
+                    await borrowToken.connect(random).approve(pool.address, borrowTokensForCollateral);
+                    await pool.connect(random).liquidatePool(false, false, false);
+
+                    await pool.connect(lender).withdrawRepayment();
                 });
     
                 it("Lenders should be able to withdraw liquidated collateral", async () => {
-                    
+                    const endOfPeriod:BigNumber = (await repaymentImpl.getNextInstalmentDeadline(pool.address));
+                    await timeTravel(network, parseInt(endOfPeriod.add(1).toString()));
+
+                    const collateralShares = (await savingsAccount.userLockedBalance(pool.address, collateralToken.address, poolStrategy.address));
+                    let collateralTokens = await poolStrategy.callStatic.getTokensForShares(collateralShares.sub(2), collateralToken.address);
+                    let borrowTokensForCollateral = await pool.getEquivalentTokens(collateralToken.address, borrowToken.address, collateralTokens);
+                    await borrowToken.connect(admin).transfer(random.address, borrowTokensForCollateral);
+                    await borrowToken.connect(random).approve(pool.address, borrowTokensForCollateral);
+                    await pool.connect(random).liquidatePool(false, false, false);
+
+                    await pool.connect(lender).withdrawLiquidity();
                 });
 
                 it("Borrower can't withdraw collateral", async () => {
+                    const endOfPeriod:BigNumber = (await repaymentImpl.getNextInstalmentDeadline(pool.address));
+                    await timeTravel(network, parseInt(endOfPeriod.add(1).toString()));
 
+                    await expect(
+                        pool.cancelPool()
+                    ).to.be.revertedWith("CP1");
+
+                    await expect(
+                        pool.closeLoan()
+                    ).to.be.revertedWith("25");
                 });
             });
 
