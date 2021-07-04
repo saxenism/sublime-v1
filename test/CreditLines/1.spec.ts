@@ -320,7 +320,7 @@ describe.only("Credit Lines", async () => {
         .withArgs(values, lender.address, borrower.address);
 
       let creditLineInfo = await creditLine.creditLineInfo(values);
-      console.log({ creditLineInfo });
+      // console.log({ creditLineInfo });
     });
   });
 });
