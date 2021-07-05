@@ -246,7 +246,7 @@ describe.only("Credit Lines", async () => {
     it("Request Credit Line to borrower", async () => {
       let _borrower: string = borrower.address;
       let _liquidationThreshold: BigNumberish = BigNumber.from(100);
-      let _borrowRate: BigNumberish = BigNumber.from(100);
+      let _borrowRate: BigNumberish = BigNumber.from(1).mul(BigNumber.from("10").pow(28));
       let _autoLiquidation: boolean = true;
       let _collateralRatio: BigNumberish = BigNumber.from(250);
       let _borrowAsset: string = Contracts.DAI;
@@ -378,15 +378,18 @@ describe.only("Credit Lines", async () => {
 
     describe("Failed Cases", async () => {
       it("Cannot borrow more if amount more than borrow limit", async () => {
-        await DaiTokenContract.connect(lender).approve(
-          creditLine.address,
-          amountToBorrow
-        );
+        await savingsAccount
+          .connect(lender)
+          .approve(
+            DaiTokenContract.address,
+            creditLine.address,
+            amountToBorrow
+          );
 
         await expect(
           creditLine
             .connect(borrower)
-            .borrowFromCreditLine(amountToBorrow, borrowerCreditLine)
+            .borrowFromCreditLine(amountToBorrow.mul(100), borrowerCreditLine)
         ).to.be.revertedWith("CreditLine: Amount exceeds borrow limit.");
       });
     });
@@ -406,27 +409,48 @@ describe.only("Credit Lines", async () => {
     describe("Liquidation", async () => {
       before(async () => {
         // borrow to max limit
-        let _borrowableAmount = await creditLine.calculateBorrowableAmount(
-          borrowerCreditLine
-        );
+        let _borrowableAmount =
+          await creditLine.callStatic.calculateBorrowableAmount(
+            borrowerCreditLine
+          );
+        console.log({
+          _borrowableAmountInBefore: _borrowableAmount.toString(),
+        });
+
+        await savingsAccount
+          .connect(lender)
+          .approve(
+            DaiTokenContract.address,
+            creditLine.address,
+            _borrowableAmount.mul(5).div(4)
+          );
+
         await creditLine
           .connect(borrower)
           .borrowFromCreditLine(
-            borrowLimit.sub(_borrowableAmount),
+            _borrowableAmount.mul(995).div(1000),
             borrowerCreditLine
           );
+
         // increase blocks/time
-        await incrementChain(network, 1000, 15000);
       });
 
       it("Liquidate credit line", async () => {
-        await DaiTokenContract.connect(admin).approve(
-          creditLine.address,
-          largeAmount.mul(100)
-        );
+        let _borrowableAmount =
+          await creditLine.callStatic.calculateBorrowableAmount(
+            borrowerCreditLine
+          );
+        console.log({ _borrowableAmount: _borrowableAmount.toString() });
+        await incrementChain(network, 2000, 150000000);
+        
+        _borrowableAmount =
+          await creditLine.callStatic.calculateBorrowableAmount(
+            borrowerCreditLine
+          );
+        console.log({ _borrowableAmount: _borrowableAmount.toString() });
+
         await expect(creditLine.connect(admin).liquidation(borrowerCreditLine))
-          .to.emit(creditLine, "CreditLineLiquidated")
-          .withArgs(admin.address);
+          .to.emit(creditLine, "CreditLineLiquidated");
       });
     });
   });

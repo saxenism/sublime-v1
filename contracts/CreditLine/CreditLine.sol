@@ -106,11 +106,11 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         uint256 _borrowRate,
         uint256 _timeElapsed
     ) public pure returns (uint256) {
-        uint256 _ten_e_30 = 10**30;
         uint256 _interest =
-            _principal.mul(_borrowRate).mul(_timeElapsed).div(
-                (_ten_e_30).mul(yearInSeconds)
+            _principal.mul(_borrowRate).mul(_timeElapsed).div(10**30).div(
+                yearInSeconds
             );
+
         return _interest;
     }
 
@@ -164,16 +164,34 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
 
     function calculateBorrowableAmount(bytes32 _creditLineHash)
         public
-        view
         returns (uint256)
     {
-        uint256 _debt = calculateCurrentDebt(_creditLineHash);
-        uint256 _borrowLimit = creditLineInfo[_creditLineHash].borrowLimit;
-        if (_debt >= _borrowLimit) {
-            return 0;
-        } else {
-            return _borrowLimit.sub(_debt);
+        (uint256 _ratioOfPrices, uint256 _decimals) =
+            IPriceOracle(IPoolFactory(PoolFactory).priceOracle())
+                .getLatestPrice(
+                creditLineInfo[_creditLineHash].collateralAsset,
+                creditLineInfo[_creditLineHash].borrowAsset
+            );
+
+        uint256 _totalCollateralToken =
+            calculateTotalCollateralTokens(_creditLineHash);
+
+        uint256 _currentDebt = calculateCurrentDebt(_creditLineHash);
+
+        uint256 maxPossible =
+            _totalCollateralToken
+                .mul(_ratioOfPrices)
+                .div(creditLineInfo[_creditLineHash].idealCollateralRatio)
+                .div(10**_decimals);
+
+        console.log("_currentDebt", _currentDebt);
+        console.log("maxPossible", maxPossible);
+        console.log("_totalCollateralToken", _totalCollateralToken);
+
+        if (maxPossible > _currentDebt) {
+            return maxPossible.sub(_currentDebt);
         }
+        return 0;
     }
 
     function updateinterestAccruedTillPrincipalUpdate(bytes32 creditLineHash)
@@ -507,8 +525,6 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
                 }
             }
         }
-        console.log("_activeAmount", _activeAmount);
-        console.log("_amountInTokens", _amountInTokens);
         require(_activeAmount == _amountInTokens, "insufficient balance");
     }
 
