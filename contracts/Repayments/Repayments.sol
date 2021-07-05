@@ -19,9 +19,9 @@ contract Repayments is RepaymentStorage, IRepayment {
     event MissedRepaymentRepaid(address poolID); // Previous period's interest is repaid fully
     event PartialExtensionRepaymentMade(address poolID); // Previous period's interest is repaid partially
 
-    modifier isPoolInitialized() {
+    modifier isPoolInitialized(address _poolID) {
         require(
-            repaymentConstants[msg.sender].numberOfTotalRepayments != 0,
+            repaymentConstants[_poolID].numberOfTotalRepayments != 0,
             "Pool is not Initiliazed"
         );
         _;
@@ -127,7 +127,7 @@ contract Repayments is RepaymentStorage, IRepayment {
             repaymentVars[_poolID].loanDurationCovered;
 
         uint256 _interestDueTillInstalmentDeadline =
-            (_nextInstalmentDeadline.sub(_loanDurationCovered)).mul(
+            (_nextInstalmentDeadline.sub(repaymentConstants[_poolID].loanStartTime).sub(_loanDurationCovered)).mul(
                 _interestPerSecond
             ).div(10**30);
 
@@ -300,7 +300,7 @@ contract Repayments is RepaymentStorage, IRepayment {
     function repayAmount(address _poolID, uint256 _amount)
         public
         payable
-        isPoolInitialized
+        isPoolInitialized(_poolID)
     {
         IPool _pool = IPool(_poolID);
 
@@ -396,7 +396,7 @@ contract Repayments is RepaymentStorage, IRepayment {
     function repayPrincipal(address payable _poolID, uint256 _amount)
         public
         payable
-        isPoolInitialized
+        isPoolInitialized(_poolID)
     {
         IPool _pool = IPool(_poolID);
         uint256 _loanStatus = _pool.getLoanStatus();
