@@ -62,6 +62,10 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
 
     // TODO - Number of strategies user can invest in is limited. Make this set specific to user rather than global.
 
+    function updateCreditLine(address _creditLine) external onlyOwner {
+        CreditLine = _creditLine;
+    }
+
     function updateStrategyRegistry(address _strategyRegistry)
         external
         onlyOwner
