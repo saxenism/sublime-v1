@@ -154,8 +154,6 @@ contract Repayments is RepaymentStorage, IRepayment {
         uint256 _loanStartTime = repaymentConstants[_poolID].loanStartTime;
         uint256 _nextInstalmentDeadline;
 
-        //uint256 _ extensions on impro
-
         if (_loanExtensionPeriod > _instalmentsCompleted) {
             _nextInstalmentDeadline = (
                 (_instalmentsCompleted.add(10**30).add(10**30)).mul(
