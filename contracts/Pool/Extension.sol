@@ -71,9 +71,9 @@ contract Extension is Initializable, IExtension {
         IRepayment _repayment = IRepayment(poolFactory.repaymentImpl());
         uint256 _gracePeriodFraction = _repayment.getGracePeriodFraction();
         uint256 _gracePeriod =
-            (_repaymentInterval * _gracePeriodFraction).div(10**30); // multiplying exponents
+            (_repaymentInterval * _gracePeriodFraction); // multiplying exponents
         uint256 _nextDueTime = _repayment.getNextInstalmentDeadline(_pool);
-        _extensionVoteEndTime = (_nextDueTime).add(_gracePeriod);
+        _extensionVoteEndTime = (_nextDueTime).add(_gracePeriod).div(10**30);
         poolInfo[_pool].extensionVoteEndTime = _extensionVoteEndTime; // TODO this makes extension request single use, ideally need to reset extensionVoteEndTime if vote doesnt cross threshold
         emit ExtensionRequested(_extensionVoteEndTime);
     }

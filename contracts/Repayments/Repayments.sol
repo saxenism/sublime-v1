@@ -68,10 +68,10 @@ contract Repayments is RepaymentStorage, IRepayment {
             .numberOfTotalRepayments = numberOfTotalRepayments;
         repaymentConstants[msg.sender].loanDuration = repaymentInterval.mul(
             numberOfTotalRepayments
-        );
-        repaymentConstants[msg.sender].repaymentInterval = repaymentInterval;
+        ).mul(10**30);
+        repaymentConstants[msg.sender].repaymentInterval = repaymentInterval.mul(10**30);
         repaymentConstants[msg.sender].borrowRate = borrowRate;
-        repaymentConstants[msg.sender].loanStartTime = loanStartTime;
+        repaymentConstants[msg.sender].loanStartTime = loanStartTime.mul(10**30);
         repaymentConstants[msg.sender].repayAsset = lentAsset;
         repaymentConstants[msg.sender].savingsAccount = savingsAccount;
         //repaymentVars[msg.sender].nextDuePeriod = loanStartTime.add(repaymentInterval); TODO is this necessary
@@ -82,6 +82,7 @@ contract Repayments is RepaymentStorage, IRepayment {
      * @notice returns the number of repayment intervals that have been repaid,
      * if repayment interval = 10 secs, loan duration covered = 55 secs, repayment intervals covered = 5
      * @param _poolID address of the pool
+     * @return scaled interest per second
      */
 
     function getInterestPerSecond(address _poolID)
@@ -97,6 +98,7 @@ contract Repayments is RepaymentStorage, IRepayment {
         return _interestPerSecond;
     }
 
+    // @return scaled instalments completed
     function getInstalmentsCompleted(address _poolID)
         public
         view
@@ -113,6 +115,7 @@ contract Repayments is RepaymentStorage, IRepayment {
         return _instalmentsCompleted;
     }
 
+    // @return scaled 
     function getInterestDueTillInstalmentDeadline(address _poolID)
         public
         view
@@ -137,7 +140,7 @@ contract Repayments is RepaymentStorage, IRepayment {
     {
         repaymentVars[_poolID].loanExtensionPeriod = _period;
     }*/
-
+    // return timestamp before which next instalment ends
     function getNextInstalmentDeadline(address _poolID)
         public
         view
@@ -158,12 +161,12 @@ contract Repayments is RepaymentStorage, IRepayment {
             _nextInstalmentDeadline = (
                 (_instalmentsCompleted.add(10**30).add(10**30)).mul(
                     _repaymentInterval
-                )
+                ).div(10**30)
             )
                 .add(_loanStartTime);
         } else {
             _nextInstalmentDeadline = (
-                (_instalmentsCompleted.add(10**30)).mul(_repaymentInterval)
+                (_instalmentsCompleted.add(10**30)).mul(_repaymentInterval).div(10**30)
             )
                 .add(_loanStartTime);
         }
@@ -187,7 +190,7 @@ contract Repayments is RepaymentStorage, IRepayment {
         returns (uint256)
     {
         uint256 _loanStartTime = repaymentConstants[_poolID].loanStartTime;
-        uint256 _currentTime = block.timestamp;
+        uint256 _currentTime = block.timestamp.mul(10**30);
         uint256 _repaymentInterval =
             repaymentConstants[_poolID].repaymentInterval;
         uint256 _currentInterval =
@@ -209,13 +212,13 @@ contract Repayments is RepaymentStorage, IRepayment {
         //uint256 _loanStartTime = repaymentConstants[_poolID].loanStartTime;
         uint256 _repaymentInterval =
             repaymentConstants[_poolID].repaymentInterval;
-        uint256 _currentTime = block.timestamp;
+        uint256 _currentTime = block.timestamp.mul(10**30);
         uint256 _gracePeriodFraction =
             repaymentConstants[_poolID].gracePeriodFraction;
         uint256 _nextInstalmentDeadline = getNextInstalmentDeadline(_poolID);
         uint256 _gracePeriodDeadline =
             _nextInstalmentDeadline.add(
-                _gracePeriodFraction.mul(_repaymentInterval)
+                _gracePeriodFraction.mul(_repaymentInterval).div(10**30)
             );
 
         require(_currentTime <= _gracePeriodDeadline, "Borrower has defaulted");
@@ -230,7 +233,7 @@ contract Repayments is RepaymentStorage, IRepayment {
         override
         returns (bool)
     {
-        uint256 _currentTime = block.timestamp;
+        uint256 _currentTime = block.timestamp.mul(10**30);
         uint256 _instalmentDeadline = getNextInstalmentDeadline(_poolID);
 
         if (_currentTime > _instalmentDeadline) return true;

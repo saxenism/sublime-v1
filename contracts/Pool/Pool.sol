@@ -813,7 +813,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             IRepayment(_poolFactory.repaymentImpl()).getInterestCalculationVars(
                 address(this)
             );
-        uint256 _currentBlockTime = block.timestamp;
+        uint256 _currentBlockTime = block.timestamp.mul(10**30);
         uint256 _interestAccrued =
             _interestPerSecond
                 .mul(_currentBlockTime.sub(_loanDurationCovered))
