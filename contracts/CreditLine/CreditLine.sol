@@ -304,11 +304,9 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
                 true
             );
         // setRepayments(creditLineHash);
-        ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()).approve(
-            _borrowAsset,
-            address(this),
-            _borrowLimit
-        );
+        ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount())
+            .approveFromToCreditLine(_borrowAsset, msg.sender, _borrowLimit);
+
         emit CreditLineRequestedToBorrower(
             _creditLineHash,
             msg.sender,
@@ -361,9 +359,10 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         onlyCreditLineLender(_creditLineHash)
     {
         _acceptCreditLine(_creditLineHash, false);
-        ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()).approve(
+        ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount())
+            .approveFromToCreditLine(
             creditLineInfo[_creditLineHash].borrowAsset,
-            address(this),
+            creditLineInfo[_creditLineHash].lender,
             creditLineInfo[_creditLineHash].borrowLimit
         );
     }
@@ -493,7 +492,6 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
                 uint256 _tokensToTransfer = tokenInStrategy;
                 if (_activeAmount.add(tokenInStrategy) >= _amountInTokens) {
                     _tokensToTransfer = (_amountInTokens.sub(_activeAmount));
-                    _activeAmount = _activeAmount.add(_tokensToTransfer);
                 }
                 _activeAmount = _activeAmount.add(_tokensToTransfer);
                 _savingsAccount.withdrawFrom(
@@ -509,6 +507,8 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
                 }
             }
         }
+        console.log("_activeAmount", _activeAmount);
+        console.log("_amountInTokens", _amountInTokens);
         require(_activeAmount == _amountInTokens, "insufficient balance");
     }
 

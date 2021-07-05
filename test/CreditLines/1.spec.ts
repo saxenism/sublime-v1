@@ -188,6 +188,7 @@ describe("Credit Lines", async () => {
       creditLine = await deployHelper.core.deployCreditLines();
       poolFactory = await deployHelper.pool.deployPoolFactory();
       extenstion = await deployHelper.pool.deployExtenstion();
+      await savingsAccount.connect(admin).updateCreditLine(creditLine.address);
     });
 
     it("Initialize required contracts", async () => {

@@ -133,6 +133,8 @@ describe.only("Credit Lines", async () => {
         aaveYieldParams._lendingPoolAddressesProvider
       );
 
+    await strategyRegistry.connect(admin).addStrategy(zeroAddress);
+
     await strategyRegistry.connect(admin).addStrategy(aaveYield.address);
 
     yearnYield = await deployHelper.core.deployYearnYield();
@@ -198,6 +200,7 @@ describe.only("Credit Lines", async () => {
       extenstion = await deployHelper.pool.deployExtenstion();
 
       await extenstion.connect(admin).initialize(poolFactory.address);
+      await savingsAccount.connect(admin).updateCreditLine(creditLine.address);
 
       let {
         _collectionPeriod,
@@ -331,22 +334,26 @@ describe.only("Credit Lines", async () => {
     it("Borrow From Credit Line", async () => {
       await DaiTokenContract.connect(admin).transfer(
         lender.address,
-        largeAmount
-      );
-      await DaiTokenContract.connect(lender).approve(
-        creditLine.address,
-        largeAmount
-      );
-
-      await DaiTokenContract.connect(admin).transfer(
-        lender.address,
         largeAmount.mul(100)
       );
 
       await DaiTokenContract.connect(lender).approve(
-        creditLine.address,
-        amountToBorrow
+        savingsAccount.address,
+        largeAmount.mul(100)
       );
+
+      await savingsAccount
+        .connect(lender)
+        .depositTo(
+          largeAmount.mul(100),
+          DaiTokenContract.address,
+          zeroAddress,
+          lender.address
+        );
+
+      await savingsAccount
+        .connect(lender)
+        .approve(DaiTokenContract.address, creditLine.address, amountToBorrow);
 
       await creditLine
         .connect(borrower)
