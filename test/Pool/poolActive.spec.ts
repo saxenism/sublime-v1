@@ -668,28 +668,98 @@ describe.only("Pool Borrow Active stage", async () => {
             });
 
             context("Margin call when collateral ratio falls below ideal ratio", async () => {
-                it("Margin called lender, can't send pool tokens", async () => {
+                beforeEach(async () => {
+                    await priceOracle
+                        .connect(admin)
+                        .setfeedAddress(
+                            Contracts.LINK,
+                            ChainLinkAggregators["DAI/USD"]
+                        );
+                });
 
+                it("Margin called lender, can't send pool tokens", async () => {
+                    await pool.connect(lender).requestMarginCall();
+
+                    await expect(
+                        poolToken.connect(lender).transfer(random.address, 5)
+                    ).to.be.revertedWith("18");
                 });
 
                 it("Margin called lender, can't receive pool tokens", async () => {
+                    await pool.connect(lender).requestMarginCall();
 
+                    await expect(
+                        poolToken.connect(lender1).transfer(lender.address, 5)
+                    ).to.be.revertedWith("19");
                 });
 
-                it("Any lender can initiate margin call", async () => {
-                
+                it("Multiple lender can initiate margin call", async () => {
+                    await pool.connect(lender).requestMarginCall();
+
+                    await pool.connect(lender1).requestMarginCall();
+                });
+
+                it("Only lender can initiate margin call", async () => {
+                    await pool.connect(random).requestMarginCall();
                 });
                 
                 it("Margin call can't be liquidated, if borrower adds collateral for margin call", async () => {
-                    
+                    await pool.connect(lender).requestMarginCall();
+
+                    const amount:BigNumber = createPoolParams._poolSize.sub(createPoolParams._collateralAmount);
+                    await collateralToken
+                        .connect(admin)
+                        .transfer(borrower.address, amount);
+
+                    await collateralToken
+                        .connect(borrower)
+                        .approve(pool.address, amount);
+            
+                    await pool.connect(borrower).addCollateralInMarginCall(
+                        lender.address,
+                        amount,
+                        false
+                    );
+
+                    await expect(
+                        pool.liquidateLender(lender.address, false, false, false)
+                    ).to.be.revertedWith("29");
                 });
     
                 it("Margin call can't be liquidated, if collateral ratio goes above ideal ratio", async () => {
+                    await pool.connect(lender).requestMarginCall();
+
+                    await priceOracle
+                        .connect(admin)
+                        .setfeedAddress(
+                            Contracts.LINK,
+                            ChainLinkAggregators["LINK/USD"]
+                        );
                     
+                    await expect(
+                        pool.liquidateLender(lender.address, false, false, false)
+                    ).to.be.revertedWith("29");
                 });
     
                 it("If collateral ratio below ideal after margin call time, Anyone can liquidate lender's part of collateral", async () => {
-                    
+                    await pool.connect(lender).requestMarginCall();
+
+                    const amount:BigNumber = createPoolParams._poolSize.sub(createPoolParams._collateralAmount).sub(10);
+                    await collateralToken
+                        .connect(admin)
+                        .transfer(borrower.address, amount);
+
+                    await collateralToken
+                        .connect(borrower)
+                        .approve(pool.address, amount);
+            
+                    await pool.connect(borrower).addCollateralInMarginCall(
+                        lender.address,
+                        amount,
+                        false
+                    );
+
+                    await pool.liquidateLender(lender.address, false, false, false);
                 });
 
                 context("Collateral added in margin call is specific to lender", async () => {
