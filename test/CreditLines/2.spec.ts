@@ -47,7 +47,7 @@ import { ContractTransaction } from "@ethersproject/contracts";
 import { getContractAddress } from "@ethersproject/address";
 import { BytesLike } from "@ethersproject/bytes";
 
-describe("Credit Lines", async () => {
+describe.only("Credit Lines", async () => {
   let savingsAccount: SavingsAccount;
   let strategyRegistry: StrategyRegistry;
 
@@ -175,7 +175,7 @@ describe("Credit Lines", async () => {
       .setfeedAddress(Contracts.DAI, ChainLinkAggregators["DAI/USD"]);
   });
 
-  describe("Create Credit Lines Contract", async () => {
+  describe("Create Credit Lines Contract Amount Checks", async () => {
     let creditLine: CreditLine;
     let poolFactory: PoolFactory;
     let extenstion: Extension;
@@ -183,14 +183,20 @@ describe("Credit Lines", async () => {
     let borrowerCreditLine: BytesLike;
     let lenderCreditLine: BytesLike;
 
+    let borrowLimit: BigNumber = BigNumber.from("10").mul(
+      "1000000000000000000"
+    );
+
+    let collateralAmountToUse = BigNumber.from("25").mul("1000000000000000000");
+    let largeAmount = BigNumber.from("10").mul("1000000000000000000");
+    let amountToBorrow = BigNumber.from("1").mul("1000000000000000000");
+
     before(async () => {
       const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
       creditLine = await deployHelper.core.deployCreditLines();
       poolFactory = await deployHelper.pool.deployPoolFactory();
       extenstion = await deployHelper.pool.deployExtenstion();
-    });
 
-    it("Initialize required contracts", async () => {
       await extenstion.connect(admin).initialize(poolFactory.address);
 
       let {
@@ -234,67 +240,8 @@ describe("Credit Lines", async () => {
         );
     });
 
-    it("Check global variables", async () => {
-      expect(await creditLine.CreditLineCounter()).to.eq(0);
-      expect(await creditLine.PoolFactory()).to.eq(poolFactory.address);
-      expect(await creditLine.strategyRegistry()).to.eq(
-        strategyRegistry.address
-      );
-      expect(await creditLine.defaultStrategy()).to.eq(yearnYield.address);
-    });
-
-    it("Request Credit Line to lender", async () => {
-      let _lender: string = lender.address;
-      let _borrowLimit: BigNumberish = BigNumber.from("10").mul(
-        "1000000000000000000"
-      );
-      let _liquidationThreshold: BigNumberish = BigNumber.from(100);
-      let _borrowRate: BigNumberish = BigNumber.from(100);
-      let _autoLiquidation: boolean = true;
-      let _collateralRatio: BigNumberish = BigNumber.from(250);
-      let _borrowAsset: string = Contracts.DAI;
-      let _collateralAsset: string = Contracts.LINK;
-
-      let values = await creditLine
-        .connect(borrower)
-        .callStatic.requestCreditLineToLender(
-          _lender,
-          _borrowLimit,
-          _liquidationThreshold,
-          _borrowRate,
-          _autoLiquidation,
-          _collateralRatio,
-          _borrowAsset,
-          _collateralAsset
-        );
-
-      await expect(
-        creditLine
-          .connect(borrower)
-          .requestCreditLineToLender(
-            _lender,
-            _borrowLimit,
-            _liquidationThreshold,
-            _borrowRate,
-            _autoLiquidation,
-            _collateralRatio,
-            _borrowAsset,
-            _collateralAsset
-          )
-      )
-        .to.emit(creditLine, "CreditLineRequestedToLender")
-        .withArgs(values, lender.address, borrower.address);
-
-      lenderCreditLine = values;
-      let creditLineInfo = await creditLine.creditLineInfo(values);
-      //   console.log({ creditLineInfo });
-    });
-
     it("Request Credit Line to borrower", async () => {
       let _borrower: string = borrower.address;
-      let _borrowLimit: BigNumberish = BigNumber.from("10").mul(
-        "1000000000000000000"
-      );
       let _liquidationThreshold: BigNumberish = BigNumber.from(100);
       let _borrowRate: BigNumberish = BigNumber.from(100);
       let _autoLiquidation: boolean = true;
@@ -306,7 +253,7 @@ describe("Credit Lines", async () => {
         .connect(lender)
         .callStatic.requestCreditLineToBorrower(
           _borrower,
-          _borrowLimit,
+          borrowLimit,
           _liquidationThreshold,
           _borrowRate,
           _autoLiquidation,
@@ -320,7 +267,7 @@ describe("Credit Lines", async () => {
           .connect(lender)
           .requestCreditLineToBorrower(
             _borrower,
-            _borrowLimit,
+            borrowLimit,
             _liquidationThreshold,
             _borrowRate,
             _autoLiquidation,
@@ -350,7 +297,7 @@ describe("Credit Lines", async () => {
     it("Deposit Collateral into existing credit line (not from savings account)", async () => {
       // console.log({ borrowerCreditLine, lenderCreditLine });
       // console.log(await creditLine.creditLineInfo(borrowerCreditLine));
-      let valueToTest = BigNumber.from("25").mul("1000000000000000000");
+      let valueToTest: BigNumberish = collateralAmountToUse;
 
       await LinkTokenContract.connect(admin).transfer(
         borrower.address,
@@ -371,96 +318,108 @@ describe("Credit Lines", async () => {
         );
     });
 
-    it("Deposit Collateral into existing credit line (from savings account)", async () => {
-      // console.log({ borrowerCreditLine, lenderCreditLine });
-      // console.log(await creditLine.creditLineInfo(borrowerCreditLine));
-      let valueToTest = BigNumber.from("25").mul("1000000000000000000");
+    it("Calculate Interest", async () => {
+      expect(
+        await creditLine.calculateInterest(
+          BigNumber.from("1000").mul("1000000000000000000000"),
+          BigNumber.from("1"),
+          BigNumber.from("1000000000000000")
+        )
+      ).to.gt(0);
+    });
 
-      await LinkTokenContract.connect(admin).transfer(
-        borrower.address,
-        valueToTest.mul(3)
+    it("Borrow From Credit Line", async () => {
+      await DaiTokenContract.connect(admin).transfer(
+        lender.address,
+        largeAmount
       );
-      await LinkTokenContract.connect(borrower).approve(
-        savingsAccount.address,
-        valueToTest
-      );
-
-      await LinkTokenContract.connect(borrower).approve(
-        yearnYield.address,
-        valueToTest.mul(2)
+      await DaiTokenContract.connect(lender).approve(
+        creditLine.address,
+        largeAmount
       );
 
-      await savingsAccount
-        .connect(borrower)
-        .depositTo(
-          valueToTest,
-          LinkTokenContract.address,
-          zeroAddress,
-          borrower.address
-        );
-      await savingsAccount
-        .connect(borrower)
-        .depositTo(
-          valueToTest.mul(2),
-          LinkTokenContract.address,
-          yearnYield.address,
-          borrower.address
-        );
-      await savingsAccount
-        .connect(borrower)
-        .approve(Contracts.LINK, creditLine.address, valueToTest.mul(2));
+      await DaiTokenContract.connect(admin).transfer(
+        lender.address,
+        largeAmount.mul(100)
+      );
+
+      await DaiTokenContract.connect(lender).approve(
+        creditLine.address,
+        amountToBorrow
+      );
 
       await creditLine
         .connect(borrower)
-        .depositCollateral(
-          Contracts.LINK,
-          valueToTest,
-          borrowerCreditLine,
-          true
+        .borrowFromCreditLine(amountToBorrow, borrowerCreditLine);
+    });
+
+    it("Check Collateralization Ratio", async () => {
+      console.log(
+        await creditLine
+          .connect(borrower)
+          .callStatic.calculateCurrentCollateralRatio(borrowerCreditLine)
+      );
+    });
+
+    it("Check Total Collateral Amount", async () => {
+      expect(
+        await creditLine
+          .connect(borrower)
+          .callStatic.calculateTotalCollateralTokens(borrowerCreditLine)
+      ).to.gt(0);
+    });
+
+    describe("Failed Cases", async () => {
+      it("Cannot borrow more if amount more than borrow limit", async () => {
+        await DaiTokenContract.connect(lender).approve(
+          creditLine.address,
+          amountToBorrow
         );
+
+        await expect(
+          creditLine
+            .connect(borrower)
+            .borrowFromCreditLine(amountToBorrow, borrowerCreditLine)
+        ).to.be.revertedWith("CreditLine: Amount exceeds borrow limit.");
+      });
     });
 
-    it("Close Credit Line", async () => {
+    it("Cannot liquidate if overcollateralized", async () => {
+      await DaiTokenContract.connect(admin).approve(
+        creditLine.address,
+        largeAmount.mul(100)
+      );
       await expect(
-        creditLine.connect(borrower).closeCreditLine(borrowerCreditLine)
-      )
-        .to.emit(creditLine, "CreditLineClosed")
-        .withArgs(borrowerCreditLine);
+        creditLine.connect(admin).liquidation(borrowerCreditLine)
+      ).to.be.revertedWith(
+        "CreditLine: Collateral ratio is higher than liquidation threshold"
+      );
     });
 
-    describe("Failed cases", async () => {
-      it("Cannot deposit into invalid credit line hash", async () => {
-        let randomInvalidHash =
-          "0x0000000011111111000000001111111100000000111111110000000011111111";
-        await expect(
-          creditLine
-            .connect(borrower)
-            .depositCollateral(
-              Contracts.LINK,
-              BigNumber.from("123123123"),
-              randomInvalidHash,
-              false
-            )
-        ).to.be.revertedWith(" Credit line does not exist");
-
-        await expect(
-          creditLine
-            .connect(borrower)
-            .depositCollateral(
-              Contracts.LINK,
-              BigNumber.from("123123123"),
-              randomInvalidHash,
-              true
-            )
-        ).to.be.revertedWith(" Credit line does not exist");
+    describe("Liquidation", async () => {
+      before(async () => {
+        // borrow to max limit
+        let _borrowableAmount = await creditLine.calculateBorrowableAmount(
+          borrowerCreditLine
+        );
+        await creditLine
+          .connect(borrower)
+          .borrowFromCreditLine(
+            borrowLimit.sub(_borrowableAmount),
+            borrowerCreditLine
+          );
+        // increase blocks/time
+        await incrementChain(network, 1000, 15000);
       });
 
-      it("should fail if any other user/address is trying to accept the credit line", async () => {
-        await expect(
-          creditLine
-            .connect(lender)
-            .acceptCreditLineBorrower(borrowerCreditLine)
-        ).to.be.revertedWith("Only credit line Borrower can access");
+      it("Liquidate credit line", async () => {
+        await DaiTokenContract.connect(admin).approve(
+          creditLine.address,
+          largeAmount.mul(100)
+        );
+        await expect(creditLine.connect(admin).liquidation(borrowerCreditLine))
+          .to.emit(creditLine, "CreditLineLiquidated")
+          .withArgs(admin.address);
       });
     });
   });

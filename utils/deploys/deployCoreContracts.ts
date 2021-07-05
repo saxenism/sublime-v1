@@ -14,7 +14,7 @@ import { AaveYield__factory } from "../../typechain/factories/AaveYield__factory
 import { CompoundYield__factory } from "../../typechain/factories/CompoundYield__factory";
 import { YearnYield__factory } from "../../typechain/factories/YearnYield__factory";
 import { PoolToken__factory } from "../../typechain/factories/PoolToken__factory";
-import { CreditLine__factory } from "../../typechain/factories/CreditLine__factory"
+import { CreditLine__factory } from "../../typechain/factories/CreditLine__factory";
 
 import { Address } from "hardhat-deploy/dist/types";
 
@@ -91,11 +91,15 @@ export default class DeployCoreContracts {
     );
   }
 
-  public async deployCreditLines(): Promise<CreditLine>{
+  public async deployCreditLines(): Promise<CreditLine> {
     return await new CreditLine__factory(this._deployerSigner).deploy();
   }
 
-  public async getCreditLines(creditLinesAddress: Address): Promise<CreditLine> {
-    return await new CreditLine__factory(this._deployerSigner).attach(creditLinesAddress);
+  public async getCreditLines(
+    creditLinesAddress: Address
+  ): Promise<CreditLine> {
+    return await new CreditLine__factory(this._deployerSigner).attach(
+      creditLinesAddress
+    );
   }
 }

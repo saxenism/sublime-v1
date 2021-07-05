@@ -13,6 +13,8 @@ import "../interfaces/ISavingsAccount.sol";
 import "../SavingsAccount/SavingsAccountUtil.sol";
 import "../interfaces/IStrategyRegistry.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @title Credit Line contract with Methods related to credit Line
  * @notice Implements the functions related to Credit Line
@@ -73,6 +75,9 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         address lender,
         address borrower
     );
+
+    event CreditLineLiquidated(bytes32 creditLineHash, address liquidator);
+
     event BorrowedFromCreditLine(uint256 borrowAmount, bytes32 creditLineHash);
     event CreditLineAccepted(bytes32 creditLineHash);
     event CreditLineReset(bytes32 creditLineHash);
@@ -101,9 +106,10 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         uint256 _borrowRate,
         uint256 _timeElapsed
     ) public pure returns (uint256) {
+        uint256 _ten_e_30 = 10**30;
         uint256 _interest =
-            (_principal.mul(_borrowRate).mul(_timeElapsed)).div(10**30).div(
-                yearInSeconds
+            _principal.mul(_borrowRate).mul(_timeElapsed).div(
+                (_ten_e_30).mul(yearInSeconds)
             );
         return _interest;
     }
@@ -154,6 +160,20 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
                 .add(_interestAccrued)
                 .sub(creditLineUsage[_creditLineHash].totalInterestRepaid);
         return _currentDebt;
+    }
+
+    function calculateBorrowableAmount(bytes32 _creditLineHash)
+        public
+        view
+        returns (uint256)
+    {
+        uint256 _debt = calculateCurrentDebt(_creditLineHash);
+        uint256 _borrowLimit = creditLineInfo[_creditLineHash].borrowLimit;
+        if (_debt >= _borrowLimit) {
+            return 0;
+        } else {
+            return _borrowLimit.sub(_debt);
+        }
     }
 
     function updateinterestAccruedTillPrincipalUpdate(bytes32 creditLineHash)
@@ -213,6 +233,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
                 _strategyList[_index],
                 _tokensToTransfer
             );
+
             if (_amount == _activeAmount) {
                 return;
             }
@@ -418,10 +439,17 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
                     address(this),
                     _collateralAmount
                 );
-                IERC20(_collateralAsset).approve(
-                    address(_savingsAccount),
-                    _collateralAmount
-                );
+                if (_strategy == address(0)) {
+                    IERC20(_collateralAsset).approve(
+                        address(_savingsAccount),
+                        _collateralAmount
+                    );
+                } else {
+                    IERC20(_collateralAsset).approve(
+                        _strategy,
+                        _collateralAmount
+                    );
+                }
             }
             uint256 _sharesReceived =
                 _savingsAccount.depositTo{value: msg.value}(
@@ -511,11 +539,12 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
 
         uint256 _totalCollateralToken =
             calculateTotalCollateralTokens(creditLineHash);
+
         uint256 collateralRatioIfAmountIsWithdrawn =
-            _ratioOfPrices
-                .mul(_totalCollateralToken)
-                .div(_currentDebt.add(borrowAmount))
-                .div(10**_decimals);
+            _ratioOfPrices.mul(_totalCollateralToken).div(
+                (_currentDebt.add(borrowAmount)).mul(10**_decimals)
+            );
+
         require(
             collateralRatioIfAmountIsWithdrawn >
                 creditLineInfo[creditLineHash].idealCollateralRatio,
@@ -884,6 +913,8 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         }
         creditLineInfo[creditLineHash].currentStatus = creditLineStatus
             .LIQUIDATED;
+
+        emit CreditLineLiquidated(creditLineHash, msg.sender);
     }
 
     receive() external payable {
