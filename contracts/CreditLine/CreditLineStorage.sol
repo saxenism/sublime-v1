@@ -24,7 +24,7 @@ contract CreditLineStorage is OwnableUpgradeable {
         LIQUIDATED
     }
 
-    uint256 CreditLineCounter;
+    uint256 public CreditLineCounter;
 
     // assuming number of days in year is 365 more discussion is needed for this
     uint256 public constant yearInSeconds = 365 days;

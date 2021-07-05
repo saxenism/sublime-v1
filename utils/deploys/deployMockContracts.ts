@@ -47,9 +47,6 @@ export default class DeployMockContracts {
   }
 
   public async getYield(yieldAddress: Address): Promise<IYield> {
-    return await IYield__factory.connect(
-      yieldAddress,
-      this._deployerSigner
-    );
+    return await IYield__factory.connect(yieldAddress, this._deployerSigner);
   }
 }

@@ -37,7 +37,6 @@ contract RepaymentStorage is OwnableUpgradeable {
         uint256 loanStartTime;
         address repayAsset;
         address savingsAccount;
-
         uint256 loanDurationCovered;
     }
 
