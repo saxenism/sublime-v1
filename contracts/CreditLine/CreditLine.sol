@@ -8,7 +8,6 @@ import "./CreditLineStorage.sol";
 import "../interfaces/IPoolFactory.sol";
 import "../interfaces/IPriceOracle.sol";
 import "../interfaces/IYield.sol";
-import "../interfaces/IRepayment.sol";
 import "../interfaces/ISavingsAccount.sol";
 import "../SavingsAccount/SavingsAccountUtil.sol";
 import "../interfaces/IStrategyRegistry.sol";

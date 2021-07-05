@@ -46,7 +46,7 @@ const config: HardhatUserConfig = {
     hardhat: {
       // hardfork: "istanbul",
       forking: {
-        url: "https://eth-mainnet.alchemyapi.io/v2/snGskhAXMQaRLnJaxbcfOL7U5_bSZl_Y",
+        url: "https://eth-mainnet.alchemyapi.io/v2/wsHSVJhcoPmPHEDrXAOWE-jW2wXCO8jE",
         blockNumber: 12400000,
       },
       accounts: getHardhatPrivateKeys(),
