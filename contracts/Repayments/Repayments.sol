@@ -2,14 +2,11 @@
 pragma solidity 0.7.0;
 
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-
 import "@openzeppelin/contracts/math/SafeMath.sol";
-
 import "./RepaymentStorage.sol";
 import "../interfaces/IPool.sol";
 import "../interfaces/IRepayment.sol";
 import "../interfaces/ISavingsAccount.sol";
-
 import "hardhat/console.sol";
 
 contract Repayments is RepaymentStorage, IRepayment {
@@ -22,9 +19,9 @@ contract Repayments is RepaymentStorage, IRepayment {
     event MissedRepaymentRepaid(address poolID); // Previous period's interest is repaid fully
     event PartialExtensionRepaymentMade(address poolID); // Previous period's interest is repaid partially
 
-    modifier isPoolInitialized() {
+    modifier isPoolInitialized(address _poolID) {
         require(
-            repaymentConstants[msg.sender].numberOfTotalRepayments != 0,
+            repaymentConstants[_poolID].numberOfTotalRepayments != 0,
             "Pool is not Initiliazed"
         );
         _;
@@ -42,7 +39,7 @@ contract Repayments is RepaymentStorage, IRepayment {
         address _owner,
         address _poolFactory,
         uint256 _votingPassRatio,
-        uint256 _gracePenalityRate,
+        uint256 _gracePenaltyRate,
         uint256 _gracePeriodFraction,
         address _savingsAccount
     ) public initializer {
@@ -53,7 +50,7 @@ contract Repayments is RepaymentStorage, IRepayment {
         votingPassRatio = _votingPassRatio;
         PoolFactory = _poolFactory;
         savingsAccount = _savingsAccount;
-        gracePenaltyRate = _gracePenalityRate;
+        gracePenaltyRate = _gracePenaltyRate;
         gracePeriodFraction = _gracePeriodFraction;
     }
 
@@ -71,10 +68,10 @@ contract Repayments is RepaymentStorage, IRepayment {
             .numberOfTotalRepayments = numberOfTotalRepayments;
         repaymentConstants[msg.sender].loanDuration = repaymentInterval.mul(
             numberOfTotalRepayments
-        );
-        repaymentConstants[msg.sender].repaymentInterval = repaymentInterval;
+        ).mul(10**30);
+        repaymentConstants[msg.sender].repaymentInterval = repaymentInterval.mul(10**30);
         repaymentConstants[msg.sender].borrowRate = borrowRate;
-        repaymentConstants[msg.sender].loanStartTime = loanStartTime;
+        repaymentConstants[msg.sender].loanStartTime = loanStartTime.mul(10**30);
         repaymentConstants[msg.sender].repayAsset = lentAsset;
         repaymentConstants[msg.sender].savingsAccount = savingsAccount;
         //repaymentVars[msg.sender].nextDuePeriod = loanStartTime.add(repaymentInterval);
@@ -85,6 +82,7 @@ contract Repayments is RepaymentStorage, IRepayment {
      * @notice returns the number of repayment intervals that have been repaid,
      * if repayment interval = 10 secs, loan duration covered = 55 secs, repayment intervals covered = 5
      * @param _poolID address of the pool
+     * @return scaled interest per second
      */
 
     function getInterestPerSecond(address _poolID)
@@ -100,6 +98,7 @@ contract Repayments is RepaymentStorage, IRepayment {
         return _interestPerSecond;
     }
 
+    // @return scaled instalments completed
     function getInstalmentsCompleted(address _poolID)
         public
         view
@@ -116,6 +115,7 @@ contract Repayments is RepaymentStorage, IRepayment {
         return _instalmentsCompleted;
     }
 
+    // @return scaled 
     function getInterestDueTillInstalmentDeadline(address _poolID)
         public
         view
@@ -127,9 +127,9 @@ contract Repayments is RepaymentStorage, IRepayment {
             repaymentVars[_poolID].loanDurationCovered;
 
         uint256 _interestDueTillInstalmentDeadline =
-            (_nextInstalmentDeadline.sub(_loanDurationCovered)).mul(
+            (_nextInstalmentDeadline.sub(repaymentConstants[_poolID].loanStartTime).sub(_loanDurationCovered)).mul(
                 _interestPerSecond
-            );
+            ).div(10**30);
 
         return _interestDueTillInstalmentDeadline;
     }
@@ -140,7 +140,7 @@ contract Repayments is RepaymentStorage, IRepayment {
     {
         repaymentVars[_poolID].loanExtensionPeriod = _period;
     }*/
-
+    // return timestamp before which next instalment ends
     function getNextInstalmentDeadline(address _poolID)
         public
         view
@@ -161,12 +161,12 @@ contract Repayments is RepaymentStorage, IRepayment {
             _nextInstalmentDeadline = (
                 (_instalmentsCompleted.add(10**30).add(10**30)).mul(
                     _repaymentInterval
-                )
+                ).div(10**30)
             )
                 .add(_loanStartTime);
         } else {
             _nextInstalmentDeadline = (
-                (_instalmentsCompleted.add(10**30)).mul(_repaymentInterval)
+                (_instalmentsCompleted.add(10**30)).mul(_repaymentInterval).div(10**30)
             )
                 .add(_loanStartTime);
         }
@@ -190,7 +190,7 @@ contract Repayments is RepaymentStorage, IRepayment {
         returns (uint256)
     {
         uint256 _loanStartTime = repaymentConstants[_poolID].loanStartTime;
-        uint256 _currentTime = block.timestamp;
+        uint256 _currentTime = block.timestamp.mul(10**30);
         uint256 _repaymentInterval =
             repaymentConstants[_poolID].repaymentInterval;
         uint256 _currentInterval =
@@ -212,13 +212,13 @@ contract Repayments is RepaymentStorage, IRepayment {
         //uint256 _loanStartTime = repaymentConstants[_poolID].loanStartTime;
         uint256 _repaymentInterval =
             repaymentConstants[_poolID].repaymentInterval;
-        uint256 _currentTime = block.timestamp;
+        uint256 _currentTime = block.timestamp.mul(10**30);
         uint256 _gracePeriodFraction =
             repaymentConstants[_poolID].gracePeriodFraction;
         uint256 _nextInstalmentDeadline = getNextInstalmentDeadline(_poolID);
         uint256 _gracePeriodDeadline =
             _nextInstalmentDeadline.add(
-                _gracePeriodFraction.mul(_repaymentInterval)
+                _gracePeriodFraction.mul(_repaymentInterval).div(10**30)
             );
 
         require(_currentTime <= _gracePeriodDeadline, "Borrower has defaulted");
@@ -233,7 +233,7 @@ contract Repayments is RepaymentStorage, IRepayment {
         override
         returns (bool)
     {
-        uint256 _currentTime = block.timestamp;
+        uint256 _currentTime = block.timestamp.mul(10**30);
         uint256 _instalmentDeadline = getNextInstalmentDeadline(_poolID);
 
         if (_currentTime > _instalmentDeadline) return true;
@@ -299,7 +299,7 @@ contract Repayments is RepaymentStorage, IRepayment {
     function repayAmount(address _poolID, uint256 _amount)
         public
         payable
-        isPoolInitialized
+        isPoolInitialized(_poolID)
     {
         IPool _pool = IPool(_poolID);
 
@@ -394,7 +394,7 @@ contract Repayments is RepaymentStorage, IRepayment {
     function repayPrincipal(address payable _poolID, uint256 _amount)
         public
         payable
-        isPoolInitialized
+        isPoolInitialized(_poolID)
     {
         IPool _pool = IPool(_poolID);
         uint256 _loanStatus = _pool.getLoanStatus();
@@ -454,7 +454,7 @@ contract Repayments is RepaymentStorage, IRepayment {
         override
     {
         require(
-            msg.sender == IPoolFactory(PoolFactory).owner(),
+            msg.sender == IPoolFactory(PoolFactory).extension(),
             "Repayments::repaymentExtended - Invalid caller"
         );
 

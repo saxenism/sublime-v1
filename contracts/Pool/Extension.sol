@@ -10,11 +10,7 @@ import "../interfaces/IRepayment.sol";
 
 contract Extension is Initializable, IExtension {
     using SafeMath for uint256;
-
-    uint256 constant MAX_INT = uint256(-1);
-
-    event VotingPassed(uint256 nextDuePeriod); //, uint256 periodWhenExtensionIsPassed); Confirm: do we need to pass the second var?
-
+    
     struct PoolInfo {
         uint256 periodWhenExtensionIsPassed;
         uint256 totalExtensionSupport;
@@ -23,11 +19,11 @@ contract Extension is Initializable, IExtension {
         mapping(address => uint256) lastVoteTime;
     }
 
-    mapping(address => PoolInfo) poolInfo;
+    mapping(address => PoolInfo) public poolInfo;
     IPoolFactory poolFactory;
 
     event ExtensionRequested(uint256 extensionVoteEndTime);
-    event ExtensionPassed(uint256 nextDuePeriod);
+    event ExtensionPassed(uint256 loanInterval);
     event LenderVoted(
         address lender,
         uint256 totalExtensionSupport,
@@ -68,17 +64,17 @@ contract Extension is Initializable, IExtension {
 
         // This check is required so that borrower doesn't ask for more extension if previously an extension is already granted
         require(
-            poolInfo[_pool].periodWhenExtensionIsPassed == MAX_INT,
-            "Extension::requestExtension: you have already been given an extension,No more extension"
+            poolInfo[_pool].periodWhenExtensionIsPassed == 0,
+            "Extension::requestExtension: Extension already availed"
         );
 
         poolInfo[_pool].totalExtensionSupport = 0; // As we can multiple voting every time new voting start we have to make previous votes 0
         IRepayment _repayment = IRepayment(poolFactory.repaymentImpl());
         uint256 _gracePeriodFraction = _repayment.getGracePeriodFraction();
         uint256 _gracePeriod =
-            (_repaymentInterval * _gracePeriodFraction).div(10**30); // multiplying exponents
+            (_repaymentInterval * _gracePeriodFraction); // multiplying exponents
         uint256 _nextDueTime = _repayment.getNextInstalmentDeadline(_pool);
-        _extensionVoteEndTime = (_nextDueTime).add(_gracePeriod);
+        _extensionVoteEndTime = (_nextDueTime).add(_gracePeriod).div(10**30);
         poolInfo[_pool].extensionVoteEndTime = _extensionVoteEndTime; // this makes extension request single use
         emit ExtensionRequested(_extensionVoteEndTime);
     }
@@ -104,7 +100,7 @@ contract Extension is Initializable, IExtension {
             IRepayment(poolFactory.repaymentImpl()).getGracePeriodFraction();
         uint256 _repaymentInterval = poolInfo[_pool].repaymentInterval;
         uint256 _gracePeriod =
-            (_repaymentInterval * _gracePeriodFraction).div(100000000);
+            (_repaymentInterval * _gracePeriodFraction).div(10**30);
         require(
             _lastVoteTime <
                 _extensionVoteEndTime.sub(_gracePeriod).sub(_repaymentInterval),

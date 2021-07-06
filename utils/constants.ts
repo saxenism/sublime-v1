@@ -21,6 +21,9 @@ export const WhaleAccount = "0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503";
 export const DAI_Yearn_Protocol_Address =
   "0xacd43e627e64355f1861cec6d3a6688b31a6f952"; // TODO: To be upgraded to v2
 
+export const LINK_Yearn_Protocol_Address =
+  "0x881b06da56bb5675c54e4ed311c21e54c5025298"; // @prateek to check if update needed in upgrade v2
+
 export const aLink = "0xa06bC25B5805d5F8d82847D191Cb4Af5A3e873E0";
 
 const collateralRatio = BigNumber.from(60).mul(BigNumber.from(10).pow(28));
@@ -50,17 +53,24 @@ export const testPoolFactoryParams = {
   _collectionPeriod: BigNumber.from(10000),
   _matchCollateralRatioInterval: BigNumber.from(200),
   _marginCallDuration: BigNumber.from(300),
-  _collateralVolatilityThreshold: BigNumber.from(20).mul(BigNumber.from(10).pow(28)),
-  _gracePeriodPenaltyFraction: BigNumber.from(5).mul(BigNumber.from(10).pow(28)),
+  _collateralVolatilityThreshold: BigNumber.from(20).mul(
+    BigNumber.from(10).pow(28)
+  ),
+  _gracePeriodPenaltyFraction: BigNumber.from(5).mul(
+    BigNumber.from(10).pow(28)
+  ),
   _liquidatorRewardFraction: BigNumber.from(15).mul(BigNumber.from(10).pow(28)),
   _poolInitFuncSelector: "0x272edaf2",
   _poolTokenInitFuncSelector: "0x077f224a",
-  _poolCancelPenalityFraction: BigNumber.from(10).mul(BigNumber.from(10).pow(28))
+  _poolCancelPenalityFraction: BigNumber.from(10).mul(
+    BigNumber.from(10).pow(28)
+  ),
 };
 
-
 export const repaymentParams = {
-  "votingPassRatio": BigNumber.from(10).pow(28).mul(50)
+  "votingPassRatio": BigNumber.from(10).pow(28).mul(50),
+  "gracePenalityRate": BigNumber.from(10).mul(BigNumber.from(10).pow(28)),
+  "gracePeriodFraction": BigNumber.from(10).mul(BigNumber.from(10).pow(28)),
 };
 
 // Pool Factory inputs tro be manually added

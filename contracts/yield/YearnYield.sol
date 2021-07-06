@@ -8,6 +8,8 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../interfaces/IYield.sol";
 import "../interfaces/Invest/IyVault.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @title Yield contract
  * @notice Implements the functions to lock/unlock tokens into YVault

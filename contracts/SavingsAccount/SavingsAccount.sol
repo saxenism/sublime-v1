@@ -60,6 +60,11 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         CreditLine = _creditLine;
     }
 
+
+    function updateCreditLine(address _creditLine) external onlyOwner {
+        CreditLine = _creditLine;
+    }
+
     function updateStrategyRegistry(address _strategyRegistry)
         external
         onlyOwner
