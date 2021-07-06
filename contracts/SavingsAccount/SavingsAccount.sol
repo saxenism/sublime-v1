@@ -60,7 +60,6 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         CreditLine = _creditLine;
     }
 
-    // TODO - Number of strategies user can invest in is limited. Make this set specific to user rather than global.
 
     function updateCreditLine(address _creditLine) external onlyOwner {
         CreditLine = _creditLine;
@@ -239,7 +238,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
             amount = IYield(strategy).getSharesForTokens(amount, asset);
         }
 
-        // TODO not considering yield generated, needs to be updated later
+        
         userLockedBalance[msg.sender][asset][strategy] = userLockedBalance[
             msg.sender
         ][asset][strategy]
