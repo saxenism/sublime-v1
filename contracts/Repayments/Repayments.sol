@@ -77,7 +77,7 @@ contract Repayments is RepaymentStorage, IRepayment {
         repaymentConstants[msg.sender].loanStartTime = loanStartTime;
         repaymentConstants[msg.sender].repayAsset = lentAsset;
         repaymentConstants[msg.sender].savingsAccount = savingsAccount;
-        //repaymentVars[msg.sender].nextDuePeriod = loanStartTime.add(repaymentInterval); TODO is this necessary
+        //repaymentVars[msg.sender].nextDuePeriod = loanStartTime.add(repaymentInterval);
         repaymentVars[msg.sender].nInstalmentsFullyPaid = 0;
     }
 
@@ -199,7 +199,7 @@ contract Repayments is RepaymentStorage, IRepayment {
                     _repaymentInterval
                 )
             )
-                .add(10**30); // TODO add 10**30 to add 1 - check
+                .add(10**30); // adding 10**30 to add 1
 
         return _currentInterval;
     }
@@ -267,7 +267,6 @@ contract Repayments is RepaymentStorage, IRepayment {
         return interestDueTillPeriodEnd;
     }
 */
-    // TODO need to add grace penalty
 
     function getInterestLeft(address _poolID) public view returns (uint256) {
         uint256 _interestPerSecond = getInterestPerSecond((_poolID));
@@ -392,7 +391,6 @@ contract Repayments is RepaymentStorage, IRepayment {
         }
     }
 
-    // TODO should this be calling closeLoan() or the other way around?
     function repayPrincipal(address payable _poolID, uint256 _amount)
         public
         payable

@@ -82,7 +82,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     */
     event OpenBorrowPoolClosed();
 
-    // TODO confirm - are borrower and sharesReceived necessary?
+    // borrower and sharesReceived might not be necessary
     /*
     * @notice emitted when borrower posts collateral
     * @param borrower address of the borrower
@@ -95,7 +95,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         uint256 sharesReceived
     );
 
-    // TODO confirm - are borrower and sharesReceived necessary?
+    // borrower and sharesReceived might not be necessary
     /*
     * @notice emitted when borrower posts collateral after a margin call
     * @param borrower address of the borrower
@@ -758,7 +758,6 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     }
 
     function terminateOpenBorrowPool() external onlyOwner {
-        // TODO: Add delay before the transfer to admin can happen
         _withdrawAllCollateral(msg.sender, 0);
         poolToken.pause();
         poolVars.loanStatus = LoanStatus.TERMINATED;
@@ -854,7 +853,6 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
      * @dev It will revert in case collateral ratio is not below expected value
      * or the lender has already called it.
      */
-    // TODO In future, we should make it possible to delegate margin calls
 
     function requestMarginCall() external isLender(msg.sender) {
         require(poolVars.loanStatus == LoanStatus.ACTIVE, "4");
@@ -1041,7 +1039,6 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             );
     }
 
-    // TODO: Can this function be made public view ?
     function _canLenderBeLiquidated(address _lender) internal {
         require(
             (poolVars.loanStatus == LoanStatus.ACTIVE) &&
@@ -1259,7 +1256,6 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         return (_poolToken.balanceOf(_lender), _poolToken.totalSupply());
     }
 
-    // TODO Is this necessary? getNextInstalmentDeadline() in Repayments.sol returns the next deadline
     /*function updateNextDuePeriodAfterRepayment(uint256 _nextDuePeriod) 
         external 
         override 
@@ -1270,26 +1266,24 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     }*/
 
     /*
-    // TODO maybe an alternative name would make sense, currently shares name with impl from Extension.sol
     function grantExtension()
         external
         override
         onlyExtension
         returns (uint256)
     {
-        uint256 _nextDuePeriod = poolVars.nextDuePeriod.add(1); // TODO should we be adding 10**30?
+        uint256 _nextDuePeriod = poolVars.nextDuePeriod.add(1);
         poolVars.nextDuePeriod = _nextDuePeriod;
         return _nextDuePeriod;
     }
     */
-    // TODO Is this necessary? getNextInstalmentDeadline() in Repayments.sol returns the next deadline
     /*function updateNextRepaymentPeriodAfterExtension()
         external 
         override 
         returns (uint256)
     {
         require(msg.sender == IPoolFactory(PoolFactory).extension(), "38");
-        uint256 _nextRepaymentPeriod = poolVars.nextDuePeriod.add(10**30); // TODO verify - adding 10**30 to add 1
+        uint256 _nextRepaymentPeriod = poolVars.nextDuePeriod.add(10**30);
         poolVars.nextRepaymentPeriod = _nextDuePeriod;
         return _nextDuePeriod;
     }*/

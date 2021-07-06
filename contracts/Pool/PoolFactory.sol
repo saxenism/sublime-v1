@@ -141,7 +141,6 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     */
     event CollectionPeriodUpdated(uint256 updatedCollectionPeriod);
 
-    // TODO: what's this?
     event MatchCollateralRatioIntervalUpdated(
         uint256 updatedMatchCollateralRatioInterval
     );
@@ -198,7 +197,6 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     */
     event CollateralTokenUpdated(address collateralToken, bool isSupported);
 
-    // TODO confirm
     /*
     * @notice functions affected by this modifier can only be invoked by the Pool
     */
@@ -223,7 +221,6 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     }
 
 
-    // TODO confirm
     /*
     * @notice returns the owner of the pool
     */
@@ -236,9 +233,8 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         return OwnableUpgradeable.owner();
     }
 
-    // TODO confirm
     /*
-    * @notice invoked when
+    * @notice invoked during deployment
     * @param _userRegistry
     * @param _strategyRegistry
     * @param _admin
@@ -294,7 +290,6 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         poolCancelPenalityFraction = _poolCancelPenalityFraction;
     }
 
-    // TODO confirm - is this only invoked once during initial deployment?
     /*
     * @notice invoked by admin to update logic for pool, repayment, and pool token contracts
     * @param _poolImpl Address of new pool contract
@@ -315,7 +310,6 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         emit PoolTokenImplUpdated(_poolTokenImpl);
     }
 
-    // TODO confirm
     // check _collateralAmount
     // check _salt
     /*
@@ -523,13 +517,11 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         emit CollateralTokenUpdated(_collateralToken, _isSupported);
     }
 
-    // TODO confirm
     function updatepoolInitFuncSelector(bytes4 _functionId) external onlyOwner {
         poolInitFuncSelector = _functionId;
         emit PoolInitSelectorUpdated(_functionId);
     }
 
-    // TODO confirm
     function updatePoolTokenInitFuncSelector(bytes4 _functionId)
         external
         onlyOwner
