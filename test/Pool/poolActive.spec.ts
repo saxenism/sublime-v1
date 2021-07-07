@@ -47,7 +47,7 @@ import { ContractTransaction } from "@ethersproject/contracts";
 import { getContractAddress } from "@ethersproject/address";
 import { IYield } from "@typechain/IYield";
 
-describe("Pool Borrow Active stage", async () => {
+describe.only("Pool Active stage", async () => {
     let savingsAccount: SavingsAccount;
     let strategyRegistry: StrategyRegistry;
 
