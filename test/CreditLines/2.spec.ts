@@ -246,7 +246,9 @@ describe("Credit Lines", async () => {
     it("Request Credit Line to borrower", async () => {
       let _borrower: string = borrower.address;
       let _liquidationThreshold: BigNumberish = BigNumber.from(100);
-      let _borrowRate: BigNumberish = BigNumber.from(1).mul(BigNumber.from("10").pow(28));
+      let _borrowRate: BigNumberish = BigNumber.from(1).mul(
+        BigNumber.from("10").pow(28)
+      );
       let _autoLiquidation: boolean = true;
       let _collateralRatio: BigNumberish = BigNumber.from(250);
       let _borrowAsset: string = Contracts.DAI;
@@ -442,15 +444,16 @@ describe("Credit Lines", async () => {
           );
         console.log({ _borrowableAmount: _borrowableAmount.toString() });
         await incrementChain(network, 2000, 150000000);
-        
+
         _borrowableAmount =
           await creditLine.callStatic.calculateBorrowableAmount(
             borrowerCreditLine
           );
         console.log({ _borrowableAmount: _borrowableAmount.toString() });
 
-        await expect(creditLine.connect(admin).liquidation(borrowerCreditLine))
-          .to.emit(creditLine, "CreditLineLiquidated");
+        await expect(
+          creditLine.connect(admin).liquidation(borrowerCreditLine)
+        ).to.emit(creditLine, "CreditLineLiquidated");
       });
     });
   });

@@ -66,12 +66,15 @@ contract Repayments is RepaymentStorage, IRepayment {
             .gracePeriodFraction = gracePeriodFraction;
         repaymentConstants[msg.sender]
             .numberOfTotalRepayments = numberOfTotalRepayments;
-        repaymentConstants[msg.sender].loanDuration = repaymentInterval.mul(
-            numberOfTotalRepayments
-        ).mul(10**30);
-        repaymentConstants[msg.sender].repaymentInterval = repaymentInterval.mul(10**30);
+        repaymentConstants[msg.sender].loanDuration = repaymentInterval
+            .mul(numberOfTotalRepayments)
+            .mul(10**30);
+        repaymentConstants[msg.sender].repaymentInterval = repaymentInterval
+            .mul(10**30);
         repaymentConstants[msg.sender].borrowRate = borrowRate;
-        repaymentConstants[msg.sender].loanStartTime = loanStartTime.mul(10**30);
+        repaymentConstants[msg.sender].loanStartTime = loanStartTime.mul(
+            10**30
+        );
         repaymentConstants[msg.sender].repayAsset = lentAsset;
         repaymentConstants[msg.sender].savingsAccount = savingsAccount;
         //repaymentVars[msg.sender].nextDuePeriod = loanStartTime.add(repaymentInterval);
@@ -115,7 +118,7 @@ contract Repayments is RepaymentStorage, IRepayment {
         return _instalmentsCompleted;
     }
 
-    // @return scaled 
+    // @return scaled
     function getInterestDueTillInstalmentDeadline(address _poolID)
         public
         view
@@ -127,9 +130,13 @@ contract Repayments is RepaymentStorage, IRepayment {
             repaymentVars[_poolID].loanDurationCovered;
 
         uint256 _interestDueTillInstalmentDeadline =
-            (_nextInstalmentDeadline.sub(repaymentConstants[_poolID].loanStartTime).sub(_loanDurationCovered)).mul(
-                _interestPerSecond
-            ).div(10**30);
+            (
+                _nextInstalmentDeadline
+                    .sub(repaymentConstants[_poolID].loanStartTime)
+                    .sub(_loanDurationCovered)
+            )
+                .mul(_interestPerSecond)
+                .div(10**30);
 
         return _interestDueTillInstalmentDeadline;
     }
@@ -159,14 +166,16 @@ contract Repayments is RepaymentStorage, IRepayment {
 
         if (_loanExtensionPeriod > _instalmentsCompleted) {
             _nextInstalmentDeadline = (
-                (_instalmentsCompleted.add(10**30).add(10**30)).mul(
-                    _repaymentInterval
-                ).div(10**30)
+                (_instalmentsCompleted.add(10**30).add(10**30))
+                    .mul(_repaymentInterval)
+                    .div(10**30)
             )
                 .add(_loanStartTime);
         } else {
             _nextInstalmentDeadline = (
-                (_instalmentsCompleted.add(10**30)).mul(_repaymentInterval).div(10**30)
+                (_instalmentsCompleted.add(10**30)).mul(_repaymentInterval).div(
+                    10**30
+                )
             )
                 .add(_loanStartTime);
         }

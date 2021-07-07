@@ -217,14 +217,16 @@ describe("Pool Collection stage", async () => {
     poolTokenImpl = await deployHelper.pool.deployPoolToken();
     repaymentImpl = await deployHelper.pool.deployRepayments();
 
-    await repaymentImpl.connect(admin).initialize(
-      admin.address, 
-      poolFactory.address, 
-      repaymentParams.votingPassRatio, 
-      repaymentParams.gracePenalityRate, 
-      repaymentParams.gracePeriodFraction, 
-      savingsAccount.address
-    );
+    await repaymentImpl
+      .connect(admin)
+      .initialize(
+        admin.address,
+        poolFactory.address,
+        repaymentParams.votingPassRatio,
+        repaymentParams.gracePenalityRate,
+        repaymentParams.gracePeriodFraction,
+        savingsAccount.address
+      );
 
     await poolFactory
       .connect(admin)

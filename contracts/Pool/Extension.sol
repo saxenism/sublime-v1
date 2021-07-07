@@ -10,7 +10,7 @@ import "../interfaces/IRepayment.sol";
 
 contract Extension is Initializable, IExtension {
     using SafeMath for uint256;
-    
+
     struct PoolInfo {
         uint256 periodWhenExtensionIsPassed;
         uint256 totalExtensionSupport;
@@ -44,8 +44,10 @@ contract Extension is Initializable, IExtension {
         override
     {
         IPoolFactory _poolFactory = poolFactory;
-        require(poolInfo[msg.sender].repaymentInterval == 0,
-                "Extension::initializePoolExtension - _repaymentInterval cannot be 0");
+        require(
+            poolInfo[msg.sender].repaymentInterval == 0,
+            "Extension::initializePoolExtension - _repaymentInterval cannot be 0"
+        );
         require(
             _poolFactory.openBorrowPoolRegistry(msg.sender),
             "Repayments::onlyValidPool - Invalid Pool"
@@ -71,8 +73,7 @@ contract Extension is Initializable, IExtension {
         poolInfo[_pool].totalExtensionSupport = 0; // As we can multiple voting every time new voting start we have to make previous votes 0
         IRepayment _repayment = IRepayment(poolFactory.repaymentImpl());
         uint256 _gracePeriodFraction = _repayment.getGracePeriodFraction();
-        uint256 _gracePeriod =
-            (_repaymentInterval * _gracePeriodFraction); // multiplying exponents
+        uint256 _gracePeriod = (_repaymentInterval * _gracePeriodFraction); // multiplying exponents
         uint256 _nextDueTime = _repayment.getNextInstalmentDeadline(_pool);
         _extensionVoteEndTime = (_nextDueTime).add(_gracePeriod).div(10**30);
         poolInfo[_pool].extensionVoteEndTime = _extensionVoteEndTime; // this makes extension request single use

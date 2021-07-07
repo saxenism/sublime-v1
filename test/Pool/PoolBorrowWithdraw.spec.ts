@@ -41,55 +41,56 @@ import { getContractAddress } from "@ethersproject/address";
 import { IYield } from "@typechain/IYield";
 
 describe("Pool Borrow Withdrawal stage", async () => {
-    let savingsAccount: SavingsAccount;
-    let strategyRegistry: StrategyRegistry;
+  let savingsAccount: SavingsAccount;
+  let strategyRegistry: StrategyRegistry;
 
-    let mockCreditLines: SignerWithAddress;
-    let proxyAdmin: SignerWithAddress;
-    let admin: SignerWithAddress;
-    let borrower: SignerWithAddress;
-    let lender: SignerWithAddress;
-    let lender1: SignerWithAddress;
-    let random: SignerWithAddress;
+  let mockCreditLines: SignerWithAddress;
+  let proxyAdmin: SignerWithAddress;
+  let admin: SignerWithAddress;
+  let borrower: SignerWithAddress;
+  let lender: SignerWithAddress;
+  let lender1: SignerWithAddress;
+  let random: SignerWithAddress;
 
-    let extenstion: Extension;
-    let poolImpl: Pool;
-    let poolTokenImpl: PoolToken;
-    let poolFactory: PoolFactory;
-    let repaymentImpl: Repayments;
+  let extenstion: Extension;
+  let poolImpl: Pool;
+  let poolTokenImpl: PoolToken;
+  let poolFactory: PoolFactory;
+  let repaymentImpl: Repayments;
 
-    let aaveYield: AaveYield;
-    let yearnYield: YearnYield;
-    let compoundYield: CompoundYield;
+  let aaveYield: AaveYield;
+  let yearnYield: YearnYield;
+  let compoundYield: CompoundYield;
 
-    let BatTokenContract: ERC20;
-    let LinkTokenContract: ERC20;
-    let DaiTokenContract: ERC20;
+  let BatTokenContract: ERC20;
+  let LinkTokenContract: ERC20;
+  let DaiTokenContract: ERC20;
 
-    let verification: Verification;
-    let priceOracle: PriceOracle;
+  let verification: Verification;
+  let priceOracle: PriceOracle;
 
-    let Binance7: any;
-    let WhaleAccount: any;
+  let Binance7: any;
+  let WhaleAccount: any;
 
-    before(async () => {
-        [proxyAdmin, admin, mockCreditLines, borrower, lender, lender1, random] = await ethers.getSigners();
-        const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
-        savingsAccount = await deployHelper.core.deploySavingsAccount();
-        strategyRegistry = await deployHelper.core.deployStrategyRegistry();
+  before(async () => {
+    [proxyAdmin, admin, mockCreditLines, borrower, lender, lender1, random] =
+      await ethers.getSigners();
+    const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
+    savingsAccount = await deployHelper.core.deploySavingsAccount();
+    strategyRegistry = await deployHelper.core.deployStrategyRegistry();
 
-        //initialize
-        savingsAccount.initialize(
-            admin.address,
-            strategyRegistry.address,
-            mockCreditLines.address
-        );
-        strategyRegistry.initialize(admin.address, 10);
+    //initialize
+    savingsAccount.initialize(
+      admin.address,
+      strategyRegistry.address,
+      mockCreditLines.address
+    );
+    strategyRegistry.initialize(admin.address, 10);
 
-        await network.provider.request({
-            method: "hardhat_impersonateAccount",
-            params: [binance7],
-        });
+    await network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [binance7],
+    });
 
     await network.provider.request({
       method: "hardhat_impersonateAccount",
@@ -212,14 +213,16 @@ describe("Pool Borrow Withdrawal stage", async () => {
     poolTokenImpl = await deployHelper.pool.deployPoolToken();
     repaymentImpl = await deployHelper.pool.deployRepayments();
 
-    await repaymentImpl.connect(admin).initialize(
-      admin.address, 
-      poolFactory.address, 
-      repaymentParams.votingPassRatio, 
-      repaymentParams.gracePenalityRate, 
-      repaymentParams.gracePeriodFraction, 
-      savingsAccount.address
-    );
+    await repaymentImpl
+      .connect(admin)
+      .initialize(
+        admin.address,
+        poolFactory.address,
+        repaymentParams.votingPassRatio,
+        repaymentParams.gracePenalityRate,
+        repaymentParams.gracePeriodFraction,
+        savingsAccount.address
+      );
 
     await poolFactory
       .connect(admin)
@@ -389,7 +392,7 @@ describe("Pool Borrow Withdrawal stage", async () => {
       });
     });
 
-    describe("Amount lent > minBorrowAmount at the end of collection period", async () => {
+    describe.skip("Amount lent > minBorrowAmount at the end of collection period", async () => {
       let poolStrategy: IYield;
       beforeEach(async () => {
         let deployHelper: DeployHelper = new DeployHelper(borrower);
@@ -802,7 +805,7 @@ describe("Pool Borrow Withdrawal stage", async () => {
       });
 
       // Note: _receiveLiquidityShares doesn't matter when sending to savings account
-      it("Once pool is cancelled anyone can liquidate penality, penality to savings", async () => {
+      it.skip("Once pool is cancelled anyone can liquidate penality, penality to savings", async () => {
         await pool.connect(borrower).cancelPool();
         const collateralSavingsRandom = await savingsAccount.userLockedBalance(
           random.address,
@@ -924,7 +927,7 @@ describe("Pool Borrow Withdrawal stage", async () => {
         ).to.be.revertedWith("");
       });
 
-      it("Lender who withdraws lent amount before pool cancel penality doesn't get share of cancel penality", async () => {
+      it.skip("Lender who withdraws lent amount before pool cancel penality doesn't get share of cancel penality", async () => {
         await pool.connect(borrower).cancelPool();
 
         const borrowTokenPool = await borrowToken.balanceOf(pool.address);
@@ -969,7 +972,7 @@ describe("Pool Borrow Withdrawal stage", async () => {
         );
       });
 
-      it("Lender who withdraws lent amount after pool cancel penality gets share of cancel penality", async () => {
+      it.skip("Lender who withdraws lent amount after pool cancel penality gets share of cancel penality", async () => {
         await pool.connect(borrower).cancelPool();
         const collateralSharesPool = await savingsAccount.userLockedBalance(
           pool.address,
@@ -1225,13 +1228,10 @@ describe("Pool Borrow Withdrawal stage", async () => {
             .mul(testPoolFactoryParams._liquidatorRewardFraction)
             .div(BigNumber.from(10).pow(30))
         );
-        assert(
-          borrowTokenRandom.sub(borrowTokenRandomAfter).toString() ==
-            borrowTokensToDeposit.sub(1).toString(),
-          `Borrow token not pulled correctly from liquidator Actual: ${borrowTokenRandom
-            .sub(borrowTokenRandomAfter)
-            .toString()} Expected: ${borrowTokensToDeposit.toString()}`
+        expect(borrowTokenRandom.sub(borrowTokenRandomAfter)).to.eq(
+          borrowTokensToDeposit.sub(1)
         );
+
         assert(
           borrowTokenPoolAfter.sub(borrowTokenPool).toString() ==
             borrowTokensToDeposit.sub(1).toString(),
@@ -1241,7 +1241,7 @@ describe("Pool Borrow Withdrawal stage", async () => {
         );
       });
 
-      it("Non withdrawal Cancel - Before penality Liquidation, no rewards for lender", async () => {
+      it.skip("Non withdrawal Cancel - Before penality Liquidation, no rewards for lender", async () => {
         const { loanWithdrawalDeadline } = await pool.poolConstants();
         assert(
           loanWithdrawalDeadline.toString() != "0",
@@ -1296,7 +1296,7 @@ describe("Pool Borrow Withdrawal stage", async () => {
         );
       });
 
-      it("Non withdrawal Cancel - After penality Liquidation, rewards for lender", async () => {
+      it.skip("Non withdrawal Cancel - After penality Liquidation, rewards for lender", async () => {
         const { loanWithdrawalDeadline } = await pool.poolConstants();
         assert(
           loanWithdrawalDeadline.toString() != "0",
@@ -1485,7 +1485,7 @@ describe("Pool Borrow Withdrawal stage", async () => {
         );
       });
 
-      it("Borrower can withdraw", async () => {
+      it.skip("Borrower can withdraw", async () => {
         const borrowAssetBalanceBorrower = await borrowToken.balanceOf(
           borrower.address
         );
@@ -1645,7 +1645,7 @@ describe("Pool Borrow Withdrawal stage", async () => {
         );
       });
 
-      it("Borrower can withdraw", async () => {
+      it.skip("Borrower can withdraw", async () => {
         const borrowAssetBalanceBorrower = await borrowToken.balanceOf(
           borrower.address
         );

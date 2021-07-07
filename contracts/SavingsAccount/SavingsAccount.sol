@@ -60,7 +60,6 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         CreditLine = _creditLine;
     }
 
-
     function updateCreditLine(address _creditLine) external onlyOwner {
         CreditLine = _creditLine;
     }
@@ -238,7 +237,6 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
             amount = IYield(strategy).getSharesForTokens(amount, asset);
         }
 
-        
         userLockedBalance[msg.sender][asset][strategy] = userLockedBalance[
             msg.sender
         ][asset][strategy]
