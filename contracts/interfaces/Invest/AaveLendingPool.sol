@@ -2,8 +2,8 @@
 pragma solidity 0.7.0;
 pragma experimental ABIEncoderV2;
 
-import "./DataTypes.sol";
-import "./ILendingPoolAddressesProvider.sol";
+import './DataTypes.sol';
+import './ILendingPoolAddressesProvider.sol';
 
 interface AaveLendingPool {
     function deposit(
@@ -24,13 +24,7 @@ interface AaveLendingPool {
      * @param asset The address of the underlying asset of the reserve
      * @return The state of the reserve
      **/
-    function getReserveData(address asset)
-        external
-        view
-        returns (DataTypes.ReserveData memory);
+    function getReserveData(address asset) external view returns (DataTypes.ReserveData memory);
 
-    function getAddressesProvider()
-        external
-        view
-        returns (ILendingPoolAddressesProvider);
+    function getAddressesProvider() external view returns (ILendingPoolAddressesProvider);
 }

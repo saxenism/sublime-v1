@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.0;
 
-import "@openzeppelin/contracts-upgradeable/presets/ERC20PresetMinterPauserUpgradeable.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "../interfaces/IPool.sol";
+import '@openzeppelin/contracts-upgradeable/presets/ERC20PresetMinterPauserUpgradeable.sol';
+import '@openzeppelin/contracts/math/SafeMath.sol';
+import '../interfaces/IPool.sol';
 
 contract PoolToken is Initializable, ERC20PresetMinterPauserUpgradeable {
     using SafeMath for uint256;
 
-    bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
+    bytes32 public constant BURNER_ROLE = keccak256('BURNER_ROLE');
     address public pool;
 
     function initialize(
@@ -16,10 +16,7 @@ contract PoolToken is Initializable, ERC20PresetMinterPauserUpgradeable {
         string memory symbol,
         address _pool
     ) public initializer {
-        ERC20PresetMinterPauserUpgradeable.__ERC20PresetMinterPauser_init(
-            name,
-            symbol
-        );
+        ERC20PresetMinterPauserUpgradeable.__ERC20PresetMinterPauser_init(name, symbol);
         _setupRole(MINTER_ROLE, _pool);
         _setupRole(PAUSER_ROLE, _pool);
         _setupRole(BURNER_ROLE, _pool);
@@ -37,15 +34,11 @@ contract PoolToken is Initializable, ERC20PresetMinterPauserUpgradeable {
         uint256 amount
     ) internal virtual override {
         if (to != address(0)) {
-            require(!paused(), "ERC20Pausable: token transfer while paused");
+            require(!paused(), 'ERC20Pausable: token transfer while paused');
         }
     }
 
-    function transfer(address _recipient, uint256 _amount)
-        public
-        override
-        returns (bool)
-    {
+    function transfer(address _recipient, uint256 _amount) public override returns (bool) {
         IPool(pool).beforeTransfer(_msgSender(), _recipient, _amount);
         _transfer(_msgSender(), _recipient, _amount);
         return true;
@@ -61,10 +54,7 @@ contract PoolToken is Initializable, ERC20PresetMinterPauserUpgradeable {
         _approve(
             _sender,
             _msgSender(),
-            allowance(_sender, _msgSender()).sub(
-                _amount,
-                "ERC20: transfer amount exceeds allowance"
-            )
+            allowance(_sender, _msgSender()).sub(_amount, 'ERC20: transfer amount exceeds allowance')
         );
         return true;
     }

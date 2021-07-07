@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.0;
 
-import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "../interfaces/IPool.sol";
-import "../interfaces/IPoolFactory.sol";
-import "../interfaces/IExtension.sol";
-import "../interfaces/IRepayment.sol";
+import '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
+import '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
+import '../interfaces/IPool.sol';
+import '../interfaces/IPoolFactory.sol';
+import '../interfaces/IExtension.sol';
+import '../interfaces/IRepayment.sol';
 
 contract Extension is Initializable, IExtension {
     using SafeMath for uint256;
@@ -24,14 +24,10 @@ contract Extension is Initializable, IExtension {
 
     event ExtensionRequested(uint256 extensionVoteEndTime);
     event ExtensionPassed(uint256 loanInterval);
-    event LenderVoted(
-        address lender,
-        uint256 totalExtensionSupport,
-        uint256 lastVoteTime
-    );
+    event LenderVoted(address lender, uint256 totalExtensionSupport, uint256 lastVoteTime);
 
     modifier onlyBorrower(address _pool) {
-        require(IPool(_pool).borrower() == msg.sender, "Not Borrower");
+        require(IPool(_pool).borrower() == msg.sender, 'Not Borrower');
         _;
     }
 
@@ -39,19 +35,13 @@ contract Extension is Initializable, IExtension {
         poolFactory = IPoolFactory(_poolFactory);
     }
 
-    function initializePoolExtension(uint256 _repaymentInterval)
-        external
-        override
-    {
+    function initializePoolExtension(uint256 _repaymentInterval) external override {
         IPoolFactory _poolFactory = poolFactory;
         require(
             poolInfo[msg.sender].repaymentInterval == 0,
-            "Extension::initializePoolExtension - _repaymentInterval cannot be 0"
+            'Extension::initializePoolExtension - _repaymentInterval cannot be 0'
         );
-        require(
-            _poolFactory.openBorrowPoolRegistry(msg.sender),
-            "Repayments::onlyValidPool - Invalid Pool"
-        );
+        require(_poolFactory.openBorrowPoolRegistry(msg.sender), 'Repayments::onlyValidPool - Invalid Pool');
         poolInfo[msg.sender].repaymentInterval = _repaymentInterval;
     }
 
@@ -59,15 +49,12 @@ contract Extension is Initializable, IExtension {
         uint256 _repaymentInterval = poolInfo[_pool].repaymentInterval;
         require(_repaymentInterval != 0);
         uint256 _extensionVoteEndTime = poolInfo[_pool].extensionVoteEndTime;
-        require(
-            block.timestamp > _extensionVoteEndTime,
-            "Extension::requestExtension - Extension requested already"
-        ); // _extensionVoteEndTime is 0 when no extension is active
+        require(block.timestamp > _extensionVoteEndTime, 'Extension::requestExtension - Extension requested already'); // _extensionVoteEndTime is 0 when no extension is active
 
         // This check is required so that borrower doesn't ask for more extension if previously an extension is already granted
         require(
             poolInfo[_pool].periodWhenExtensionIsPassed == 0,
-            "Extension::requestExtension: Extension already availed"
+            'Extension::requestExtension: Extension already availed'
         );
 
         poolInfo[_pool].totalExtensionSupport = 0; // As we can multiple voting every time new voting start we have to make previous votes 0
@@ -82,30 +69,20 @@ contract Extension is Initializable, IExtension {
 
     function voteOnExtension(address _pool) external {
         uint256 _extensionVoteEndTime = poolInfo[_pool].extensionVoteEndTime;
-        require(
-            block.timestamp < _extensionVoteEndTime,
-            "Pool::voteOnExtension - Voting is over"
-        );
+        require(block.timestamp < _extensionVoteEndTime, 'Pool::voteOnExtension - Voting is over');
 
-        (uint256 _balance, uint256 _totalSupply) =
-            IPool(_pool).getBalanceDetails(msg.sender);
-        require(
-            _balance != 0,
-            "Pool::voteOnExtension - Not a valid lender for pool"
-        );
+        (uint256 _balance, uint256 _totalSupply) = IPool(_pool).getBalanceDetails(msg.sender);
+        require(_balance != 0, 'Pool::voteOnExtension - Not a valid lender for pool');
 
         uint256 _votingPassRatio = IPoolFactory(poolFactory).votingPassRatio();
 
         uint256 _lastVoteTime = poolInfo[_pool].lastVoteTime[msg.sender]; //Lender last vote time need to store it as it checks that a lender only votes once
-        uint256 _gracePeriodFraction =
-            IRepayment(poolFactory.repaymentImpl()).getGracePeriodFraction();
+        uint256 _gracePeriodFraction = IRepayment(poolFactory.repaymentImpl()).getGracePeriodFraction();
         uint256 _repaymentInterval = poolInfo[_pool].repaymentInterval;
-        uint256 _gracePeriod =
-            (_repaymentInterval * _gracePeriodFraction).div(10**30);
+        uint256 _gracePeriod = (_repaymentInterval * _gracePeriodFraction).div(10**30);
         require(
-            _lastVoteTime <
-                _extensionVoteEndTime.sub(_gracePeriod).sub(_repaymentInterval),
-            "Pool::voteOnExtension - you have already voted"
+            _lastVoteTime < _extensionVoteEndTime.sub(_gracePeriod).sub(_repaymentInterval),
+            'Pool::voteOnExtension - you have already voted'
         );
 
         uint256 _extensionSupport = poolInfo[_pool].totalExtensionSupport;
@@ -116,10 +93,7 @@ contract Extension is Initializable, IExtension {
         emit LenderVoted(msg.sender, _extensionSupport, _lastVoteTime);
         poolInfo[_pool].totalExtensionSupport = _extensionSupport;
 
-        if (
-            ((_extensionSupport)) >=
-            (_totalSupply.mul(_votingPassRatio)).div(10**30)
-        ) {
+        if (((_extensionSupport)) >= (_totalSupply.mul(_votingPassRatio)).div(10**30)) {
             grantExtension(_pool);
         }
     }
