@@ -44,7 +44,8 @@ contract Extension is Initializable, IExtension {
         override
     {
         IPoolFactory _poolFactory = poolFactory;
-        require(poolInfo[msg.sender].repaymentInterval == 0); // TODO missing error code
+        require(poolInfo[msg.sender].repaymentInterval == 0,
+                "Extension::initializePoolExtension - _repaymentInterval cannot be 0");
         require(
             _poolFactory.openBorrowPoolRegistry(msg.sender),
             "Repayments::onlyValidPool - Invalid Pool"
@@ -74,7 +75,7 @@ contract Extension is Initializable, IExtension {
             (_repaymentInterval * _gracePeriodFraction); // multiplying exponents
         uint256 _nextDueTime = _repayment.getNextInstalmentDeadline(_pool);
         _extensionVoteEndTime = (_nextDueTime).add(_gracePeriod).div(10**30);
-        poolInfo[_pool].extensionVoteEndTime = _extensionVoteEndTime; // TODO this makes extension request single use, ideally need to reset extensionVoteEndTime if vote doesnt cross threshold
+        poolInfo[_pool].extensionVoteEndTime = _extensionVoteEndTime; // this makes extension request single use
         emit ExtensionRequested(_extensionVoteEndTime);
     }
 

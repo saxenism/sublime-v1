@@ -243,7 +243,7 @@ describe.only("Pool Active stage", async () => {
             );
     });
 
-    describe.only("Pool that borrows ERC20 with ERC20 as collateral", async () => {
+    describe("Pool that borrows ERC20 with ERC20 as collateral", async () => {
         let pool: Pool;
         let poolToken: PoolToken;
         let collateralToken: ERC20;
