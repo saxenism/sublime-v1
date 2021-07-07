@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 library SavingsAccountUtil {
     using SafeERC20 for IERC20;
 
-    function _depositFromSavingsAccount(
+    function depositFromSavingsAccount(
         ISavingsAccount _savingsAccount,
         address _from,
         address _to,
@@ -18,7 +18,7 @@ library SavingsAccountUtil {
     ) internal returns (uint256) {
         if (_toSavingsAccount) {
             return
-                _savingsAccountTransfer(
+                savingsAccountTransfer(
                     _savingsAccount,
                     _from,
                     _to,
@@ -28,7 +28,7 @@ library SavingsAccountUtil {
                 );
         } else {
             return
-                _withdrawFromSavingsAccount(
+                withdrawFromSavingsAccount(
                     _savingsAccount,
                     _from,
                     _to,
@@ -40,7 +40,7 @@ library SavingsAccountUtil {
         }
     }
 
-    function _directDeposit(
+    function directDeposit(
         ISavingsAccount _savingsAccount,
         address _from,
         address _to,
@@ -51,7 +51,7 @@ library SavingsAccountUtil {
     ) internal returns (uint256) {
         if (_toSavingsAccount) {
             return
-                _directSavingsAccountDeposit(
+                directSavingsAccountDeposit(
                     _savingsAccount,
                     _from,
                     _to,
@@ -60,11 +60,11 @@ library SavingsAccountUtil {
                     _strategy
                 );
         } else {
-            return _pullTokens(_asset, _amount, _from, _to);
+            return transferTokens(_asset, _amount, _from, _to);
         }
     }
 
-    function _directSavingsAccountDeposit(
+    function directSavingsAccountDeposit(
         ISavingsAccount _savingsAccount,
         address _from,
         address _to,
@@ -72,7 +72,7 @@ library SavingsAccountUtil {
         address _asset,
         address _strategy
     ) internal returns (uint256 _sharesReceived) {
-        _pullTokens(_asset, _amount, _from, _to);
+        transferTokens(_asset, _amount, _from, _to);
         uint256 _ethValue;
         if (_asset == address(0)) {
             _ethValue = _amount;
@@ -91,7 +91,7 @@ library SavingsAccountUtil {
         );
     }
 
-    function _savingsAccountTransfer(
+    function savingsAccountTransfer(
         ISavingsAccount _savingsAccount,
         address _from,
         address _to,
@@ -113,7 +113,7 @@ library SavingsAccountUtil {
         return _amount;
     }
 
-    function _withdrawFromSavingsAccount(
+    function withdrawFromSavingsAccount(
         ISavingsAccount _savingsAccount,
         address _from,
         address _to,
@@ -142,7 +142,7 @@ library SavingsAccountUtil {
         }
     }
 
-    function _pullTokens(
+    function transferTokens(
         address _asset,
         uint256 _amount,
         address _from,
@@ -160,7 +160,11 @@ library SavingsAccountUtil {
             }
             return _amount;
         }
-        IERC20(_asset).transferFrom(_from, _to, _amount);
+        if(_from == address(this)) {
+            IERC20(_asset).transfer(_to, _amount);
+        } else {
+            IERC20(_asset).transferFrom(_from, _to, _amount);
+        }
         return _amount;
     }
 }
