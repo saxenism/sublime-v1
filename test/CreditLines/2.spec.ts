@@ -47,7 +47,7 @@ import { ContractTransaction } from "@ethersproject/contracts";
 import { getContractAddress } from "@ethersproject/address";
 import { BytesLike } from "@ethersproject/bytes";
 
-describe.only("Credit Lines", async () => {
+describe("Credit Lines", async () => {
   let savingsAccount: SavingsAccount;
   let strategyRegistry: StrategyRegistry;
 

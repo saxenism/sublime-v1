@@ -47,7 +47,7 @@ import { ContractTransaction } from "@ethersproject/contracts";
 import { getContractAddress } from "@ethersproject/address";
 import { IYield } from "@typechain/IYield";
 
-describe.only("Pool Borrow Active stage", async () => {
+describe("Pool Borrow Active stage", async () => {
     let savingsAccount: SavingsAccount;
     let strategyRegistry: StrategyRegistry;
 
@@ -243,7 +243,7 @@ describe.only("Pool Borrow Active stage", async () => {
             );
     });
 
-    describe.only("Pool that borrows ERC20 with ERC20 as collateral", async () => {
+    describe("Pool that borrows ERC20 with ERC20 as collateral", async () => {
         let pool: Pool;
         let poolToken: PoolToken;
         let collateralToken: ERC20;
