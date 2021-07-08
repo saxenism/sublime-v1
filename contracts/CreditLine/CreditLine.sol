@@ -444,7 +444,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         uint256 _totalCollateralToken = calculateTotalCollateralTokens(creditLineHash);
 
         uint256 collateralRatioIfAmountIsWithdrawn =
-            _ratioOfPrices.mul(_totalCollateralToken).mul(10**_decimals)).div((_currentDebt.add(borrowAmount));
+            _ratioOfPrices.mul(_totalCollateralToken).div((_currentDebt.add(borrowAmount)).mul(10**_decimals));
 
         require(
             collateralRatioIfAmountIsWithdrawn > creditLineInfo[creditLineHash].idealCollateralRatio,
@@ -468,20 +468,11 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
     }
 
     /**
-     * @dev used to repay assest to credit line
-     * @param _repayAmount amount which borrower wants to repay to credit line
-     * @param _creditLineHash Credit line hash which represents the credit Line Unique Hash
+     * @notice internal function used to repay credit line
+     * @param _repayAmount amount which borrower wants to repay 
+     * @param _creditLineHash Credit line hash
+     * @param _transferFromSavingAccount if true, amount is transferred from borrower's savings account
      */
-
-    /*
-        Parameters used:
-        - currentStatus
-        - borrowAsset
-        - interestAccruedTillPrincipalUpdate
-        - principal
-        - totalInterestRepaid
-        - lastPrincipalUpdateTime
-    */
     function _repay(bytes32 _creditLineHash, bool _transferFromSavingAccount, uint256 _repayAmount) internal {
         address _borrowAsset = creditLineInfo[_creditLineHash].borrowAsset;
         address _lender = creditLineInfo[_creditLineHash].lender;
@@ -500,6 +491,12 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         _savingsAccount.approveFromToCreditLine(_borrowAsset, _lender, _repayAmount);
     }
 
+    /*
+    * @notice external function called to repay a credit line
+    * @param repayAmount amount to be repaid
+    * @param creditLineHash credit line hash
+    * @param _transferFromSavingAccount if true, amount is transferred from borrower's savings account
+    */
     function repayCreditLine(
         uint256 repayAmount,
         bytes32 creditLineHash,
@@ -531,6 +528,10 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         emit PartialCreditLineRepaid(creditLineHash, repayAmount);
     }
 
+    /*
+    * @notice internal function called by repayCreditLine if principal borrowed reaches zero
+    * @param creditLineHash credit line hash
+    */
     function _resetCreditLine(bytes32 creditLineHash) internal {
         creditLineUsage[creditLineHash].lastPrincipalUpdateTime = 0; // check if can assign 0 or not
         creditLineUsage[creditLineHash].totalInterestRepaid = 0;
