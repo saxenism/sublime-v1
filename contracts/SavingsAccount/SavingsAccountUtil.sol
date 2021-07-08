@@ -47,7 +47,7 @@ library SavingsAccountUtil {
         address _asset,
         address _strategy
     ) internal returns (uint256 _sharesReceived) {
-        transferTokens(_asset, _amount, _from, _to);
+        transferTokens(_asset, _amount, _from, address(this));
         uint256 _ethValue;
         if (_asset == address(0)) {
             _ethValue = _amount;
