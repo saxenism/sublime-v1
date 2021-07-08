@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.0;
 
-import "@openzeppelin/contracts/proxy/TransparentUpgradeableProxy.sol";
+import '@openzeppelin/contracts/proxy/TransparentUpgradeableProxy.sol';
 
 contract SublimeProxy is TransparentUpgradeableProxy {
     constructor(

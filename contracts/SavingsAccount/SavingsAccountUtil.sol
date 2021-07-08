@@ -1,7 +1,7 @@
 pragma solidity 0.7.0;
 
-import "../interfaces/ISavingsAccount.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import '../interfaces/ISavingsAccount.sol';
+import '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 
 library SavingsAccountUtil {
     using SafeERC20 for IERC20;
@@ -21,7 +21,7 @@ library SavingsAccountUtil {
     * @param _toSavingsAccount if true, deposit is being made to another savings account. if false, _to 
     *                          is an external address
     */
-    function _depositFromSavingsAccount(
+    function depositFromSavingsAccount(
         ISavingsAccount _savingsAccount,
         address _from,
         address _to,
@@ -32,26 +32,9 @@ library SavingsAccountUtil {
         bool _toSavingsAccount
     ) internal returns (uint256) {
         if (_toSavingsAccount) {
-            return
-                _savingsAccountTransfer(
-                    _savingsAccount,
-                    _from,
-                    _to,
-                    _amount,
-                    _asset,
-                    _strategy
-                );
+            return savingsAccountTransfer(_savingsAccount, _from, _to, _amount, _asset, _strategy);
         } else {
-            return
-                _withdrawFromSavingsAccount(
-                    _savingsAccount,
-                    _from,
-                    _to,
-                    _amount,
-                    _asset,
-                    _strategy,
-                    _withdrawShares
-                );
+            return withdrawFromSavingsAccount(_savingsAccount, _from, _to, _amount, _asset, _strategy, _withdrawShares);
         }
     }
 
@@ -66,7 +49,7 @@ library SavingsAccountUtil {
     *                           made to an external account
     * @param _strategy if _toSavingsAccount is true, _strategy is the strategy into which _amount is getting deposited
     */
-    function _directDeposit(
+    function directDeposit(
         ISavingsAccount _savingsAccount,
         address _from,
         address _to,
@@ -76,17 +59,9 @@ library SavingsAccountUtil {
         address _strategy
     ) internal returns (uint256) {
         if (_toSavingsAccount) {
-            return
-                _directSavingsAccountDeposit(
-                    _savingsAccount,
-                    _from,
-                    _to,
-                    _amount,
-                    _asset,
-                    _strategy
-                );
+            return directSavingsAccountDeposit(_savingsAccount, _from, _to, _amount, _asset, _strategy);
         } else {
-            return _pullTokens(_asset, _amount, _from, _to);
+            return transferTokens(_asset, _amount, _from, _to);
         }
     }
 
@@ -99,7 +74,7 @@ library SavingsAccountUtil {
     * @param _asset asset to be transferred
     * @param _strategy savings account strategy into wihch amount should be transferred
     */
-    function _directSavingsAccountDeposit(
+    function directSavingsAccountDeposit(
         ISavingsAccount _savingsAccount,
         address _from,
         address _to,
@@ -107,7 +82,7 @@ library SavingsAccountUtil {
         address _asset,
         address _strategy
     ) internal returns (uint256 _sharesReceived) {
-        _pullTokens(_asset, _amount, _from, _to);
+        transferTokens(_asset, _amount, _from, address(this));
         uint256 _ethValue;
         if (_asset == address(0)) {
             _ethValue = _amount;
@@ -118,12 +93,7 @@ library SavingsAccountUtil {
             }
             IERC20(_asset).safeApprove(_approveTo, _amount);
         }
-        _sharesReceived = _savingsAccount.depositTo{value: _ethValue}(
-            _amount,
-            _asset,
-            _strategy,
-            _to
-        );
+        _sharesReceived = _savingsAccount.depositTo{value: _ethValue}(_amount, _asset, _strategy, _to);
     }
 
     /*
@@ -136,7 +106,7 @@ library SavingsAccountUtil {
     * @param _strategy strategy from which amount is withdrawn from _from and also the strategy into which
     *                   it is deposited in _to
     */
-    function _savingsAccountTransfer(
+    function savingsAccountTransfer(
         ISavingsAccount _savingsAccount,
         address _from,
         address _to,
@@ -147,13 +117,7 @@ library SavingsAccountUtil {
         if (_from == address(this)) {
             _savingsAccount.transfer(_asset, _to, _strategy, _amount);
         } else {
-            _savingsAccount.transferFrom(
-                _asset,
-                _from,
-                _to,
-                _strategy,
-                _amount
-            );
+            _savingsAccount.transferFrom(_asset, _from, _to, _strategy, _amount);
         }
         return _amount;
     }
@@ -169,7 +133,7 @@ library SavingsAccountUtil {
     * @param _withdrawShares if true, assets as withdrawn as LP tokens. if false, LP tokens are converted
     *                           into underlying base tokens and then withdrawn
     */
-    function _withdrawFromSavingsAccount(
+    function withdrawFromSavingsAccount(
         ISavingsAccount _savingsAccount,
         address _from,
         address _to,
@@ -179,13 +143,7 @@ library SavingsAccountUtil {
         bool _withdrawShares
     ) internal returns (uint256 _amountReceived) {
         if (_from == address(this)) {
-            _amountReceived = _savingsAccount.withdraw(
-                payable(_to),
-                _amount,
-                _asset,
-                _strategy,
-                _withdrawShares
-            );
+            _amountReceived = _savingsAccount.withdraw(payable(_to), _amount, _asset, _strategy, _withdrawShares);
         } else {
             _amountReceived = _savingsAccount.withdrawFrom(
                 _from,
@@ -205,25 +163,29 @@ library SavingsAccountUtil {
     * @param _from sender address
     * @param _to receiver address
     */
-    function _pullTokens(
+    function transferTokens(
         address _asset,
         uint256 _amount,
         address _from,
         address _to
     ) internal returns (uint256) {
         if (_asset == address(0)) {
-            require(msg.value >= _amount, "");
+            require(msg.value >= _amount, '');
             if (_to != address(this)) {
                 payable(_to).transfer(_amount);
             }
             if (msg.value >= _amount) {
                 payable(address(msg.sender)).transfer(msg.value - _amount);
             } else {
-                revert("Insufficient Ether");
+                revert('Insufficient Ether');
             }
             return _amount;
         }
-        IERC20(_asset).transferFrom(_from, _to, _amount);
+        if (_from == address(this)) {
+            IERC20(_asset).transfer(_to, _amount);
+        } else {
+            IERC20(_asset).transferFrom(_from, _to, _amount);
+        }
         return _amount;
     }
 }

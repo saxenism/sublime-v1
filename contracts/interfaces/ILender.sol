@@ -16,8 +16,7 @@ interface ILender {
         uint256 amountSupplied
     ) external payable;
 
-    function withdrawLiquidity(bytes32 poolHash, address lenderAddress)
-        external;
+    function withdrawLiquidity(bytes32 poolHash, address lenderAddress) external;
 
     function withdrawInterest(
         bytes32 poolHash,
@@ -25,14 +24,9 @@ interface ILender {
         uint256 amount
     ) external;
 
-    function withdrawRepayment(bytes32 poolHash, uint256 amountWantToWithdraw)
-        external
-        payable;
+    function withdrawRepayment(bytes32 poolHash, uint256 amountWantToWithdraw) external payable;
 
-    function getResultOfVoting(bytes32 poolHash)
-        external
-        view
-        returns (uint256);
+    function getResultOfVoting(bytes32 poolHash) external view returns (uint256);
 
     function requestCollateralCall(bytes32 poolHash) external;
 
@@ -40,55 +34,26 @@ interface ILender {
 
     function ResultOfVoting(bytes32 poolHash) external;
 
-    function borrow(bytes32 poolHash, address borrower)
-        external
-        returns (uint256);
+    function borrow(bytes32 poolHash, address borrower) external returns (uint256);
 
     //getters
-    function getAmountSupplied(bytes32 poolHash, address lender)
-        external
-        view
-        returns (uint256);
+    function getAmountSupplied(bytes32 poolHash, address lender) external view returns (uint256);
 
-    function getPercentWithdrawable(bytes32 poolHash, address lender)
-        external
-        view
-        returns (uint256);
+    function getPercentWithdrawable(bytes32 poolHash, address lender) external view returns (uint256);
 
-    function getAmountWithrawn(bytes32 poolHash, address lender)
-        external
-        view
-        returns (uint256);
+    function getAmountWithrawn(bytes32 poolHash, address lender) external view returns (uint256);
 
-    function getAmountWithrawable(bytes32 poolHash, address lender)
-        external
-        view
-        returns (uint256);
+    function getAmountWithrawable(bytes32 poolHash, address lender) external view returns (uint256);
 
-    function getExtraCollateralDueBlock(bytes32 poolHash, address lender)
-        external
-        view
-        returns (uint256);
+    function getExtraCollateralDueBlock(bytes32 poolHash, address lender) external view returns (uint256);
 
-    function getExists(bytes32 poolHash, address lender)
-        external
-        view
-        returns (bool);
+    function getExists(bytes32 poolHash, address lender) external view returns (bool);
 
-    function getVotedOnExtension(bytes32 poolHash, address lender)
-        external
-        view
-        returns (bool);
+    function getVotedOnExtension(bytes32 poolHash, address lender) external view returns (bool);
 
-    function getDefaultVote(bytes32 poolHash, address lender)
-        external
-        view
-        returns (bool);
+    function getDefaultVote(bytes32 poolHash, address lender) external view returns (bool);
 
-    function getCollateralCalled(bytes32 poolHash, address lender)
-        external
-        view
-        returns (bool);
+    function getCollateralCalled(bytes32 poolHash, address lender) external view returns (bool);
 
     //setters
     function setAmountSupplied(

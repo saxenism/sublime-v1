@@ -6,8 +6,8 @@
 
 pragma solidity 0.7.0;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import '@openzeppelin/contracts/math/SafeMath.sol';
+import '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 
 interface IStrategy {
     function want() external view returns (address);
@@ -43,10 +43,7 @@ interface OneSplitAudit {
         uint256 amount,
         uint256 parts,
         uint256 flags // See constants in IOneSplit.sol
-    )
-        external
-        view
-        returns (uint256 returnAmount, uint256[] memory distribution);
+    ) external view returns (uint256 returnAmount, uint256[] memory distribution);
 }
 
 contract Controller {
@@ -76,46 +73,43 @@ contract Controller {
     }
 
     function setRewards(address _rewards) public {
-        require(msg.sender == governance, "!governance");
+        require(msg.sender == governance, '!governance');
         rewards = _rewards;
     }
 
     function setStrategist(address _strategist) public {
-        require(msg.sender == governance, "!governance");
+        require(msg.sender == governance, '!governance');
         strategist = _strategist;
     }
 
     function setSplit(uint256 _split) public {
-        require(msg.sender == governance, "!governance");
+        require(msg.sender == governance, '!governance');
         split = _split;
     }
 
     function setOneSplit(address _onesplit) public {
-        require(msg.sender == governance, "!governance");
+        require(msg.sender == governance, '!governance');
         onesplit = _onesplit;
     }
 
     function setGovernance(address _governance) public {
-        require(msg.sender == governance, "!governance");
+        require(msg.sender == governance, '!governance');
         governance = _governance;
     }
 
     function setVault(address _token, address _vault) public {
-        require(
-            msg.sender == strategist || msg.sender == governance,
-            "!strategist"
-        );
-        require(vaults[_token] == address(0), "vault");
+        require(msg.sender == strategist || msg.sender == governance, '!strategist');
+        require(vaults[_token] == address(0), 'vault');
         vaults[_token] = _vault;
     }
 
     function approveStrategy(address _token, address _strategy) public {
-        require(msg.sender == governance, "!governance");
+        require(msg.sender == governance, '!governance');
         approvedStrategies[_token][_strategy] = true;
     }
 
     function revokeStrategy(address _token, address _strategy) public {
-        require(msg.sender == governance, "!governance");
+        require(msg.sender == governance, '!governance');
         approvedStrategies[_token][_strategy] = false;
     }
 
@@ -124,19 +118,13 @@ contract Controller {
         address _output,
         address _converter
     ) public {
-        require(
-            msg.sender == strategist || msg.sender == governance,
-            "!strategist"
-        );
+        require(msg.sender == strategist || msg.sender == governance, '!strategist');
         converters[_input][_output] = _converter;
     }
 
     function setStrategy(address _token, address _strategy) public {
-        require(
-            msg.sender == strategist || msg.sender == governance,
-            "!strategist"
-        );
-        require(approvedStrategies[_token][_strategy] == true, "!approved");
+        require(msg.sender == strategist || msg.sender == governance, '!strategist');
+        require(approvedStrategies[_token][_strategy] == true, '!approved');
 
         address _current = strategies[_token];
         if (_current != address(0)) {
@@ -164,28 +152,17 @@ contract Controller {
     }
 
     function withdrawAll(address _token) public {
-        require(
-            msg.sender == strategist || msg.sender == governance,
-            "!strategist"
-        );
+        require(msg.sender == strategist || msg.sender == governance, '!strategist');
         IStrategy(strategies[_token]).withdrawAll();
     }
 
     function inCaseTokensGetStuck(address _token, uint256 _amount) public {
-        require(
-            msg.sender == strategist || msg.sender == governance,
-            "!governance"
-        );
+        require(msg.sender == strategist || msg.sender == governance, '!governance');
         IERC20(_token).safeTransfer(msg.sender, _amount);
     }
 
-    function inCaseStrategyTokenGetStuck(address _strategy, address _token)
-        public
-    {
-        require(
-            msg.sender == strategist || msg.sender == governance,
-            "!governance"
-        );
+    function inCaseStrategyTokenGetStuck(address _strategy, address _token) public {
+        require(msg.sender == strategist || msg.sender == governance, '!governance');
         IStrategy(_strategy).withdraw(_token);
     }
 
@@ -196,13 +173,7 @@ contract Controller {
     ) public view returns (uint256 expected) {
         uint256 _balance = IERC20(_token).balanceOf(_strategy);
         address _want = IStrategy(_strategy).want();
-        (expected, ) = OneSplitAudit(onesplit).getExpectedReturn(
-            _token,
-            _want,
-            _balance,
-            parts,
-            0
-        );
+        (expected, ) = OneSplitAudit(onesplit).getExpectedReturn(_token, _want, _balance, parts, 0);
     }
 
     // Only allows to withdraw non-core strategy tokens ~ this is over and above normal yield
@@ -211,10 +182,7 @@ contract Controller {
         address _token,
         uint256 parts
     ) public {
-        require(
-            msg.sender == strategist || msg.sender == governance,
-            "!governance"
-        );
+        require(msg.sender == strategist || msg.sender == governance, '!governance');
         // This contract should never have value in it, but just incase since this is a public call
         uint256 _before = IERC20(_token).balanceOf(address(this));
         IStrategy(_strategy).withdraw(_token);
@@ -227,16 +195,8 @@ contract Controller {
             _before = IERC20(_want).balanceOf(address(this));
             IERC20(_token).safeApprove(onesplit, 0);
             IERC20(_token).safeApprove(onesplit, _amount);
-            (_expected, _distribution) = OneSplitAudit(onesplit)
-                .getExpectedReturn(_token, _want, _amount, parts, 0);
-            OneSplitAudit(onesplit).swap(
-                _token,
-                _want,
-                _amount,
-                _expected,
-                _distribution,
-                0
-            );
+            (_expected, _distribution) = OneSplitAudit(onesplit).getExpectedReturn(_token, _want, _amount, parts, 0);
+            OneSplitAudit(onesplit).swap(_token, _want, _amount, _expected, _distribution, 0);
             _after = IERC20(_want).balanceOf(address(this));
             if (_after > _before) {
                 _amount = _after.sub(_before);
@@ -248,7 +208,7 @@ contract Controller {
     }
 
     function withdraw(address _token, uint256 _amount) public {
-        require(msg.sender == vaults[_token], "!vault");
+        require(msg.sender == vaults[_token], '!vault');
         IStrategy(strategies[_token]).withdraw(_amount);
     }
 }

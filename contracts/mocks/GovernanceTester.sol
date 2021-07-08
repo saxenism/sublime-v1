@@ -5,14 +5,10 @@ contract GovernanceTester {
     address public gov;
     uint256 public value;
 
-    event valueUpdated(
-        address indexed governance,
-        address indexed sender,
-        uint256 v
-    );
+    event valueUpdated(address indexed governance, address indexed sender, uint256 v);
 
     modifier onlyGov() {
-        require(msg.sender == gov, "Only Governance should be able to hit");
+        require(msg.sender == gov, 'Only Governance should be able to hit');
         _;
     }
 
