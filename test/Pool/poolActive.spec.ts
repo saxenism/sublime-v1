@@ -40,7 +40,7 @@ import { ContractTransaction } from '@ethersproject/contracts';
 import { getContractAddress } from '@ethersproject/address';
 import { IYield } from '@typechain/IYield';
 
-describe.skip('Pool Borrow Active stage', async () => {
+describe('Pool Active stage', async () => {
     let savingsAccount: SavingsAccount;
     let strategyRegistry: StrategyRegistry;
 
@@ -193,9 +193,7 @@ describe.skip('Pool Borrow Active stage', async () => {
                 savingsAccount.address
             );
 
-        await poolFactory
-            .connect(admin)
-            .setImplementations(poolImpl.address, repaymentImpl.address, poolTokenImpl.address);
+        await poolFactory.connect(admin).setImplementations(poolImpl.address, repaymentImpl.address, poolTokenImpl.address);
     });
 
     describe('Pool that borrows ERC20 with ERC20 as collateral', async () => {
@@ -325,9 +323,7 @@ describe.skip('Pool Borrow Active stage', async () => {
                         .mul(createPoolParams._repaymentInterval)
                         .div(60 * 60 * 24 * 365)
                         .div(BigNumber.from(10).pow(30));
-                    const interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(
-                        pool.address
-                    );
+                    const interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address);
                     assert(
                         interestForCurrentPeriod.div(BigNumber.from(10).pow(30)).toString() == repayAmount.toString(),
                         `Incorrect interest for period 1. Actual: ${interestForCurrentPeriod
@@ -367,9 +363,7 @@ describe.skip('Pool Borrow Active stage', async () => {
                         repaymentParams.gracePenalityRate.mul(await repaymentImpl.getInterestLeft(pool.address))
                     );
                     await borrowToken.connect(random).approve(repaymentImpl.address, repayAmountWithPenality);
-                    await expect(
-                        repaymentImpl.connect(random).repayAmount(pool.address, repayAmount)
-                    ).to.be.revertedWith('');
+                    await expect(repaymentImpl.connect(random).repayAmount(pool.address, repayAmount)).to.be.revertedWith('');
                     await repaymentImpl.connect(random).repayAmount(pool.address, repayAmountWithPenality);
                 });
 
@@ -391,9 +385,7 @@ describe.skip('Pool Borrow Active stage', async () => {
                     );
                     await borrowToken.connect(random).approve(repaymentImpl.address, repayAmountWithPenality);
                     await repaymentImpl.connect(random).repayAmount(pool.address, repayAmountWithPenality.add(20));
-                    const interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(
-                        pool.address
-                    );
+                    const interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address);
                     assert(
                         interestForCurrentPeriod.toString() == repayAmount.sub(20).toString(),
                         `Extra repayment in grace period not correctly recorded. Actual: ${interestForCurrentPeriod.toString()} Expected: ${repayAmount.sub(
@@ -415,12 +407,8 @@ describe.skip('Pool Borrow Active stage', async () => {
             return;
             context('Borrower requests extension', async () => {
                 it('Request extension', async () => {
-                    await expect(extenstion.connect(random).requestExtension(pool.address)).to.be.revertedWith(
-                        'Not Borrower'
-                    );
-                    await expect(extenstion.connect(lender).requestExtension(pool.address)).to.be.revertedWith(
-                        'Not Borrower'
-                    );
+                    await expect(extenstion.connect(random).requestExtension(pool.address)).to.be.revertedWith('Not Borrower');
+                    await expect(extenstion.connect(lender).requestExtension(pool.address)).to.be.revertedWith('Not Borrower');
                     await extenstion.connect(borrower).requestExtension(pool.address);
                 });
 
@@ -447,9 +435,7 @@ describe.skip('Pool Borrow Active stage', async () => {
                         await extenstion.connect(lender).voteOnExtension(pool.address);
                         await extenstion.connect(lender1).voteOnExtension(pool.address);
 
-                        const interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(
-                            pool.address
-                        );
+                        const interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address);
                         await repaymentImpl.repayAmount(pool.address, interestForCurrentPeriod.sub(1));
 
                         const endOfExtension: BigNumber = await repaymentImpl.getNextInstalmentDeadline(pool.address);
@@ -479,9 +465,7 @@ describe.skip('Pool Borrow Active stage', async () => {
                         await extenstion.connect(lender).voteOnExtension(pool.address);
                         await extenstion.connect(lender1).voteOnExtension(pool.address);
 
-                        const interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(
-                            pool.address
-                        );
+                        const interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address);
                         const endOfExtension: BigNumber = await repaymentImpl.getNextInstalmentDeadline(pool.address);
                         await borrowToken.connect(random).approve(repaymentImpl.address, interestForCurrentPeriod);
                         await repaymentImpl.connect(random).repayAmount(pool.address, interestForCurrentPeriod);
@@ -498,17 +482,13 @@ describe.skip('Pool Borrow Active stage', async () => {
                         await extenstion.connect(lender).voteOnExtension(pool.address);
                         await extenstion.connect(lender1).voteOnExtension(pool.address);
 
-                        let interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(
-                            pool.address
-                        );
+                        let interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address);
                         const endOfExtension: BigNumber = await repaymentImpl.getNextInstalmentDeadline(pool.address);
                         await repaymentImpl.repayAmount(pool.address, interestForCurrentPeriod);
 
                         await timeTravel(network, parseInt(endOfExtension.add(1).toString()));
 
-                        interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(
-                            pool.address
-                        );
+                        interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address);
                         assert(
                             interestForCurrentPeriod.toString() != '0',
                             `Interest not charged correctly. Actual: ${interestForCurrentPeriod.toString()} Expected: 0`
@@ -526,9 +506,7 @@ describe.skip('Pool Borrow Active stage', async () => {
                         const { extensionVoteEndTime } = await extenstion.poolInfo(pool.address);
                         await timeTravel(network, parseInt(extensionVoteEndTime.add(1).toString()));
 
-                        let interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(
-                            pool.address
-                        );
+                        let interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address);
                         await borrowToken.connect(random).approve(repaymentImpl.address, interestForCurrentPeriod);
                         await repaymentImpl.connect(random).repayAmount(pool.address, interestForCurrentPeriod);
 
@@ -541,9 +519,7 @@ describe.skip('Pool Borrow Active stage', async () => {
                         await extenstion.connect(borrower).requestExtension(pool.address);
                         await extenstion.connect(lender).voteOnExtension(pool.address);
 
-                        const interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(
-                            pool.address
-                        );
+                        const interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address);
                         await repaymentImpl.repayAmount(pool.address, interestForCurrentPeriod.sub(1));
 
                         const endOfPeriod: BigNumber = await repaymentImpl.getNextInstalmentDeadline(pool.address);
@@ -592,9 +568,7 @@ describe.skip('Pool Borrow Active stage', async () => {
                         await extenstion.connect(lender).voteOnExtension(pool.address);
                         await extenstion.connect(lender1).voteOnExtension(pool.address);
 
-                        const interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(
-                            pool.address
-                        );
+                        const interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address);
                         const endOfExtension: BigNumber = await repaymentImpl.getNextInstalmentDeadline(pool.address);
                         await borrowToken.connect(random).approve(repaymentImpl.address, interestForCurrentPeriod);
                         await repaymentImpl.connect(random).repayAmount(pool.address, interestForCurrentPeriod);
@@ -743,9 +717,7 @@ describe.skip('Pool Borrow Active stage', async () => {
                 it("If collateral ratio below ideal after margin call time, Anyone can liquidate lender's part of collateral", async () => {
                     await pool.connect(lender).requestMarginCall();
 
-                    const amount: BigNumber = createPoolParams._poolSize
-                        .sub(createPoolParams._collateralAmount)
-                        .sub(10);
+                    const amount: BigNumber = createPoolParams._poolSize.sub(createPoolParams._collateralAmount).sub(10);
                     await collateralToken.connect(admin).transfer(borrower.address, amount);
 
                     await collateralToken.connect(borrower).approve(pool.address, amount);

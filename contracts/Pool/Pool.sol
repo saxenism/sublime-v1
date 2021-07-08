@@ -285,7 +285,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         address _depositTo
     ) internal returns (uint256 _sharesReceived) {
         if (_fromSavingsAccount) {
-            _sharesReceived = SavingsAccountUtil._depositFromSavingsAccount(
+            _sharesReceived = SavingsAccountUtil.depositFromSavingsAccount(
                 ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()),
                 _depositFrom,
                 _depositTo,
@@ -296,7 +296,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
                 _toSavingsAccount
             );
         } else {
-            _sharesReceived = SavingsAccountUtil._directDeposit(
+            _sharesReceived = SavingsAccountUtil.directDeposit(
                 ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()),
                 _depositFrom,
                 _depositTo,
@@ -366,7 +366,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             poolConstants.borrowAsset
         );
         IExtension(_poolFactory.extension()).initializePoolExtension(_repaymentInterval);
-        SavingsAccountUtil._pullTokens(poolConstants.borrowAsset, _tokensLent, address(this), msg.sender);
+        SavingsAccountUtil.transferTokens(poolConstants.borrowAsset, _tokensLent, address(this), msg.sender);
 
         delete poolConstants.loanWithdrawalDeadline;
         emit AmountBorrowed(_tokensLent);
@@ -384,7 +384,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         uint256 _sharesReceived;
         if (_collateralShares != 0) {
             ISavingsAccount _savingsAccount = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
-            _sharesReceived = SavingsAccountUtil._savingsAccountTransfer(
+            _sharesReceived = SavingsAccountUtil.savingsAccountTransfer(
                 _savingsAccount,
                 address(this),
                 _receiver,
@@ -494,7 +494,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
                 _poolFactory,
                 IPoolFactory(_poolFactory).liquidatorRewardFraction()
             );
-        SavingsAccountUtil._pullTokens(poolConstants.borrowAsset, _liquidationTokens, msg.sender, address(this));
+        SavingsAccountUtil.transferTokens(poolConstants.borrowAsset, _liquidationTokens, msg.sender, address(this));
         poolVars.penalityLiquidityAmount = _liquidationTokens;
         _withdraw(
             _toSavingsAccount,
@@ -519,7 +519,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         uint256 _principalToPayback = poolToken.totalSupply();
         address _borrowAsset = poolConstants.borrowAsset;
 
-        SavingsAccountUtil._pullTokens(_borrowAsset, _principalToPayback, msg.sender, address(this));
+        SavingsAccountUtil.transferTokens(_borrowAsset, _principalToPayback, msg.sender, address(this));
 
         poolVars.loanStatus = LoanStatus.CLOSED;
 
@@ -579,7 +579,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         //to add transfer if not included in above (can be transferred with liquidity)
         poolToken.burn(msg.sender, _actualBalance);
         //transfer liquidity provided
-        SavingsAccountUtil._pullTokens(poolConstants.borrowAsset, _toTransfer, address(this), msg.sender);
+        SavingsAccountUtil.transferTokens(poolConstants.borrowAsset, _toTransfer, address(this), msg.sender);
 
         // TODO: Something wrong in the below event. Please have a look
         emit LiquidityWithdrawn(_toTransfer, msg.sender);
@@ -716,7 +716,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     ) internal returns (uint256) {
         ISavingsAccount _savingsAccount = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
         return
-            SavingsAccountUtil._depositFromSavingsAccount(
+            SavingsAccountUtil.depositFromSavingsAccount(
                 _savingsAccount,
                 address(this),
                 msg.sender,
@@ -880,7 +880,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             return;
         }
 
-        SavingsAccountUtil._pullTokens(poolConstants.borrowAsset, _amountToWithdraw, address(this), _lender);
+        SavingsAccountUtil.transferTokens(poolConstants.borrowAsset, _amountToWithdraw, address(this), _lender);
 
         lenders[_lender].interestWithdrawn = lenders[_lender].interestWithdrawn.add(_amountToWithdraw);
     }

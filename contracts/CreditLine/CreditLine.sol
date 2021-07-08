@@ -147,10 +147,6 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
                 10**_decimals
             );
 
-        console.log('_currentDebt', _currentDebt);
-        console.log('maxPossible', maxPossible);
-        console.log('_totalCollateralToken', _totalCollateralToken);
-
         if (maxPossible > _currentDebt) {
             return maxPossible.sub(_currentDebt);
         }

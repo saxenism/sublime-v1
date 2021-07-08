@@ -243,9 +243,7 @@ describe('Pool', async () => {
             });
             it('Should revert if any other address other than owner tries to update implementation contracts', async () => {
                 await expect(
-                    poolFactory
-                        .connect(proxyAdmin)
-                        .setImplementations(poolFactory.address, repaymentImpl.address, poolTokenImpl.address)
+                    poolFactory.connect(proxyAdmin).setImplementations(poolFactory.address, repaymentImpl.address, poolTokenImpl.address)
                 ).to.be.revertedWith('Ownable: caller is not the owner');
             });
         });
@@ -268,9 +266,7 @@ describe('Pool', async () => {
 
             await poolFactory.connect(admin).updateSupportedCollateralTokens(Contracts.LINK, true);
 
-            await poolFactory
-                .connect(admin)
-                .setImplementations(poolImpl.address, repaymentImpl.address, poolTokenImpl.address);
+            await poolFactory.connect(admin).setImplementations(poolImpl.address, repaymentImpl.address, poolTokenImpl.address);
 
             let deployHelper: DeployHelper = new DeployHelper(borrower);
             let collateralToken: ERC20 = await deployHelper.mock.getMockERC20(Contracts.LINK);
@@ -350,9 +346,7 @@ describe('Pool', async () => {
 
                 await poolFactory.connect(admin).updateSupportedCollateralTokens(Contracts.LINK, true);
 
-                await poolFactory
-                    .connect(admin)
-                    .setImplementations(poolImpl.address, repaymentImpl.address, poolTokenImpl.address);
+                await poolFactory.connect(admin).setImplementations(poolImpl.address, repaymentImpl.address, poolTokenImpl.address);
 
                 let deployHelper: DeployHelper = new DeployHelper(borrower);
                 let collateralToken: ERC20 = await deployHelper.mock.getMockERC20(Contracts.LINK);
@@ -463,9 +457,7 @@ describe('Pool', async () => {
 
                 await poolFactory.connect(admin).updateSupportedCollateralTokens(Contracts.LINK, true);
 
-                await poolFactory
-                    .connect(admin)
-                    .setImplementations(poolImpl.address, repaymentImpl.address, poolTokenImpl.address);
+                await poolFactory.connect(admin).setImplementations(poolImpl.address, repaymentImpl.address, poolTokenImpl.address);
 
                 let deployHelper: DeployHelper = new DeployHelper(borrower);
                 let collateralToken: ERC20 = await deployHelper.mock.getMockERC20(Contracts.LINK);

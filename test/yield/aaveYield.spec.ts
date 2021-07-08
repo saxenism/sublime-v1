@@ -57,16 +57,14 @@ describe('Aave Yield', async () => {
         });
 
         it('should throw error when a random account tries to change savings account', async () => {
-            await expect(
-                aaveYield.connect(randomAccount).updateSavingsAccount(randomAccount.address)
-            ).to.be.revertedWith('Ownable: caller is not the owner');
+            await expect(aaveYield.connect(randomAccount).updateSavingsAccount(randomAccount.address)).to.be.revertedWith(
+                'Ownable: caller is not the owner'
+            );
         });
 
         it('should throw error when a random account tries update params', async () => {
             await expect(
-                aaveYield
-                    .connect(randomAccount)
-                    .updateAaveAddresses(randomAccount.address, randomAccount.address, randomAccount.address)
+                aaveYield.connect(randomAccount).updateAaveAddresses(randomAccount.address, randomAccount.address, randomAccount.address)
             ).to.be.revertedWith('Ownable: caller is not the owner');
         });
 

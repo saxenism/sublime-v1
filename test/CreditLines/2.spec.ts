@@ -196,9 +196,7 @@ describe('Credit Lines', async () => {
                     _poolCancelPenalityFraction
                 );
 
-            await creditLine
-                .connect(admin)
-                .initialize(yearnYield.address, poolFactory.address, strategyRegistry.address);
+            await creditLine.connect(admin).initialize(yearnYield.address, poolFactory.address, strategyRegistry.address);
         });
 
         it('Request Credit Line to borrower', async () => {
@@ -259,9 +257,7 @@ describe('Credit Lines', async () => {
             await LinkTokenContract.connect(admin).transfer(borrower.address, valueToTest);
             await LinkTokenContract.connect(borrower).approve(creditLine.address, valueToTest); // yearn yield is the default strategy in this case
 
-            await creditLine
-                .connect(borrower)
-                .depositCollateral(Contracts.LINK, valueToTest, borrowerCreditLine, false);
+            await creditLine.connect(borrower).depositCollateral(Contracts.LINK, valueToTest, borrowerCreditLine, false);
         });
 
         it('Calculate Interest', async () => {
@@ -279,9 +275,7 @@ describe('Credit Lines', async () => {
 
             await DaiTokenContract.connect(lender).approve(savingsAccount.address, largeAmount.mul(100));
 
-            await savingsAccount
-                .connect(lender)
-                .depositTo(largeAmount.mul(100), DaiTokenContract.address, zeroAddress, lender.address);
+            await savingsAccount.connect(lender).depositTo(largeAmount.mul(100), DaiTokenContract.address, zeroAddress, lender.address);
 
             await savingsAccount.connect(lender).approve(DaiTokenContract.address, creditLine.address, amountToBorrow);
 
@@ -289,22 +283,16 @@ describe('Credit Lines', async () => {
         });
 
         it('Check Collateralization Ratio', async () => {
-            console.log(
-                await creditLine.connect(borrower).callStatic.calculateCurrentCollateralRatio(borrowerCreditLine)
-            );
+            console.log(await creditLine.connect(borrower).callStatic.calculateCurrentCollateralRatio(borrowerCreditLine));
         });
 
         it('Check Total Collateral Amount', async () => {
-            expect(
-                await creditLine.connect(borrower).callStatic.calculateTotalCollateralTokens(borrowerCreditLine)
-            ).to.gt(0);
+            expect(await creditLine.connect(borrower).callStatic.calculateTotalCollateralTokens(borrowerCreditLine)).to.gt(0);
         });
 
         describe('Failed Cases', async () => {
             it('Cannot borrow more if amount more than borrow limit', async () => {
-                await savingsAccount
-                    .connect(lender)
-                    .approve(DaiTokenContract.address, creditLine.address, amountToBorrow);
+                await savingsAccount.connect(lender).approve(DaiTokenContract.address, creditLine.address, amountToBorrow);
 
                 await expect(
                     creditLine.connect(borrower).borrowFromCreditLine(amountToBorrow.mul(100), borrowerCreditLine)
@@ -327,13 +315,9 @@ describe('Credit Lines', async () => {
                     _borrowableAmountInBefore: _borrowableAmount.toString(),
                 });
 
-                await savingsAccount
-                    .connect(lender)
-                    .approve(DaiTokenContract.address, creditLine.address, _borrowableAmount.mul(5).div(4));
+                await savingsAccount.connect(lender).approve(DaiTokenContract.address, creditLine.address, _borrowableAmount.mul(5).div(4));
 
-                await creditLine
-                    .connect(borrower)
-                    .borrowFromCreditLine(_borrowableAmount.mul(995).div(1000), borrowerCreditLine);
+                await creditLine.connect(borrower).borrowFromCreditLine(_borrowableAmount.mul(995).div(1000), borrowerCreditLine);
 
                 // increase blocks/time
             });
@@ -350,10 +334,7 @@ describe('Credit Lines', async () => {
                     _borrowableAmount: _borrowableAmount.toString(),
                 });
 
-                await expect(creditLine.connect(admin).liquidation(borrowerCreditLine)).to.emit(
-                    creditLine,
-                    'CreditLineLiquidated'
-                );
+                await expect(creditLine.connect(admin).liquidation(borrowerCreditLine)).to.emit(creditLine, 'CreditLineLiquidated');
             });
         });
     });

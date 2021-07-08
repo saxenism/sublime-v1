@@ -69,10 +69,7 @@ function getSalt(address: Address, salt: BytesLike) {
 }
 
 function getInitCodehash(proxyBytecode: BytesLike, poolImplAddr: Address, poolData: BytesLike, admin: Address) {
-    const initialize = ethers.utils.defaultAbiCoder.encode(
-        ['address', 'address', 'bytes'],
-        [poolImplAddr, admin, poolData]
-    );
+    const initialize = ethers.utils.defaultAbiCoder.encode(['address', 'address', 'bytes'], [poolImplAddr, admin, poolData]);
     const encodedData = proxyBytecode + initialize.replace('0x', '');
     return ethers.utils.keccak256(encodedData);
 }

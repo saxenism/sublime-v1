@@ -189,9 +189,7 @@ describe.skip('Template For Test cases', async () => {
 
                 await poolFactory.connect(admin).updateSupportedCollateralTokens(Contracts.LINK, true);
 
-                await poolFactory
-                    .connect(admin)
-                    .setImplementations(poolImpl.address, repaymentImpl.address, poolTokenImpl.address);
+                await poolFactory.connect(admin).setImplementations(poolImpl.address, repaymentImpl.address, poolTokenImpl.address);
 
                 let deployHelper: DeployHelper = new DeployHelper(borrower);
                 let collateralToken: ERC20 = await deployHelper.mock.getMockERC20(Contracts.LINK);

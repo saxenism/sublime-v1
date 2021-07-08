@@ -193,9 +193,7 @@ describe('Pool Collection stage', async () => {
                 savingsAccount.address
             );
 
-        await poolFactory
-            .connect(admin)
-            .setImplementations(poolImpl.address, repaymentImpl.address, poolTokenImpl.address);
+        await poolFactory.connect(admin).setImplementations(poolImpl.address, repaymentImpl.address, poolTokenImpl.address);
     });
 
     describe('Pool that borrows ERC20 with ERC20 as collateral', async () => {

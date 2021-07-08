@@ -54,9 +54,9 @@ describe('Yearn Yield', async () => {
         });
 
         it('should throw error when a random account tries to change savings account', async () => {
-            await expect(
-                yearnYield.connect(randomAccount).updateSavingsAccount(randomAccount.address)
-            ).to.be.revertedWith('Ownable: caller is not the owner');
+            await expect(yearnYield.connect(randomAccount).updateSavingsAccount(randomAccount.address)).to.be.revertedWith(
+                'Ownable: caller is not the owner'
+            );
         });
 
         it('should throw error when a random account tries update params', async () => {

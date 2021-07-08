@@ -190,9 +190,7 @@ describe('Credit Lines', async () => {
                     _poolCancelPenalityFraction
                 );
 
-            await creditLine
-                .connect(admin)
-                .initialize(yearnYield.address, poolFactory.address, strategyRegistry.address);
+            await creditLine.connect(admin).initialize(yearnYield.address, poolFactory.address, strategyRegistry.address);
         });
 
         it('Check global variables', async () => {
@@ -306,9 +304,7 @@ describe('Credit Lines', async () => {
             await LinkTokenContract.connect(admin).transfer(borrower.address, valueToTest);
             await LinkTokenContract.connect(borrower).approve(creditLine.address, valueToTest); // yearn yield is the default strategy in this case
 
-            await creditLine
-                .connect(borrower)
-                .depositCollateral(Contracts.LINK, valueToTest, borrowerCreditLine, false);
+            await creditLine.connect(borrower).depositCollateral(Contracts.LINK, valueToTest, borrowerCreditLine, false);
         });
 
         it('Deposit Collateral into existing credit line (from savings account)', async () => {
@@ -321,9 +317,7 @@ describe('Credit Lines', async () => {
 
             await LinkTokenContract.connect(borrower).approve(yearnYield.address, valueToTest.mul(2));
 
-            await savingsAccount
-                .connect(borrower)
-                .depositTo(valueToTest, LinkTokenContract.address, zeroAddress, borrower.address);
+            await savingsAccount.connect(borrower).depositTo(valueToTest, LinkTokenContract.address, zeroAddress, borrower.address);
             await savingsAccount
                 .connect(borrower)
                 .depositTo(valueToTest.mul(2), LinkTokenContract.address, yearnYield.address, borrower.address);
@@ -342,22 +336,18 @@ describe('Credit Lines', async () => {
             it('Cannot deposit into invalid credit line hash', async () => {
                 let randomInvalidHash = '0x0000000011111111000000001111111100000000111111110000000011111111';
                 await expect(
-                    creditLine
-                        .connect(borrower)
-                        .depositCollateral(Contracts.LINK, BigNumber.from('123123123'), randomInvalidHash, false)
+                    creditLine.connect(borrower).depositCollateral(Contracts.LINK, BigNumber.from('123123123'), randomInvalidHash, false)
                 ).to.be.revertedWith(' Credit line does not exist');
 
                 await expect(
-                    creditLine
-                        .connect(borrower)
-                        .depositCollateral(Contracts.LINK, BigNumber.from('123123123'), randomInvalidHash, true)
+                    creditLine.connect(borrower).depositCollateral(Contracts.LINK, BigNumber.from('123123123'), randomInvalidHash, true)
                 ).to.be.revertedWith(' Credit line does not exist');
             });
 
             it('should fail if any other user/address is trying to accept the credit line', async () => {
-                await expect(
-                    creditLine.connect(lender).acceptCreditLineBorrower(borrowerCreditLine)
-                ).to.be.revertedWith('Only credit line Borrower can access');
+                await expect(creditLine.connect(lender).acceptCreditLineBorrower(borrowerCreditLine)).to.be.revertedWith(
+                    'Only credit line Borrower can access'
+                );
             });
         });
     });
