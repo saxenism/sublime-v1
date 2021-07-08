@@ -202,12 +202,8 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
             _amount = IYield(_currentStrategy).getSharesForTokens(_amount, _asset);
         }
 
-        userLockedBalance[msg.sender][_asset][
-            _currentStrategy
-        ] = userLockedBalance[msg.sender][_asset][_currentStrategy].sub(
-            _amount,
-            "SavingsAccount::switchStrategy Insufficient balance"
-        );
+        userLockedBalance[msg.sender][_asset][_currentStrategy] = userLockedBalance[msg.sender][_asset][_currentStrategy]
+                                                                    .sub(_amount, "SavingsAccount::switchStrategy Insufficient balance");
 
         uint256 _tokensReceived = _amount;
         if (_currentStrategy != address(0)) {
@@ -230,10 +226,8 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
             );
         }
 
-        userLockedBalance[msg.sender][_asset][_newStrategy] = userLockedBalance[
-            msg.sender
-        ][_asset][_newStrategy]
-            .add(_sharesReceived);
+        userLockedBalance[msg.sender][_asset][_newStrategy] = userLockedBalance[msg.sender][_asset][_newStrategy]
+                                                                .add(_sharesReceived);
 
         emit StrategySwitched(msg.sender, _asset, _currentStrategy, _newStrategy);
     }
@@ -462,16 +456,12 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         }
 
         //reduce msg.sender balance
-        userLockedBalance[msg.sender][_token][_strategy] = userLockedBalance[
-            msg.sender
-        ][_token][_strategy]
-            .sub(_amount, "SavingsAccount::transfer insufficient funds");
+        userLockedBalance[msg.sender][_token][_strategy] = userLockedBalance[msg.sender][_token][_strategy]
+                                                            .sub(_amount, "SavingsAccount::transfer insufficient funds");
 
         //update receiver's balance
-        userLockedBalance[_to][_token][_strategy] = userLockedBalance[_to][_token][
-            _strategy
-        ]
-            .add(_amount);
+        userLockedBalance[_to][_token][_strategy] = userLockedBalance[_to][_token][_strategy]
+                                                    .add(_amount);
 
         emit Transfer(_token, _strategy, msg.sender, _to, _amount);
         //not sure
@@ -531,8 +521,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
             if (_liquidityShares != 0) {
                 uint256 _tokenInStrategy = _liquidityShares;
                 if (_strategyList[_index] != address(0)) {
-                    _tokenInStrategy = IYield(_strategyList[_index])
-                        .getTokensForShares(_liquidityShares, _asset);
+                    _tokenInStrategy = IYield(_strategyList[_index]).getTokensForShares(_liquidityShares, _asset);
                 }
 
                 _totalTokens = _totalTokens.add(_tokenInStrategy);

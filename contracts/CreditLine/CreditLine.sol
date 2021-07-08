@@ -64,11 +64,18 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         _;
     }
 
+    /*
+    * @notice emitted when borrower requests a credit line to lender
+    * @param creditLineHash creditLine hash
+    * @param lender lender address
+    * @param borrower borrower address
+    */
     event CreditLineRequestedToLender(
         bytes32 creditLineHash,
         address lender,
         address borrower
     );
+
     event CreditLineRequestedToBorrower(
         bytes32 creditLineHash,
         address lender,
@@ -106,9 +113,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         uint256 _timeElapsed
     ) public pure returns (uint256) {
         uint256 _interest =
-            _principal.mul(_borrowRate).mul(_timeElapsed).div(10**30).div(
-                yearInSeconds
-            );
+            _principal.mul(_borrowRate).mul(_timeElapsed).div(10**30).div(yearInSeconds);
 
         return _interest;
     }
@@ -118,7 +123,6 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
      * @param creditLineHash Hash of the credit line for which interest accrued has to be calculated
      * @return uint256 interest accrued over current borrowed amount since last repayment
      */
-
     function calculateInterestAccrued(bytes32 creditLineHash)
         public
         view
@@ -128,12 +132,9 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
             creditLineUsage[creditLineHash].lastPrincipalUpdateTime;
         if (_lastPrincipleUpdateTime == 0) return 0;
         uint256 _timeElapsed = (block.timestamp).sub(_lastPrincipleUpdateTime);
-        uint256 _interestAccrued =
-            calculateInterest(
-                creditLineUsage[creditLineHash].principal,
-                creditLineInfo[creditLineHash].borrowRate,
-                _timeElapsed
-            );
+        uint256 _interestAccrued = calculateInterest(creditLineUsage[creditLineHash].principal,
+                                                    creditLineInfo[creditLineHash].borrowRate,
+                                                    _timeElapsed);
         return _interestAccrued;
     }
 
@@ -152,12 +153,9 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         uint256 _interestAccrued = calculateInterestAccrued(_creditLineHash);
         uint256 _currentDebt =
             (creditLineUsage[_creditLineHash].principal)
-                .add(
-                creditLineUsage[_creditLineHash]
-                    .interestAccruedTillPrincipalUpdate
-            )
-                .add(_interestAccrued)
-                .sub(creditLineUsage[_creditLineHash].totalInterestRepaid);
+            .add(creditLineUsage[_creditLineHash].interestAccruedTillPrincipalUpdate)
+            .add(_interestAccrued)
+            .sub(creditLineUsage[_creditLineHash].totalInterestRepaid);
         return _currentDebt;
     }
 
