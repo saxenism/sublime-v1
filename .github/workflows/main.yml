@@ -1,6 +1,6 @@
 name: Compilation test
 
-on: [push, pull_request]
+on: [push, pull_request, commit]
 
 jobs:
   build:
