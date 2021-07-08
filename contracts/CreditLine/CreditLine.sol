@@ -444,7 +444,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         uint256 _totalCollateralToken = calculateTotalCollateralTokens(creditLineHash);
 
         uint256 collateralRatioIfAmountIsWithdrawn =
-            _ratioOfPrices.mul(_totalCollateralToken).div((_currentDebt.add(borrowAmount)).mul(10**_decimals));
+            _ratioOfPrices.mul(_totalCollateralToken).mul(10**_decimals)).div((_currentDebt.add(borrowAmount));
 
         require(
             collateralRatioIfAmountIsWithdrawn > creditLineInfo[creditLineHash].idealCollateralRatio,
@@ -467,7 +467,6 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         emit BorrowedFromCreditLine(borrowAmount, creditLineHash);
     }
 
-    //TODO:- Make the function to accept ether as well
     /**
      * @dev used to repay assest to credit line
      * @param _repayAmount amount which borrower wants to repay to credit line
@@ -482,15 +481,8 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         - principal
         - totalInterestRepaid
         - lastPrincipalUpdateTime
-
-
-
     */
-    function repay(
-        bytes32 _creditLineHash,
-        bool _transferFromSavingAccount,
-        uint256 _repayAmount
-    ) internal {
+    function _repay(bytes32 _creditLineHash, bool _transferFromSavingAccount, uint256 _repayAmount) internal {
         address _borrowAsset = creditLineInfo[_creditLineHash].borrowAsset;
         address _lender = creditLineInfo[_creditLineHash].lender;
         ISavingsAccount _savingsAccount = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
@@ -526,14 +518,12 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         require(_totalDebt >= repayAmount, 'CreditLine: Repay amount is greater than debt.');
 
         if (_totalRepaidNow > _totalInterestAccrued) {
-            creditLineUsage[creditLineHash].principal = (creditLineUsage[creditLineHash].principal)
-                .add(_totalInterestAccrued)
-                .sub(_totalRepaidNow);
+            creditLineUsage[creditLineHash].principal = (creditLineUsage[creditLineHash].principal).add(_totalInterestAccrued).sub(_totalRepaidNow);
             creditLineUsage[creditLineHash].interestAccruedTillPrincipalUpdate = _totalInterestAccrued;
             creditLineUsage[creditLineHash].lastPrincipalUpdateTime = block.timestamp;
         }
         creditLineUsage[creditLineHash].totalInterestRepaid = _totalRepaidNow;
-        repay(creditLineHash, _transferFromSavingAccount, repayAmount);
+        _repay(creditLineHash, _transferFromSavingAccount, repayAmount);
 
         if (creditLineUsage[creditLineHash].principal == 0) {
             _resetCreditLine(creditLineHash);
