@@ -337,11 +337,11 @@ describe('Credit Lines', async () => {
                 let randomInvalidHash = '0x0000000011111111000000001111111100000000111111110000000011111111';
                 await expect(
                     creditLine.connect(borrower).depositCollateral(Contracts.LINK, BigNumber.from('123123123'), randomInvalidHash, false)
-                ).to.be.revertedWith(' Credit line does not exist');
+                ).to.be.revertedWith('Credit line does not exist');
 
                 await expect(
                     creditLine.connect(borrower).depositCollateral(Contracts.LINK, BigNumber.from('123123123'), randomInvalidHash, true)
-                ).to.be.revertedWith(' Credit line does not exist');
+                ).to.be.revertedWith('Credit line does not exist');
             });
 
             it('should fail if any other user/address is trying to accept the credit line', async () => {
