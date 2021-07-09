@@ -406,7 +406,7 @@ describe.only("Pool Active stage", async () => {
                 });
 
                 it("Can repay for second repayment period in first repay period", async () => {
-                    const repayAmount = createPoolParams._borrowRate.mul(createPoolParams._borrowAmountRequested).mul(createPoolParams._repaymentInterval).div(60*60*24*356).div(BigNumber.from(10).pow(30))
+                    const repayAmount = createPoolParams._borrowRate.mul(createPoolParams._borrowAmountRequested).mul(createPoolParams._repaymentInterval).div(60*60*24*365).div(BigNumber.from(10).pow(30))
                     
                     await borrowToken.connect(random).approve(repaymentImpl.address, repayAmount.add(10));
                     await repaymentImpl.connect(random).repayAmount(pool.address, repayAmount.add(10));
@@ -420,7 +420,7 @@ describe.only("Pool Active stage", async () => {
 
                     await blockTravel(network, parseInt(endOfPeriod.add(gracePeriod).sub(10).toString()));
 
-                    const repayAmount = createPoolParams._borrowRate.mul(createPoolParams._borrowAmountRequested).mul(createPoolParams._repaymentInterval).div(60*60*24*356).div(BigNumber.from(10).pow(30))
+                    const repayAmount = createPoolParams._borrowRate.mul(createPoolParams._borrowAmountRequested).mul(createPoolParams._repaymentInterval).div(60*60*24*365).div(BigNumber.from(10).pow(30))
                     const repayAmountWithPenality = repayAmount.add(repaymentParams.gracePenalityRate.mul(await repaymentImpl.getInterestLeft(pool.address)).div(BigNumber.from(10).pow(60)));
                     await borrowToken.connect(random).approve(repaymentImpl.address, repayAmountWithPenality);
                     // await expect(
@@ -441,7 +441,7 @@ describe.only("Pool Active stage", async () => {
                     
                     await blockTravel(network, parseInt(endOfPeriod.add(gracePeriod).sub(10).toString()));
 
-                    const repayAmount = createPoolParams._borrowRate.mul(createPoolParams._borrowAmountRequested).mul(createPoolParams._repaymentInterval).div(60*60*24*356).div(BigNumber.from(10).pow(30))
+                    const repayAmount = createPoolParams._borrowRate.mul(createPoolParams._borrowAmountRequested).mul(createPoolParams._repaymentInterval).div(60*60*24*365).div(BigNumber.from(10).pow(30))
                     const repayAmountWithPenality = repayAmount.add(repaymentParams.gracePenalityRate.mul(await repaymentImpl.getInterestLeft(pool.address))).div(BigNumber.from(10).pow(60));
                     await borrowToken.connect(random).approve(repaymentImpl.address, repayAmountWithPenality.add(20));
                     await repaymentImpl.connect(random).repayAmount(pool.address, repayAmountWithPenality.add(20));

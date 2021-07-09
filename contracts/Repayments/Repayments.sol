@@ -290,11 +290,11 @@ contract Repayments is RepaymentStorage, IRepayment {
                 (
                     (_instalmentsCompleted.add(10**30)).mul(
                         repaymentConstants[_poolID].repaymentInterval
-                    )
+                    ).div(10**30)
                 )
                     .sub(repaymentVars[_poolID].loanDurationCovered)
             )
-                .mul(_interestPerSecond);
+                .mul(_interestPerSecond).div(10**30);
         return _interestOverdue;
     }
 
@@ -304,6 +304,7 @@ contract Repayments is RepaymentStorage, IRepayment {
         isPoolInitialized(_poolID)
     {
         IPool _pool = IPool(_poolID);
+        _amount = _amount * 10**30;
 
         uint256 _loanStatus = _pool.getLoanStatus();
         require(
@@ -332,7 +333,7 @@ contract Repayments is RepaymentStorage, IRepayment {
                     _poolID
                 ]
                     .loanDurationCovered
-                    .add(_amount.mul(10**60).div(_interestPerSecond));
+                    .add(_amount.mul(10**30).div(_interestPerSecond));
                 _amount = 0;
             }
         }
@@ -347,7 +348,7 @@ contract Repayments is RepaymentStorage, IRepayment {
                 uint256 _penalty =
                     repaymentConstants[_poolID]
                         .gracePenaltyRate
-                        .mul(_interestLeft)
+                        .mul(getInterestDueTillInstalmentDeadline(_poolID))
                         .div(10**30);
                 _interestLeft = _interestLeft.add(_penalty);
                 console.log("interest left", _interestLeft, _penalty);
@@ -355,7 +356,7 @@ contract Repayments is RepaymentStorage, IRepayment {
 
             if (_amount < _interestLeft) {
                 uint256 _loanDurationCovered =
-                    _amount.mul(10**60).div(_interestPerSecond); // dividing exponents
+                    _amount.mul(10**30).div(_interestPerSecond); // dividing exponents
                 console.log("Loan duration covered", _loanDurationCovered, _amount, _interestPerSecond);
                 repaymentVars[_poolID].loanDurationCovered = repaymentVars[
                     _poolID
@@ -376,6 +377,7 @@ contract Repayments is RepaymentStorage, IRepayment {
         address _asset = repaymentConstants[_poolID].repayAsset;
 
         require(_amountRequired != 0, "Repayments::repayAmount not necessary");
+        _amountRequired = _amountRequired.div(10**30);
 
         if (_asset == address(0)) {
             require(
