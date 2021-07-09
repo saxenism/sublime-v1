@@ -55,6 +55,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
     }
 
     /*
+    * @dev only admin can invoke
     * @notice invoked to update the credit line implementation
     * @param _creditLine address of credit line implementation
     */
@@ -77,7 +78,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
     * @param amount amount to be transferred
     * @param asset asset to be transferred
     * @param strategy strategy into which assets should be deposited
-    * @param to address of the savings account owner
+    * @param to address of the savings account holder
     */
     function depositTo(
         uint256 _amount,

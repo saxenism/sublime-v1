@@ -85,7 +85,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         strategyRegistry = _strategyRegistry;
         defaultStrategy = _defaultStrategy;
     }
-    
+
     /**
      * @dev Used to calculate interest accrued since last repayment
      * @param creditLineHash Hash of the credit line for which interest accrued has to be calculated
@@ -479,39 +479,39 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
 
     /*
     * @notice external function called to repay a credit line
-    * @param repayAmount amount to be repaid
-    * @param creditLineHash credit line hash
+    * @param _repayAmount amount to be repaid
+    * @param _creditLineHash credit line hash
     * @param _transferFromSavingAccount if true, amount is transferred from borrower's savings account
     */
     function repayCreditLine(
-        uint256 repayAmount,
-        bytes32 creditLineHash,
+        uint256 _repayAmount,
+        bytes32 _creditLineHash,
         bool _transferFromSavingAccount
     ) external payable {
         require(
-            creditLineInfo[creditLineHash].currentStatus == creditLineStatus.ACTIVE,
+            creditLineInfo[_creditLineHash].currentStatus == creditLineStatus.ACTIVE,
             'CreditLine: The credit line is not yet active.'
         );
 
-        uint256 _interestSincePrincipalUpdate = calculateInterestAccrued(creditLineHash);
+        uint256 _interestSincePrincipalUpdate = calculateInterestAccrued(_creditLineHash);
         uint256 _totalInterestAccrued =
-            (creditLineUsage[creditLineHash].interestAccruedTillPrincipalUpdate).add(_interestSincePrincipalUpdate);
-        uint256 _totalDebt = _totalInterestAccrued.add(creditLineUsage[creditLineHash].principal);
-        uint256 _totalRepaidNow = creditLineUsage[creditLineHash].totalInterestRepaid.add(repayAmount);
-        require(_totalDebt >= repayAmount, 'CreditLine: Repay amount is greater than debt.');
+            (creditLineUsage[_creditLineHash].interestAccruedTillPrincipalUpdate).add(_interestSincePrincipalUpdate);
+        uint256 _totalDebt = _totalInterestAccrued.add(creditLineUsage[_creditLineHash].principal);
+        uint256 _totalRepaidNow = creditLineUsage[_creditLineHash].totalInterestRepaid.add(_repayAmount);
+        require(_totalDebt >= _repayAmount, 'CreditLine: Repay amount is greater than debt.');
 
         if (_totalRepaidNow > _totalInterestAccrued) {
-            creditLineUsage[creditLineHash].principal = (creditLineUsage[creditLineHash].principal).add(_totalInterestAccrued).sub(_totalRepaidNow);
-            creditLineUsage[creditLineHash].interestAccruedTillPrincipalUpdate = _totalInterestAccrued;
-            creditLineUsage[creditLineHash].lastPrincipalUpdateTime = block.timestamp;
+            creditLineUsage[_creditLineHash].principal = (creditLineUsage[_creditLineHash].principal).add(_totalInterestAccrued).sub(_totalRepaidNow);
+            creditLineUsage[_creditLineHash].interestAccruedTillPrincipalUpdate = _totalInterestAccrued;
+            creditLineUsage[_creditLineHash].lastPrincipalUpdateTime = block.timestamp;
         }
-        creditLineUsage[creditLineHash].totalInterestRepaid = _totalRepaidNow;
-        _repay(creditLineHash, _transferFromSavingAccount, repayAmount);
+        creditLineUsage[_creditLineHash].totalInterestRepaid = _totalRepaidNow;
+        _repay(_creditLineHash, _transferFromSavingAccount, _repayAmount);
 
-        if (creditLineUsage[creditLineHash].principal == 0) {
-            _resetCreditLine(creditLineHash);
+        if (creditLineUsage[_creditLineHash].principal == 0) {
+            _resetCreditLine(_creditLineHash);
         }
-        emit PartialCreditLineRepaid(creditLineHash, repayAmount);
+        emit PartialCreditLineRepaid(_creditLineHash, _repayAmount);
     }
 
     /*
@@ -527,114 +527,114 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
 
     /**
      * @dev used to close credit line once by borrower or lender
-     * @param creditLineHash Credit line hash which represents the credit Line Unique Hash
+     * @param _creditLineHash Credit line hash which represents the credit Line Unique Hash
      */
-    function closeCreditLine(bytes32 creditLineHash) external ifCreditLineExists(creditLineHash) {
+    function closeCreditLine(bytes32 _creditLineHash) external ifCreditLineExists(_creditLineHash) {
         require(
-            msg.sender == creditLineInfo[creditLineHash].borrower ||
-                msg.sender == creditLineInfo[creditLineHash].lender,
+            msg.sender == creditLineInfo[_creditLineHash].borrower ||
+                msg.sender == creditLineInfo[_creditLineHash].lender,
             'CreditLine: Permission denied while closing Line of credit'
         );
         require(
-            creditLineInfo[creditLineHash].currentStatus == creditLineStatus.ACTIVE,
+            creditLineInfo[_creditLineHash].currentStatus == creditLineStatus.ACTIVE,
             'CreditLine: Credit line should be active.'
         );
-        require(creditLineUsage[creditLineHash].principal == 0, 'CreditLine: Cannot be closed since not repaid.');
+        require(creditLineUsage[_creditLineHash].principal == 0, 'CreditLine: Cannot be closed since not repaid.');
         require(
-            creditLineUsage[creditLineHash].interestAccruedTillPrincipalUpdate == 0,
+            creditLineUsage[_creditLineHash].interestAccruedTillPrincipalUpdate == 0,
             'CreditLine: Cannot be closed since not repaid.'
         );
-        creditLineInfo[creditLineHash].currentStatus = creditLineStatus.CLOSED;
-        emit CreditLineClosed(creditLineHash);
+        creditLineInfo[_creditLineHash].currentStatus = creditLineStatus.CLOSED;
+        emit CreditLineClosed(_creditLineHash);
     }
 
-    function calculateCurrentCollateralRatio(bytes32 creditLineHash)
+    function calculateCurrentCollateralRatio(bytes32 _creditLineHash)
         public
-        ifCreditLineExists(creditLineHash)
+        ifCreditLineExists(_creditLineHash)
         returns (uint256)
     {
         (uint256 _ratioOfPrices, uint256 _decimals) =
             IPriceOracle(IPoolFactory(PoolFactory).priceOracle()).getLatestPrice(
-                creditLineInfo[creditLineHash].collateralAsset,
-                creditLineInfo[creditLineHash].borrowAsset
+                creditLineInfo[_creditLineHash].collateralAsset,
+                creditLineInfo[_creditLineHash].borrowAsset
             );
 
-        uint256 currentDebt = calculateCurrentDebt(creditLineHash);
-        uint256 currentCollateralRatio =
-            calculateTotalCollateralTokens(creditLineHash).mul(_ratioOfPrices).div(currentDebt).div(10**_decimals);
-        return currentCollateralRatio;
+        uint256 _currentDebt = calculateCurrentDebt(_creditLineHash);
+        uint256 _currentCollateralRatio =
+            calculateTotalCollateralTokens(_creditLineHash).mul(_ratioOfPrices).div(_currentDebt).div(10**_decimals);
+        return _currentCollateralRatio;
     }
 
-    function calculateTotalCollateralTokens(bytes32 creditLineHash) public returns (uint256 amount) {
-        address _collateralAsset = creditLineInfo[creditLineHash].collateralAsset;
+    function calculateTotalCollateralTokens(bytes32 _creditLineHash) public returns (uint256 _amount) {
+        address _collateralAsset = creditLineInfo[_creditLineHash].collateralAsset;
         address[] memory _strategyList = IStrategyRegistry(strategyRegistry).getStrategies();
-        uint256 liquidityShares;
-        for (uint256 index = 0; index < _strategyList.length; index++) {
-            liquidityShares = collateralShareInStrategy[creditLineHash][_strategyList[index]];
-            uint256 tokenInStrategy = liquidityShares;
-            if (_strategyList[index] != address(0)) {
-                tokenInStrategy = IYield(_strategyList[index]).getTokensForShares(liquidityShares, _collateralAsset);
+        uint256 _liquidityShares;
+        for (uint256 _index = 0; _index < _strategyList.length; _index++) {
+            _liquidityShares = collateralShareInStrategy[_creditLineHash][_strategyList[_index]];
+            uint256 _tokenInStrategy = _liquidityShares;
+            if (_strategyList[_index] != address(0)) {
+                _tokenInStrategy = IYield(_strategyList[_index]).getTokensForShares(_liquidityShares, _collateralAsset);
             }
 
-            amount = amount.add(tokenInStrategy);
+            _amount = _amount.add(_tokenInStrategy);
         }
     }
 
-    function withdrawCollateralFromCreditLine(bytes32 creditLineHash, uint256 amount)
+    function withdrawCollateralFromCreditLine(bytes32 _creditLineHash, uint256 _amount)
         public
-        onlyCreditLineBorrower(creditLineHash)
+        onlyCreditLineBorrower(_creditLineHash)
     {
         //check for ideal ratio
         (uint256 _ratioOfPrices, uint256 _decimals) =
             IPriceOracle(IPoolFactory(PoolFactory).priceOracle()).getLatestPrice(
-                creditLineInfo[creditLineHash].collateralAsset,
-                creditLineInfo[creditLineHash].borrowAsset
+                creditLineInfo[_creditLineHash].collateralAsset,
+                creditLineInfo[_creditLineHash].borrowAsset
             );
 
-        uint256 _totalCollateralToken = calculateTotalCollateralTokens(creditLineHash);
-        uint256 currentDebt = calculateCurrentDebt(creditLineHash);
-        uint256 collateralRatioIfAmountIsWithdrawn =
-            ((_totalCollateralToken.sub(amount)).mul(_ratioOfPrices).div(currentDebt)).div(10**_decimals);
+        uint256 _totalCollateralToken = calculateTotalCollateralTokens(_creditLineHash);
+        uint256 _currentDebt = calculateCurrentDebt(_creditLineHash);
+        uint256 _collateralRatioIfAmountIsWithdrawn =
+            ((_totalCollateralToken.sub(_amount)).mul(_ratioOfPrices).div(_currentDebt)).div(10**_decimals);
         require(
-            collateralRatioIfAmountIsWithdrawn >= creditLineInfo[creditLineHash].idealCollateralRatio,
+            _collateralRatioIfAmountIsWithdrawn >= creditLineInfo[_creditLineHash].idealCollateralRatio,
             "CreditLine::withdrawCollateralFromCreditLine - The current collateral ration doesn't allow to withdraw"
         );
-        address _collateralAsset = creditLineInfo[creditLineHash].collateralAsset;
-        _withdrawCollateral(_collateralAsset, amount, creditLineHash);
+        address _collateralAsset = creditLineInfo[_creditLineHash].collateralAsset;
+        _withdrawCollateral(_collateralAsset, _amount, _creditLineHash);
     }
 
     function _withdrawCollateral(
         address _asset,
         uint256 _amountInTokens,
-        bytes32 creditLineHash
+        bytes32 _creditLineHash
     ) internal {
         address[] memory _strategyList = IStrategyRegistry(strategyRegistry).getStrategies();
         uint256 _activeAmount;
-        for (uint256 index = 0; index < _strategyList.length; index++) {
-            uint256 liquidityShares = collateralShareInStrategy[creditLineHash][_strategyList[index]];
-            if (liquidityShares == 0) {
+        for (uint256 _index = 0; _index < _strategyList.length; _index++) {
+            uint256 _liquidityShares = collateralShareInStrategy[_creditLineHash][_strategyList[_index]];
+            if (_liquidityShares == 0) {
                 continue;
             }
-            uint256 _tokenInStrategy = liquidityShares;
-            if (_strategyList[index] != address(0)) {
-                _tokenInStrategy = IYield(_strategyList[index]).getTokensForShares(liquidityShares, _asset);
+            uint256 _tokenInStrategy = _liquidityShares;
+            if (_strategyList[_index] != address(0)) {
+                _tokenInStrategy = IYield(_strategyList[_index]).getTokensForShares(_liquidityShares, _asset);
             }
             uint256 _tokensToTransfer = _tokenInStrategy;
             if (_activeAmount.add(_tokenInStrategy) > _amountInTokens) {
                 _tokensToTransfer = _amountInTokens.sub(_activeAmount);
 
-                liquidityShares = liquidityShares.mul(_tokensToTransfer).div(_tokenInStrategy);
+                _liquidityShares = _liquidityShares.mul(_tokensToTransfer).div(_tokenInStrategy);
             }
             _activeAmount = _activeAmount.add(_tokensToTransfer);
-            collateralShareInStrategy[creditLineHash][_strategyList[index]] = collateralShareInStrategy[creditLineHash][
-                _strategyList[index]
+            collateralShareInStrategy[_creditLineHash][_strategyList[_index]] = collateralShareInStrategy[_creditLineHash][
+                _strategyList[_index]
             ]
-                .sub(liquidityShares);
+                .sub(_liquidityShares);
             ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()).withdraw(
                 msg.sender,
                 _tokensToTransfer,
                 _asset,
-                _strategyList[index],
+                _strategyList[_index],
                 false
             );
 

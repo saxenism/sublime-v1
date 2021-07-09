@@ -281,7 +281,9 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     * @param _toSavingsAccount if true, _amount is deposited to _depositTo's Savings Account
     * @param _asset asset to be deposited
     * @param _amount amount to be deposited
-    * @param _poolSavingsStrategy strategy to be used to m
+    * @param _poolSavingsStrategy strategy into which amount will be deposited
+    * @param _depositFrom sender address
+    * @param _depositTo receiver address
     */
     function _deposit(
         bool _fromSavingsAccount,
