@@ -141,7 +141,6 @@ describe.only("Pool Active stage", async () => {
             );
 
         await strategyRegistry.connect(admin).addStrategy(aaveYield.address);
-
         yearnYield = await deployHelper.core.deployYearnYield();
         await yearnYield.initialize(admin.address, savingsAccount.address);
         await strategyRegistry.connect(admin).addStrategy(yearnYield.address);
@@ -397,49 +396,56 @@ describe.only("Pool Active stage", async () => {
             context("Borrower should repay interest", async () => {
                 it("Repay interest for first  repay period", async () => {
                     const repayAmount = createPoolParams._borrowRate.mul(amount.add(amount1)).mul(createPoolParams._repaymentInterval).div(60*60*24*365).div(BigNumber.from(10).pow(30))
-                    const interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address);
+                    const interestForCurrentPeriod = (await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address)).div(BigNumber.from(10).pow(30));
                     assert(
-                        interestForCurrentPeriod.div(BigNumber.from(10).pow(30)).toString() == repayAmount.toString(),
-                        `Incorrect interest for period 1. Actual: ${interestForCurrentPeriod.div(BigNumber.from(10).pow(30)).toString()} Expected: ${repayAmount.toString()}`
+                        interestForCurrentPeriod.toString() == repayAmount.toString(),
+                        `Incorrect interest for period 1. Actual: ${interestForCurrentPeriod.toString()} Expected: ${repayAmount.toString()}`
                     );
                     await borrowToken.connect(random).approve(repaymentImpl.address, repayAmount);
                     await repaymentImpl.connect(random).repayAmount(pool.address, repayAmount);
                 });
-                return
 
                 it("Can repay for second repayment period in first repay period", async () => {
                     const repayAmount = createPoolParams._borrowRate.mul(createPoolParams._borrowAmountRequested).mul(createPoolParams._repaymentInterval).div(60*60*24*356).div(BigNumber.from(10).pow(30))
                     
                     await borrowToken.connect(random).approve(repaymentImpl.address, repayAmount.add(10));
                     await repaymentImpl.connect(random).repayAmount(pool.address, repayAmount.add(10));
+
+                    // assert((await repaymentImpl.getNextInstalmentDeadline(pool.address)).gt())
                 });  
 
-                it("Repay in grace period, with penality", async () => {
-                    const endOfPeriod:BigNumber = await repaymentImpl.getNextInstalmentDeadline(pool.address);
+                it.only("Repay in grace period, with penality", async () => {
+                    const endOfPeriod:BigNumber = (await repaymentImpl.getNextInstalmentDeadline(pool.address)).div(BigNumber.from(10).pow(30));
                     const gracePeriod:BigNumber = repaymentParams.gracePeriodFraction.mul(createPoolParams._repaymentInterval).div(BigNumber.from(10).pow(30));
 
-                    await timeTravel(network, parseInt(endOfPeriod.add(gracePeriod).sub(10).toString()));
+                    await blockTravel(network, parseInt(endOfPeriod.add(gracePeriod).sub(10).toString()));
 
                     const repayAmount = createPoolParams._borrowRate.mul(createPoolParams._borrowAmountRequested).mul(createPoolParams._repaymentInterval).div(60*60*24*356).div(BigNumber.from(10).pow(30))
-                    const repayAmountWithPenality = repayAmount.add(repaymentParams.gracePenalityRate.mul(await repaymentImpl.getInterestLeft(pool.address)));
+                    const repayAmountWithPenality = repayAmount.add(repaymentParams.gracePenalityRate.mul(await repaymentImpl.getInterestLeft(pool.address)).div(BigNumber.from(10).pow(60)));
                     await borrowToken.connect(random).approve(repaymentImpl.address, repayAmountWithPenality);
-                    await expect(
-                        repaymentImpl.connect(random).repayAmount(pool.address, repayAmount)
-                    ).to.be.revertedWith("");
+                    // await expect(
+                    //     repaymentImpl.connect(random).repayAmount(pool.address, repayAmount)
+                    // ).to.be.revertedWith("");
+                    console.log("repayAmountWithPenality", repayAmountWithPenality.toString(), repayAmount.toString());
                     await repaymentImpl.connect(random).repayAmount(pool.address, repayAmountWithPenality);
+                    const interestForCurrentPeriod = (await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address)).div(BigNumber.from(10).pow(30));
+                    assert(
+                        interestForCurrentPeriod.toString() == repayAmount.toString(),
+                        `Repay amount for the current period not correctly recorded. Actual: ${interestForCurrentPeriod.toString()} Expected: ${repayAmount.toString()}`
+                    );
                 });
 
                 it("Repay for next period after repayment in grace period", async () => {
-                    const endOfPeriod:BigNumber = await repaymentImpl.getNextInstalmentDeadline(pool.address);
+                    const endOfPeriod:BigNumber = (await repaymentImpl.getNextInstalmentDeadline(pool.address)).div(BigNumber.from(10).pow(30));
                     const gracePeriod:BigNumber = repaymentParams.gracePeriodFraction.mul(createPoolParams._repaymentInterval).div(BigNumber.from(10).pow(30));
-
-                    await timeTravel(network, parseInt(endOfPeriod.add(gracePeriod).sub(10).toString()));
+                    
+                    await blockTravel(network, parseInt(endOfPeriod.add(gracePeriod).sub(10).toString()));
 
                     const repayAmount = createPoolParams._borrowRate.mul(createPoolParams._borrowAmountRequested).mul(createPoolParams._repaymentInterval).div(60*60*24*356).div(BigNumber.from(10).pow(30))
-                    const repayAmountWithPenality = repayAmount.add(repaymentParams.gracePenalityRate.mul(await repaymentImpl.getInterestLeft(pool.address)));
-                    await borrowToken.connect(random).approve(repaymentImpl.address, repayAmountWithPenality);
+                    const repayAmountWithPenality = repayAmount.add(repaymentParams.gracePenalityRate.mul(await repaymentImpl.getInterestLeft(pool.address))).div(BigNumber.from(10).pow(60));
+                    await borrowToken.connect(random).approve(repaymentImpl.address, repayAmountWithPenality.add(20));
                     await repaymentImpl.connect(random).repayAmount(pool.address, repayAmountWithPenality.add(20));
-                    const interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address);
+                    const interestForCurrentPeriod = (await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address)).div(BigNumber.from(10).pow(30));
                     assert(
                         interestForCurrentPeriod.toString() == repayAmount.sub(20).toString(),
                         `Extra repayment in grace period not correctly recorded. Actual: ${interestForCurrentPeriod.toString()} Expected: ${repayAmount.sub(20)}`
@@ -447,9 +453,9 @@ describe.only("Pool Active stage", async () => {
                 });
 
                 it("Can't liquidate in grace period", async () => {
-                    const endOfPeriod:BigNumber = await repaymentImpl.getNextInstalmentDeadline(pool.address);
+                    const endOfPeriod:BigNumber = (await repaymentImpl.getNextInstalmentDeadline(pool.address)).div(BigNumber.from(10).pow(30));
 
-                    await timeTravel(network, parseInt(endOfPeriod.add(10).toString()));
+                    await blockTravel(network, parseInt(endOfPeriod.add(10).toString()));
 
                     await expect(
                         pool.liquidatePool(false, false, false)
@@ -495,7 +501,7 @@ describe.only("Pool Active stage", async () => {
                         await repaymentImpl.repayAmount(pool.address, interestForCurrentPeriod.sub(1));
 
                         const endOfExtension:BigNumber = await repaymentImpl.getNextInstalmentDeadline(pool.address);
-                        await timeTravel(network, parseInt(endOfExtension.add(1).toString()));
+                        await blockTravel(network, parseInt(endOfExtension.add(1).toString()));
 
                         const collateralShares = (await savingsAccount.userLockedBalance(pool.address, collateralToken.address, poolStrategy.address));
                         let collateralTokens = await poolStrategy.callStatic.getTokensForShares(collateralShares.sub(2), collateralToken.address);
@@ -515,7 +521,7 @@ describe.only("Pool Active stage", async () => {
                         await borrowToken.connect(random).approve(repaymentImpl.address, interestForCurrentPeriod);
                         await repaymentImpl.connect(random).repayAmount(pool.address, interestForCurrentPeriod);
 
-                        await timeTravel(network, parseInt(endOfExtension.add(1).toString()));
+                        await blockTravel(network, parseInt(endOfExtension.add(1).toString()));
 
                         await expect(
                             await pool.connect(random).liquidatePool(false, false, false)
@@ -531,7 +537,7 @@ describe.only("Pool Active stage", async () => {
                         const endOfExtension:BigNumber = await repaymentImpl.getNextInstalmentDeadline(pool.address);
                         await repaymentImpl.repayAmount(pool.address, interestForCurrentPeriod);
 
-                        await timeTravel(network, parseInt(endOfExtension.add(1).toString()));
+                        await blockTravel(network, parseInt(endOfExtension.add(1).toString()));
 
                         interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address);
                         assert(interestForCurrentPeriod.toString() != "0", `Interest not charged correctly. Actual: ${interestForCurrentPeriod.toString()} Expected: 0`);
@@ -546,7 +552,7 @@ describe.only("Pool Active stage", async () => {
                         await extenstion.connect(lender).voteOnExtension(pool.address);
 
                         const { extensionVoteEndTime } = await extenstion.poolInfo(pool.address);
-                        await timeTravel(network, parseInt(extensionVoteEndTime.add(1).toString()));
+                        await blockTravel(network, parseInt(extensionVoteEndTime.add(1).toString()));
 
                         let interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address);
                         await borrowToken.connect(random).approve(repaymentImpl.address, interestForCurrentPeriod);
@@ -565,7 +571,7 @@ describe.only("Pool Active stage", async () => {
                         await repaymentImpl.repayAmount(pool.address, interestForCurrentPeriod.sub(1));
 
                         const endOfPeriod:BigNumber = await repaymentImpl.getNextInstalmentDeadline(pool.address);
-                        await timeTravel(network, parseInt(endOfPeriod.add(1).toString()));
+                        await blockTravel(network, parseInt(endOfPeriod.add(1).toString()));
 
                         const collateralShares = (await savingsAccount.userLockedBalance(pool.address, collateralToken.address, poolStrategy.address));
                         let collateralTokens = await poolStrategy.callStatic.getTokensForShares(collateralShares.sub(2), collateralToken.address);
@@ -604,7 +610,7 @@ describe.only("Pool Active stage", async () => {
                         await borrowToken.connect(random).approve(repaymentImpl.address, interestForCurrentPeriod);
                         await repaymentImpl.connect(random).repayAmount(pool.address, interestForCurrentPeriod);
 
-                        await timeTravel(network, parseInt(endOfExtension.add(1).toString()));
+                        await blockTravel(network, parseInt(endOfExtension.add(1).toString()));
 
                         await expect(
                             extenstion.connect(borrower).requestExtension(pool.address)
@@ -616,7 +622,7 @@ describe.only("Pool Active stage", async () => {
             context("Borrower defaulted repayment", async () => {
                 it("Liquidate pool", async () => {
                     const endOfPeriod:BigNumber = (await repaymentImpl.getNextInstalmentDeadline(pool.address));
-                    await timeTravel(network, parseInt(endOfPeriod.add(1).toString()));
+                    await blockTravel(network, parseInt(endOfPeriod.add(1).toString()));
 
                     const collateralShares = (await savingsAccount.userLockedBalance(pool.address, collateralToken.address, poolStrategy.address));
                     let collateralTokens = await poolStrategy.callStatic.getTokensForShares(collateralShares.sub(2), collateralToken.address);
@@ -628,7 +634,7 @@ describe.only("Pool Active stage", async () => {
                 
                 it("Lenders should be able to withdraw repayments till now", async () => {
                     const endOfPeriod:BigNumber = (await repaymentImpl.getNextInstalmentDeadline(pool.address));
-                    await timeTravel(network, parseInt(endOfPeriod.add(1).toString()));
+                    await blockTravel(network, parseInt(endOfPeriod.add(1).toString()));
 
                     const collateralShares = (await savingsAccount.userLockedBalance(pool.address, collateralToken.address, poolStrategy.address));
                     let collateralTokens = await poolStrategy.callStatic.getTokensForShares(collateralShares.sub(2), collateralToken.address);
@@ -642,7 +648,7 @@ describe.only("Pool Active stage", async () => {
     
                 it("Lenders should be able to withdraw liquidated collateral", async () => {
                     const endOfPeriod:BigNumber = (await repaymentImpl.getNextInstalmentDeadline(pool.address));
-                    await timeTravel(network, parseInt(endOfPeriod.add(1).toString()));
+                    await blockTravel(network, parseInt(endOfPeriod.add(1).toString()));
 
                     const collateralShares = (await savingsAccount.userLockedBalance(pool.address, collateralToken.address, poolStrategy.address));
                     let collateralTokens = await poolStrategy.callStatic.getTokensForShares(collateralShares.sub(2), collateralToken.address);
@@ -656,7 +662,7 @@ describe.only("Pool Active stage", async () => {
 
                 it("Borrower can't withdraw collateral", async () => {
                     const endOfPeriod:BigNumber = (await repaymentImpl.getNextInstalmentDeadline(pool.address));
-                    await timeTravel(network, parseInt(endOfPeriod.add(1).toString()));
+                    await blockTravel(network, parseInt(endOfPeriod.add(1).toString()));
 
                     await expect(
                         pool.cancelPool()

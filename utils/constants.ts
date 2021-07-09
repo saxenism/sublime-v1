@@ -36,7 +36,7 @@ export const createPoolParams = {
   _idealCollateralRatio: collateralRatio,
   _collateralRatio: collateralRatio,
   _borrowRate: BigNumber.from(5).mul(BigNumber.from(10).pow(28)),
-  _repaymentInterval: BigNumber.from(100),
+  _repaymentInterval: BigNumber.from(1000),
   _noOfRepaymentIntervals: BigNumber.from(25),
   _collateralAmount: BigNumber.from("300000000000000000"),
   _loanWithdrawalDuration: BigNumber.from(15000000),
