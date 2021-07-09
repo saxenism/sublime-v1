@@ -73,7 +73,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
     }
 
     /*
-    * @notice called to deposit assets into a savings account strategy
+    * @notice called to deposit assets into a savings account strategy, receives amount from user to be transferred
     * @param amount amount to be transferred
     * @param asset asset to be transferred
     * @param strategy strategy into which assets should be deposited
@@ -96,7 +96,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
     }
 
     /*
-    * @notice internal function used to make the actuall calls to yield strategies depending on the strategy argument
+    * @notice internal function used to make the actual calls to yield strategies depending on the strategy argument
     * @param _amount amount to be transferred
     * @param _asset assets to be transferred
     * @param _strategy strategy into which assets will be transferred

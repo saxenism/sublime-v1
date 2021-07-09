@@ -111,9 +111,11 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         uint256 _lastPrincipleUpdateTime = creditLineUsage[creditLineHash].lastPrincipalUpdateTime;
         if (_lastPrincipleUpdateTime == 0) return 0;
         uint256 _timeElapsed = (block.timestamp).sub(_lastPrincipleUpdateTime);
-        uint256 _interestAccrued = calculateInterest(creditLineUsage[creditLineHash].principal,
-                                                    creditLineInfo[creditLineHash].borrowRate,
-                                                    _timeElapsed);
+
+        uint256 _interestAccrued = creditLineUsage[creditLineHash].principal
+                            .mul(creditLineInfo[creditLineHash].borrowRate)
+                            .mul(_timeElapsed).div(10**30).div(yearInSeconds);
+
         return _interestAccrued;
     }
 
