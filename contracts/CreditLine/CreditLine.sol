@@ -85,23 +85,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         strategyRegistry = _strategyRegistry;
         defaultStrategy = _defaultStrategy;
     }
-
-    /**
-     * @dev Used to Calculate Interest Per second on given principal and Interest rate
-     * @param _principal principal Amount for which interest has to be calculated.
-     * @param _borrowRate It is the Interest Rate at which Credit Line is approved
-     * @return uint256 interest per second for the given parameters
-     */
-    function calculateInterest(
-        uint256 _principal,
-        uint256 _borrowRate,
-        uint256 _timeElapsed
-    ) public pure returns (uint256) {
-        uint256 _interest = _principal.mul(_borrowRate).mul(_timeElapsed).div(10**30).div(yearInSeconds);
-
-        return _interest;
-    }
-
+    
     /**
      * @dev Used to calculate interest accrued since last repayment
      * @param creditLineHash Hash of the credit line for which interest accrued has to be calculated
