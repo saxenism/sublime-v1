@@ -421,7 +421,7 @@ describe.only("Pool Active stage", async () => {
                     await blockTravel(network, parseInt(endOfPeriod.add(gracePeriod).sub(10).toString()));
 
                     const repayAmount = createPoolParams._borrowRate.mul(amount.add(amount1)).mul(createPoolParams._repaymentInterval).div(60*60*24*365).div(BigNumber.from(10).pow(30))
-                    const repayAmountWithPenality = repayAmount.add(repaymentParams.gracePenalityRate.mul(await repaymentImpl.getInterestLeft(pool.address)).div(BigNumber.from(10).pow(60)));
+                    const repayAmountWithPenality = repayAmount.add(1).add(repaymentParams.gracePenalityRate.mul(await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address)).div(BigNumber.from(10).pow(60)));
                     await borrowToken.connect(random).approve(repaymentImpl.address, repayAmountWithPenality);
                     // await expect(
                     //     repaymentImpl.connect(random).repayAmount(pool.address, repayAmount)
@@ -442,7 +442,7 @@ describe.only("Pool Active stage", async () => {
                     await blockTravel(network, parseInt(endOfPeriod.add(gracePeriod).sub(10).toString()));
 
                     const repayAmount = createPoolParams._borrowRate.mul(amount.add(amount1)).mul(createPoolParams._repaymentInterval).div(60*60*24*365).div(BigNumber.from(10).pow(30))
-                    const repayAmountWithPenality = repayAmount.add(repaymentParams.gracePenalityRate.mul(await repaymentImpl.getInterestLeft(pool.address))).div(BigNumber.from(10).pow(60));
+                    const repayAmountWithPenality = repayAmount.add(repaymentParams.gracePenalityRate.mul(await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address))).div(BigNumber.from(10).pow(60));
                     await borrowToken.connect(random).approve(repaymentImpl.address, repayAmountWithPenality.add(20));
                     await repaymentImpl.connect(random).repayAmount(pool.address, repayAmountWithPenality.add(20));
                     const interestForCurrentPeriod = (await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address)).div(BigNumber.from(10).pow(30));

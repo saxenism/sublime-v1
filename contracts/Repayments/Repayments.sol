@@ -74,7 +74,6 @@ contract Repayments is RepaymentStorage, IRepayment {
         repaymentConstants[msg.sender].loanStartTime = loanStartTime.mul(10**30);
         repaymentConstants[msg.sender].repayAsset = lentAsset;
         repaymentConstants[msg.sender].savingsAccount = savingsAccount;
-        //repaymentVars[msg.sender].nextDuePeriod = loanStartTime.add(repaymentInterval);
         repaymentVars[msg.sender].nInstalmentsFullyPaid = 0;
     }
 
@@ -110,7 +109,7 @@ contract Repayments is RepaymentStorage, IRepayment {
             repaymentVars[_poolID].loanDurationCovered;
         console.log("getInstallemntcomplete", _loanDurationCovered, _repaymentInterval);
         uint256 _instalmentsCompleted =
-            _loanDurationCovered.mul(10**30).div(_repaymentInterval); // dividing exponents, returns whole number rounded down
+            _loanDurationCovered.div(_repaymentInterval).mul(10**30); // dividing exponents, returns whole number rounded down
 
         return _instalmentsCompleted;
     }
@@ -123,10 +122,10 @@ contract Repayments is RepaymentStorage, IRepayment {
     {
         uint256 _interestPerSecond = getInterestPerSecond(_poolID);
         uint256 _nextInstalmentDeadline = getNextInstalmentDeadline(_poolID);
-        console.log("nextInstalmentDeadline", _nextInstalmentDeadline.div(10**30), block.timestamp);
+        console.log("nextInstalmentDeadline", _nextInstalmentDeadline, block.timestamp);
         uint256 _loanDurationCovered =
             repaymentVars[_poolID].loanDurationCovered;
-        console.log(_nextInstalmentDeadline.sub(repaymentConstants[_poolID].loanStartTime).div(10**30), _loanDurationCovered.div(10**30));
+        console.log(_nextInstalmentDeadline.sub(repaymentConstants[_poolID].loanStartTime), _loanDurationCovered);
         uint256 _interestDueTillInstalmentDeadline =
             (_nextInstalmentDeadline.sub(repaymentConstants[_poolID].loanStartTime).sub(_loanDurationCovered)).mul(
                 _interestPerSecond
@@ -148,7 +147,7 @@ contract Repayments is RepaymentStorage, IRepayment {
         override
         returns (uint256)
     {
-        uint256 _instalmentsCompleted = getInstalmentsCompleted(_poolID);
+        uint256 _instalmentsCompletedRounded = getInstalmentsCompleted(_poolID);
         uint256 _loanExtensionPeriod =
             repaymentVars[_poolID].loanExtensionPeriod;
         uint256 _repaymentInterval =
@@ -156,22 +155,20 @@ contract Repayments is RepaymentStorage, IRepayment {
         uint256 _loanStartTime = repaymentConstants[_poolID].loanStartTime;
         uint256 _nextInstalmentDeadline;
 
-        //uint256 _ extensions on impro
-
-        if (_loanExtensionPeriod > _instalmentsCompleted) {
+        if (_loanExtensionPeriod > _instalmentsCompletedRounded) {
             _nextInstalmentDeadline = (
-                (_instalmentsCompleted.add(10**30).add(10**30)).mul(
+                (_instalmentsCompletedRounded.add(10**30).add(10**30)).mul(
                     _repaymentInterval
                 ).div(10**30)
             )
                 .add(_loanStartTime);
         } else {
             _nextInstalmentDeadline = (
-                (_instalmentsCompleted.add(10**30)).mul(_repaymentInterval).div(10**30)
+                (_instalmentsCompletedRounded.add(10**30)).mul(_repaymentInterval).div(10**30)
             )
                 .add(_loanStartTime);
         }
-        console.log(_loanStartTime.div(10**30));
+        console.log("_nextInstalmentDeadline", _nextInstalmentDeadline, (_instalmentsCompletedRounded.add(10**30)).mul(_repaymentInterval), _loanStartTime.div(10**30));
         return _nextInstalmentDeadline;
     }
 
@@ -283,6 +280,7 @@ contract Repayments is RepaymentStorage, IRepayment {
     }
 
     function getInterestOverdue(address _poolID) public view returns (uint256) {
+        require(repaymentVars[_poolID].isLoanExtensionActive == true, "No overdue");
         uint256 _instalmentsCompleted = getInstalmentsCompleted(_poolID);
         uint256 _interestPerSecond = getInterestPerSecond(_poolID);
         uint256 _interestOverdue =
@@ -350,11 +348,12 @@ contract Repayments is RepaymentStorage, IRepayment {
                         .gracePenaltyRate
                         .mul(getInterestDueTillInstalmentDeadline(_poolID))
                         .div(10**30);
-                _interestLeft = _interestLeft.add(_penalty);
-                console.log("interest left", _interestLeft, _penalty);
+                _amount = _amount.sub(_penalty);
+                _amountRequired = _amountRequired.add(_penalty);
             }
 
             if (_amount < _interestLeft) {
+                console.log("_interestPerPeriod", repaymentConstants[_poolID].repaymentInterval.mul(_interestPerSecond));
                 uint256 _loanDurationCovered =
                     _amount.mul(10**30).div(_interestPerSecond); // dividing exponents
                 console.log("Loan duration covered", _loanDurationCovered, _amount, _interestPerSecond);
