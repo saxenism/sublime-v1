@@ -1,10 +1,7 @@
 import '@nomiclabs/hardhat-ethers';
 import '@nomiclabs/hardhat-waffle';
 import '@nomiclabs/hardhat-ganache';
-<<<<<<< HEAD
-import "@nomiclabs/hardhat-etherscan";
-=======
->>>>>>> master
+import '@nomiclabs/hardhat-etherscan';
 import '@openzeppelin/hardhat-upgrades';
 
 import 'hardhat-typechain';
@@ -14,12 +11,9 @@ import 'hardhat-deploy';
 import { task } from 'hardhat/config';
 import { HardhatUserConfig } from 'hardhat/types';
 
-<<<<<<< HEAD
 import { privateKeys, kovanPrivateKeys } from './utils/wallet';
-import kovanDeploymentKeys from "./keystore/keystore.json";
-=======
-import { privateKeys } from './utils/wallet';
->>>>>>> master
+import kovanDeploymentKeys from './keystore/keystore.json';
+
 import {
     etherscanKey,
     INFURA_TOKEN,
@@ -67,6 +61,7 @@ const config: HardhatUserConfig = {
             url: 'http://127.0.0.1:8545',
             timeout: 100000,
             live: false,
+            accounts: Object.values(kovanDeploymentKeys),
             saveDeployments: false,
             tags: ['localhost'],
         },

@@ -223,10 +223,7 @@ describe('Pool Collection stage', async () => {
                 false
             );
 
-            const nonce =
-                (await poolFactory.provider.getTransactionCount(
-                    poolFactory.address
-                )) + 1;
+            const nonce = (await poolFactory.provider.getTransactionCount(poolFactory.address)) + 1;
             let newPoolToken: string = getContractAddress({
                 from: poolFactory.address,
                 nonce,
@@ -280,9 +277,7 @@ describe('Pool Collection stage', async () => {
 
             await lendExpect.to.emit(poolToken, 'Transfer').withArgs(zeroAddress, lender.address, amount);
 
-            const poolTokenBalanceAfter = await poolToken.balanceOf(
-                lender.address
-            );
+            const poolTokenBalanceAfter = await poolToken.balanceOf(lender.address);
             const poolTokenTotalSupplyAfter = await poolToken.totalSupply();
             assert(
                 poolTokenBalanceAfter.toString() == poolTokenBalanceBefore.add(amount).toString(),
@@ -306,9 +301,7 @@ describe('Pool Collection stage', async () => {
 
             const poolTokenBalanceBefore = await poolToken.balanceOf(lender.address);
             const poolTokenTotalSupplyBefore = await poolToken.totalSupply();
-            await savingsAccount
-                .connect(lender)
-                .approve(borrowToken.address, pool.address, amount);
+            await savingsAccount.connect(lender).approve(borrowToken.address, pool.address, amount);
 
             const lendExpect = expect(pool.connect(lender).lend(lender.address, amount, true));
 
@@ -316,9 +309,7 @@ describe('Pool Collection stage', async () => {
 
             await lendExpect.to.emit(poolToken, 'Transfer').withArgs(zeroAddress, lender.address, amount);
 
-            const poolTokenBalanceAfter = await poolToken.balanceOf(
-                lender.address
-            );
+            const poolTokenBalanceAfter = await poolToken.balanceOf(lender.address);
             const poolTokenTotalSupplyAfter = await poolToken.totalSupply();
             assert(
                 poolTokenBalanceAfter.toString() == poolTokenBalanceBefore.add(amount).toString(),
@@ -342,9 +333,7 @@ describe('Pool Collection stage', async () => {
 
             const poolTokenBalanceBefore = await poolToken.balanceOf(lender.address);
             const poolTokenTotalSupplyBefore = await poolToken.totalSupply();
-            await savingsAccount
-                .connect(lender1)
-                .approve(borrowToken.address, pool.address, amount);
+            await savingsAccount.connect(lender1).approve(borrowToken.address, pool.address, amount);
 
             const lendExpect = expect(pool.connect(lender1).lend(lender.address, amount, true));
 
@@ -352,9 +341,7 @@ describe('Pool Collection stage', async () => {
 
             await lendExpect.to.emit(poolToken, 'Transfer').withArgs(zeroAddress, lender.address, amount);
 
-            const poolTokenBalanceAfter = await poolToken.balanceOf(
-                lender.address
-            );
+            const poolTokenBalanceAfter = await poolToken.balanceOf(lender.address);
             const poolTokenTotalSupplyAfter = await poolToken.totalSupply();
             assert(
                 poolTokenBalanceAfter.toString() == poolTokenBalanceBefore.add(amount).toString(),

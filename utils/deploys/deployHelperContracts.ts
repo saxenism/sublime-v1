@@ -1,10 +1,12 @@
-import { Signer } from 'ethers';
+import { BytesLike, Signer } from 'ethers';
 
 import { Verification } from '../../typechain/Verification';
 import { PriceOracle } from '../../typechain/PriceOracle';
+import { SublimeProxy } from '../../typechain/SublimeProxy';
 
 import { Verification__factory } from '../../typechain/factories/Verification__factory';
 import { PriceOracle__factory } from '../../typechain/factories/PriceOracle__factory';
+import { SublimeProxy__factory } from '../../typechain/factories/SublimeProxy__factory';
 
 import { Address } from 'hardhat-deploy/dist/types';
 
@@ -29,5 +31,13 @@ export default class DeployHelperContracts {
 
     public async getPriceOracle(priceOracleAddress: Address): Promise<PriceOracle> {
         return await new PriceOracle__factory(this._deployerSigner).attach(priceOracleAddress);
+    }
+
+    public async deploySublimeProxy(logic: Address, admin: Address, data: BytesLike): Promise<SublimeProxy> {
+        return await new SublimeProxy__factory(this._deployerSigner).deploy(logic, admin, data);
+    }
+
+    public async getSublimeProxy(proxy: Address): Promise<SublimeProxy> {
+        return await new SublimeProxy__factory(this._deployerSigner).attach(proxy);
     }
 }

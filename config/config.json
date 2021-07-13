@@ -22,8 +22,10 @@
             }
         },
         "repayments": {
-            "votingExtensionlength": "",
-            "votingPassRatio": ""
+            "votingPassRatio": "",
+            "votingExtensionlength":"",
+            "gracePenalty": "",
+            "gracePeriodFraction":""
         },
         "pool": {
             "collectionPeriod": "",
@@ -63,7 +65,10 @@
             }
         },
         "repayments": {
-            "votingPassRatio": 50000000
+            "votingPassRatio": 50000000,
+            "votingExtensionlength":5000,
+            "gracePenalty": 500000000,
+            "gracePeriodFraction":5000000
         },
         "pool": {
             "collectionPeriod": 900,
@@ -144,7 +149,10 @@
             }
         },
         "repayments": {
-            "votingPassRatio": 50000000
+            "votingPassRatio": 50000000,
+            "votingExtensionlength":5000,
+            "gracePenalty": 500000000,
+            "gracePeriodFraction":5000000
         },
         "pool": {
             "collectionPeriod": 900,

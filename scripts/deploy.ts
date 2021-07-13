@@ -21,91 +21,104 @@ import { SublimeProxy } from '../typechain/SublimeProxy';
 import { CreditLine } from '../typechain/CreditLine';
 
 async function init(deployNetwork: string) {
-    if(allConfig.network != deployNetwork) {
-        console.error("Deploy network different from config network");
+    if (allConfig.network != deployNetwork) {
+        console.error('Deploy network different from config network');
         process.exit();
     }
 
     let config;
-    if(network.name.includes("kovan")) {
+    if (network.name.includes('kovan')) {
         config = allConfig.kovan;
-    } else if(network.name.includes("mainnet")) {
-        config = allConfig.mainnet
+    } else if (network.name.includes('mainnet')) {
+        config = allConfig.mainnet;
     } else {
-        console.error("Config for network not found");
+        console.error('Config for network not found');
         process.exit();
     }
-    let [
-        proxyAdmin,
-        admin,
-        deployer,
-        verifier
-    ] = await ethers.getSigners();
+    let [proxyAdmin, admin, deployer, verifier] = await ethers.getSigners();
     const deployHelper: DeployHelper = new DeployHelper(deployer);
 
     const strategyRegistryLogic: StrategyRegistry = await deployHelper.core.deployStrategyRegistry();
-    const strategyRegistryProxy: SublimeProxy =  await deployHelper.helper.deploySublimeProxy(strategyRegistryLogic.address, proxyAdmin.address, Buffer.from(''));
+    const strategyRegistryProxy: SublimeProxy = await deployHelper.helper.deploySublimeProxy(
+        strategyRegistryLogic.address,
+        proxyAdmin.address,
+        Buffer.from('')
+    );
     const strategyRegistry: StrategyRegistry = await deployHelper.core.getStrategyRegistry(strategyRegistryProxy.address);
     await strategyRegistry.initialize(admin.address, config.strategies.max);
-    console.log("strategyRegistry", {
+    console.log('strategyRegistry', {
         proxy: strategyRegistryProxy.address,
-        logic: strategyRegistryLogic.address
+        logic: strategyRegistryLogic.address,
     });
 
     const creditLinesLogic: CreditLine = await deployHelper.core.deployCreditLines();
-    const creditLinesProxy: SublimeProxy = await deployHelper.helper.deploySublimeProxy(creditLinesLogic.address, proxyAdmin.address, Buffer.from(''));
+    const creditLinesProxy: SublimeProxy = await deployHelper.helper.deploySublimeProxy(
+        creditLinesLogic.address,
+        proxyAdmin.address,
+        Buffer.from('')
+    );
     const creditLines: CreditLine = await deployHelper.core.getCreditLines(creditLinesProxy.address);
-    console.log("creditLines", {
+    console.log('creditLines', {
         proxy: creditLinesProxy.address,
-        logic: creditLinesLogic.address
+        logic: creditLinesLogic.address,
     });
 
     const savingsAccountLogic: SavingsAccount = await deployHelper.core.deploySavingsAccount();
-    const savingsAccountProxy: SublimeProxy = await deployHelper.helper.deploySublimeProxy(savingsAccountLogic.address, proxyAdmin.address, Buffer.from(''));
+    const savingsAccountProxy: SublimeProxy = await deployHelper.helper.deploySublimeProxy(
+        savingsAccountLogic.address,
+        proxyAdmin.address,
+        Buffer.from('')
+    );
     const savingsAccount: SavingsAccount = await deployHelper.core.getSavingsAccount(savingsAccountProxy.address);
     await savingsAccount.initialize(admin.address, strategyRegistry.address, creditLines.address);
-    console.log("savingsAccount", {
+    console.log('savingsAccount', {
         proxy: savingsAccountProxy.address,
-        logic: savingsAccountLogic.address
+        logic: savingsAccountLogic.address,
     });
 
     const aaveYieldLogic: AaveYield = await deployHelper.core.deployAaveYield();
-    const aaveYieldProxy: SublimeProxy = await deployHelper.helper.deploySublimeProxy(aaveYieldLogic.address, proxyAdmin.address, Buffer.from(''));
+    const aaveYieldProxy: SublimeProxy = await deployHelper.helper.deploySublimeProxy(
+        aaveYieldLogic.address,
+        proxyAdmin.address,
+        Buffer.from('')
+    );
     const aaveYield: AaveYield = await deployHelper.core.getAaveYield(aaveYieldProxy.address);
     await aaveYield.initialize(
-        admin.address, 
-        savingsAccount.address, 
-        config.strategies.aave.wethGateway, 
-        config.strategies.aave.protocolDataProvider, 
+        admin.address,
+        savingsAccount.address,
+        config.strategies.aave.wethGateway,
+        config.strategies.aave.protocolDataProvider,
         config.strategies.aave.lendingPoolAddressesProvider
     );
-    console.log("aaveYield", {
+    console.log('aaveYield', {
         proxy: aaveYieldProxy.address,
-        logic: aaveYieldLogic.address
+        logic: aaveYieldLogic.address,
     });
 
     const compoundYieldLogic: CompoundYield = await deployHelper.core.deployCompoundYield();
-    const compoundYieldProxy: SublimeProxy = await deployHelper.helper.deploySublimeProxy(compoundYieldLogic.address, proxyAdmin.address, Buffer.from(''));
-    const compoundYield: CompoundYield = await deployHelper.core.getCompoundYield(compoundYieldProxy.address);
-    await compoundYield.initialize(
-        admin.address,
-        savingsAccount.address
+    const compoundYieldProxy: SublimeProxy = await deployHelper.helper.deploySublimeProxy(
+        compoundYieldLogic.address,
+        proxyAdmin.address,
+        Buffer.from('')
     );
-    console.log("compoundYield", {
+    const compoundYield: CompoundYield = await deployHelper.core.getCompoundYield(compoundYieldProxy.address);
+    await compoundYield.initialize(admin.address, savingsAccount.address);
+    console.log('compoundYield', {
         proxy: compoundYieldProxy.address,
-        logic: compoundYieldLogic.address
+        logic: compoundYieldLogic.address,
     });
 
     const yearnYieldLogic: YearnYield = await deployHelper.core.deployYearnYield();
-    const yearnYieldProxy: SublimeProxy = await deployHelper.helper.deploySublimeProxy(yearnYieldLogic.address, proxyAdmin.address, Buffer.from(''));
-    const yearnYield: YearnYield = await deployHelper.core.getYearnYield(yearnYieldProxy.address);
-    await yearnYield.initialize(
-        admin.address,
-        savingsAccount.address
+    const yearnYieldProxy: SublimeProxy = await deployHelper.helper.deploySublimeProxy(
+        yearnYieldLogic.address,
+        proxyAdmin.address,
+        Buffer.from('')
     );
-    console.log("yearnYield", {
+    const yearnYield: YearnYield = await deployHelper.core.getYearnYield(yearnYieldProxy.address);
+    await yearnYield.initialize(admin.address, savingsAccount.address);
+    console.log('yearnYield', {
         proxy: yearnYieldProxy.address,
-        logic: yearnYieldLogic.address
+        logic: yearnYieldLogic.address,
     });
 
     await strategyRegistry.connect(admin).addStrategy(aaveYield.address);
@@ -113,68 +126,84 @@ async function init(deployNetwork: string) {
     await strategyRegistry.connect(admin).addStrategy(yearnYield.address);
 
     const priceOracleLogic: PriceOracle = await deployHelper.helper.deployPriceOracle();
-    const priceOracleProxy: SublimeProxy = await deployHelper.helper.deploySublimeProxy(priceOracleLogic.address, proxyAdmin.address, Buffer.from(''));
-    const priceOracle: PriceOracle = await deployHelper.helper.getPriceOracle(priceOracleProxy.address);
-    await priceOracle.initialize(
-        admin.address
+    const priceOracleProxy: SublimeProxy = await deployHelper.helper.deploySublimeProxy(
+        priceOracleLogic.address,
+        proxyAdmin.address,
+        Buffer.from('')
     );
-    console.log("priceOracle", {
+    const priceOracle: PriceOracle = await deployHelper.helper.getPriceOracle(priceOracleProxy.address);
+    await priceOracle.initialize(admin.address);
+    console.log('priceOracle', {
         proxy: priceOracleProxy.address,
-        logic: priceOracleLogic.address
+        logic: priceOracleLogic.address,
     });
 
     const verificationLogic: Verification = await deployHelper.helper.deployVerification();
-    const verificationProxy: SublimeProxy = await deployHelper.helper.deploySublimeProxy(verificationLogic.address, proxyAdmin.address, Buffer.from(''));
-    const verification: Verification = await deployHelper.helper.getVerification(verificationProxy.address);
-    await verification.initialize(
-        verifier.address
+    const verificationProxy: SublimeProxy = await deployHelper.helper.deploySublimeProxy(
+        verificationLogic.address,
+        proxyAdmin.address,
+        Buffer.from('')
     );
-    console.log("verification", {
+    const verification: Verification = await deployHelper.helper.getVerification(verificationProxy.address);
+    await verification.initialize(verifier.address);
+    console.log('verification', {
         proxy: verificationProxy.address,
-        logic: verificationLogic.address
+        logic: verificationLogic.address,
     });
 
     const poolFactoryLogic: PoolFactory = await deployHelper.pool.deployPoolFactory();
-    const poolFactoryProxy: SublimeProxy = await deployHelper.helper.deploySublimeProxy(poolFactoryLogic.address, proxyAdmin.address, Buffer.from(''));
+    const poolFactoryProxy: SublimeProxy = await deployHelper.helper.deploySublimeProxy(
+        poolFactoryLogic.address,
+        proxyAdmin.address,
+        Buffer.from('')
+    );
     const poolFactory: PoolFactory = await deployHelper.pool.getPoolFactory(poolFactoryProxy.address);
-    console.log("poolFactory", {
+    console.log('poolFactory', {
         proxy: poolFactoryProxy.address,
-        logic: poolFactoryLogic.address
+        logic: poolFactoryLogic.address,
     });
-    
+
     const repaymentsLogic: Repayments = await deployHelper.pool.deployRepayments();
-    const repaymentsProxy: SublimeProxy = await deployHelper.helper.deploySublimeProxy(repaymentsLogic.address, proxyAdmin.address, Buffer.from(''));
+    const repaymentsProxy: SublimeProxy = await deployHelper.helper.deploySublimeProxy(
+        repaymentsLogic.address,
+        proxyAdmin.address,
+        Buffer.from('')
+    );
     const repayments: Repayments = await deployHelper.pool.getRepayments(repaymentsProxy.address);
     await repayments.initialize(
         admin.address,
         poolFactory.address,
         config.repayments.votingPassRatio,
+        config.repayments.gracePenalty,
+        config.repayments.gracePeriodFraction,
         savingsAccount.address
     );
-    console.log("repayments", {
+    console.log('repayments', {
         proxy: repaymentsProxy.address,
-        logic: repaymentsLogic.address
+        logic: repaymentsLogic.address,
     });
 
     const extensionLogic: Extension = await deployHelper.pool.deployExtenstion();
-    const extensionProxy: SublimeProxy = await deployHelper.helper.deploySublimeProxy(extensionLogic.address, proxyAdmin.address, Buffer.from(''));
-    const extension: Extension = await deployHelper.pool.getExtension(extensionProxy.address);
-    await extension.initialize(
-        poolFactory.address
+    const extensionProxy: SublimeProxy = await deployHelper.helper.deploySublimeProxy(
+        extensionLogic.address,
+        proxyAdmin.address,
+        Buffer.from('')
     );
-    console.log("extension", {
+    const extension: Extension = await deployHelper.pool.getExtension(extensionProxy.address);
+    await extension.initialize(poolFactory.address);
+    console.log('extension', {
         proxy: extensionProxy.address,
-        logic: extensionLogic.address
+        logic: extensionLogic.address,
     });
 
     const poolLogic: Pool = await deployHelper.pool.deployPool();
-    console.log("pool", {
-        logic: poolLogic.address
+    console.log('pool', {
+        logic: poolLogic.address,
     });
 
     const poolToken: PoolToken = await deployHelper.pool.deployPoolToken();
-    console.log("poolToken", {
-        logic: poolToken.address
+    console.log('poolToken', {
+        logic: poolToken.address,
     });
 
     await poolFactory.initialize(
@@ -186,8 +215,8 @@ async function init(deployNetwork: string) {
         config.pool.marginCallDuration,
         config.pool.collateralVolatilityThreshold,
         config.pool.gracePeriodPenaltyFraction,
-        poolLogic.interface.getSighash("initialize"),
-        poolToken.interface.getSighash("initialize(string,string,address)"),
+        poolLogic.interface.getSighash('initialize'),
+        poolToken.interface.getSighash('initialize(string,string,address)'),
         config.pool.liquidatorRewardFraction,
         priceOracle.address,
         savingsAccount.address,
@@ -195,17 +224,9 @@ async function init(deployNetwork: string) {
         config.pool.poolCancelPenalityFraction
     );
 
-    await poolFactory.connect(admin).setImplementations(
-        poolLogic.address,
-        repayments.address,
-        poolToken.address
-    );
+    await poolFactory.connect(admin).setImplementations(poolLogic.address, repayments.address, poolToken.address);
 
-    await creditLines.initialize(
-        config.creditLines.defaultStrategy,
-        poolFactory.address,
-        strategyRegistry.address
-    );
+    await creditLines.initialize(config.creditLines.defaultStrategy, poolFactory.address, strategyRegistry.address);
 }
 
-init("kovan");
+init('kovan');

@@ -28,3 +28,4 @@ typechain/
 flatten
 
 test.spec.ts
+utils/keys.ts

@@ -7,13 +7,15 @@
     "build": "npm run typechain",
     "test": "npx hardhat test",
     "typechain": "npx hardhat typechain",
-    "coverage":"yarn build && npx hardhat coverage --temp artifacts",
+    "coverage": "yarn build && npx hardhat coverage --temp artifacts",
     "prettier": "prettier --write '{test,utils,scripts,types}/**/*.{ts,js,json}' && prettier --write hardhat.config.ts",
     "flatten": "npx waffle flatten",
     "lint-sol": "npx prettier --write 'contracts/**/*.sol'",
     "lint-ts": "tslint -c tslint.json -p tsconfig.json '{utils,test}/**/*.{ts}' --fix",
     "deploy": "npx hardhat run scripts/deploy.ts --network",
-    "listAccount": "npx hardhat accounts --network"
+    "chain": "npx hardhat node --no-deploy",
+    "listAccount": "npx hardhat accounts --network",
+    "verify": "npx hardhat run scripts/verify.ts --network"
   },
   "repository": {
     "type": "git",
