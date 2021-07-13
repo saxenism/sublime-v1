@@ -6,11 +6,7 @@ export function getRandomFromArray<T>(items: T[]): T {
     return items[Math.floor(Math.random() * items.length)];
 }
 
-export async function incrementChain(
-    network: Network,
-    blocks: number,
-    blockTime: number = 15000
-) {
+export async function incrementChain(network: Network, blocks: number, blockTime: number = 15000) {
     await network.provider.request({
         method: 'evm_increaseTime',
         params: [blocks * blockTime],
@@ -63,33 +59,17 @@ export async function getPoolAddress(
     const poolAddress = ethers.utils.getCreate2Address(
         poolFactory,
         getSalt(borrower, salt),
-        getInitCodehash(
-            proxyMeta.bytecode,
-            poolLogic,
-            poolData,
-            '0x0000000000000000000000000000000000000001'
-        )
+        getInitCodehash(proxyMeta.bytecode, poolLogic, poolData, '0x0000000000000000000000000000000000000001')
     );
     return poolAddress;
 }
 
 function getSalt(address: Address, salt: BytesLike) {
-    return ethers.utils.solidityKeccak256(
-        ['bytes32', 'address'],
-        [salt, address]
-    );
+    return ethers.utils.solidityKeccak256(['bytes32', 'address'], [salt, address]);
 }
 
-function getInitCodehash(
-    proxyBytecode: BytesLike,
-    poolImplAddr: Address,
-    poolData: BytesLike,
-    admin: Address
-) {
-    const initialize = ethers.utils.defaultAbiCoder.encode(
-        ['address', 'address', 'bytes'],
-        [poolImplAddr, admin, poolData]
-    );
+function getInitCodehash(proxyBytecode: BytesLike, poolImplAddr: Address, poolData: BytesLike, admin: Address) {
+    const initialize = ethers.utils.defaultAbiCoder.encode(['address', 'address', 'bytes'], [poolImplAddr, admin, poolData]);
     const encodedData = proxyBytecode + initialize.replace('0x', '');
     return ethers.utils.keccak256(encodedData);
 }

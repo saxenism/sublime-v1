@@ -20,11 +20,7 @@ import DeployHelper from '../utils/deploys';
 import { SavingsAccount } from '../typechain/SavingsAccount';
 import { StrategyRegistry } from '../typechain/StrategyRegistry';
 
-import {
-    getPoolAddress,
-    getRandomFromArray,
-    incrementChain,
-} from '../utils/helpers';
+import { getPoolAddress, getRandomFromArray, incrementChain } from '../utils/helpers';
 
 import { Address } from 'hardhat-deploy/dist/types';
 import { AaveYield } from '../typechain/AaveYield';
@@ -69,18 +65,13 @@ describe.skip('Template For Test cases', async () => {
     let WhaleAccount: any;
 
     before(async () => {
-        [proxyAdmin, admin, mockCreditLines, borrower, lender] =
-            await ethers.getSigners();
+        [proxyAdmin, admin, mockCreditLines, borrower, lender] = await ethers.getSigners();
         const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
         savingsAccount = await deployHelper.core.deploySavingsAccount();
         strategyRegistry = await deployHelper.core.deployStrategyRegistry();
 
         //initialize
-        savingsAccount.initialize(
-            admin.address,
-            strategyRegistry.address,
-            mockCreditLines.address
-        );
+        savingsAccount.initialize(admin.address, strategyRegistry.address, mockCreditLines.address);
         strategyRegistry.initialize(admin.address, 10);
 
         await network.provider.request({
@@ -102,24 +93,13 @@ describe.skip('Template For Test cases', async () => {
         WhaleAccount = await ethers.provider.getSigner(whaleAccount);
 
         BatTokenContract = await deployHelper.mock.getMockERC20(Contracts.BAT);
-        await BatTokenContract.connect(Binance7).transfer(
-            admin.address,
-            BigNumber.from('10').pow(23)
-        ); // 10,000 BAT tokens
+        await BatTokenContract.connect(Binance7).transfer(admin.address, BigNumber.from('10').pow(23)); // 10,000 BAT tokens
 
-        LinkTokenContract = await deployHelper.mock.getMockERC20(
-            Contracts.LINK
-        );
-        await LinkTokenContract.connect(Binance7).transfer(
-            admin.address,
-            BigNumber.from('10').pow(23)
-        ); // 10,000 LINK tokens
+        LinkTokenContract = await deployHelper.mock.getMockERC20(Contracts.LINK);
+        await LinkTokenContract.connect(Binance7).transfer(admin.address, BigNumber.from('10').pow(23)); // 10,000 LINK tokens
 
         DaiTokenContract = await deployHelper.mock.getMockERC20(Contracts.DAI);
-        await DaiTokenContract.connect(WhaleAccount).transfer(
-            admin.address,
-            BigNumber.from('10').pow(23)
-        ); // 10,000 DAI
+        await DaiTokenContract.connect(WhaleAccount).transfer(admin.address, BigNumber.from('10').pow(23)); // 10,000 DAI
 
         aaveYield = await deployHelper.core.deployAaveYield();
         await aaveYield
@@ -137,38 +117,21 @@ describe.skip('Template For Test cases', async () => {
         yearnYield = await deployHelper.core.deployYearnYield();
         await yearnYield.initialize(admin.address, savingsAccount.address);
         await strategyRegistry.connect(admin).addStrategy(yearnYield.address);
-        await yearnYield
-            .connect(admin)
-            .updateProtocolAddresses(
-                DaiTokenContract.address,
-                DAI_Yearn_Protocol_Address
-            );
+        await yearnYield.connect(admin).updateProtocolAddresses(DaiTokenContract.address, DAI_Yearn_Protocol_Address);
 
         compoundYield = await deployHelper.core.deployCompoundYield();
         await compoundYield.initialize(admin.address, savingsAccount.address);
-        await strategyRegistry
-            .connect(admin)
-            .addStrategy(compoundYield.address);
-        await compoundYield
-            .connect(admin)
-            .updateProtocolAddresses(Contracts.DAI, Contracts.cDAI);
+        await strategyRegistry.connect(admin).addStrategy(compoundYield.address);
+        await compoundYield.connect(admin).updateProtocolAddresses(Contracts.DAI, Contracts.cDAI);
 
         verification = await deployHelper.helper.deployVerification();
         await verification.connect(admin).initialize(admin.address);
-        await verification
-            .connect(admin)
-            .registerUser(borrower.address, sha256(Buffer.from('Borrower')));
+        await verification.connect(admin).registerUser(borrower.address, sha256(Buffer.from('Borrower')));
 
         priceOracle = await deployHelper.helper.deployPriceOracle();
         await priceOracle.connect(admin).initialize(admin.address);
-        await priceOracle
-            .connect(admin)
-            .setfeedAddress(
-                Contracts.LINK,
-                Contracts.DAI,
-                ChainLinkAggregators['LINK/USD'],
-                ChainLinkAggregators['DAI/USD']
-            );
+        await priceOracle.connect(admin).setfeedAddress(Contracts.LINK, ChainLinkAggregators['LINK/USD']);
+        await priceOracle.connect(admin).setfeedAddress(Contracts.DAI, ChainLinkAggregators['DAI/USD']);
     });
 
     describe('Pool Related', async () => {
@@ -222,25 +185,14 @@ describe.skip('Template For Test cases', async () => {
         describe('Pool is created here', async () => {
             let pool: Pool;
             before(async () => {
-                await poolFactory
-                    .connect(admin)
-                    .updateSupportedBorrowTokens(Contracts.DAI, true);
+                await poolFactory.connect(admin).updateSupportedBorrowTokens(Contracts.DAI, true);
 
-                await poolFactory
-                    .connect(admin)
-                    .updateSupportedCollateralTokens(Contracts.LINK, true);
+                await poolFactory.connect(admin).updateSupportedCollateralTokens(Contracts.LINK, true);
 
-                await poolFactory
-                    .connect(admin)
-                    .setImplementations(
-                        poolImpl.address,
-                        repaymentImpl.address,
-                        poolTokenImpl.address
-                    );
+                await poolFactory.connect(admin).setImplementations(poolImpl.address, repaymentImpl.address, poolTokenImpl.address);
 
                 let deployHelper: DeployHelper = new DeployHelper(borrower);
-                let collateralToken: ERC20 =
-                    await deployHelper.mock.getMockERC20(Contracts.LINK);
+                let collateralToken: ERC20 = await deployHelper.mock.getMockERC20(Contracts.LINK);
 
                 let generatedPoolAddress: Address = await getPoolAddress(
                     borrower.address,
@@ -253,10 +205,7 @@ describe.skip('Template For Test cases', async () => {
                     false
                 );
 
-                const nonce =
-                    (await poolFactory.provider.getTransactionCount(
-                        poolFactory.address
-                    )) + 1;
+                const nonce = (await poolFactory.provider.getTransactionCount(poolFactory.address)) + 1;
                 let newPoolToken: string = getContractAddress({
                     from: poolFactory.address,
                     nonce,
@@ -280,14 +229,9 @@ describe.skip('Template For Test cases', async () => {
                     _collateralAmount,
                 } = createPoolParams;
 
-                await collateralToken
-                    .connect(admin)
-                    .transfer(borrower.address, _collateralAmount.mul(2)); // Transfer quantity to borrower
+                await collateralToken.connect(admin).transfer(borrower.address, _collateralAmount.mul(2)); // Transfer quantity to borrower
 
-                await collateralToken.approve(
-                    generatedPoolAddress,
-                    _collateralAmount.mul(2)
-                );
+                await collateralToken.approve(generatedPoolAddress, _collateralAmount.mul(2));
 
                 await expect(
                     poolFactory
@@ -308,25 +252,16 @@ describe.skip('Template For Test cases', async () => {
                         )
                 )
                     .to.emit(poolFactory, 'PoolCreated')
-                    .withArgs(
-                        generatedPoolAddress,
-                        borrower.address,
-                        newPoolToken
-                    );
+                    .withArgs(generatedPoolAddress, borrower.address, newPoolToken);
 
-                let newlyCreatedToken: PoolToken =
-                    await deployHelper.pool.getPoolToken(newPoolToken);
+                let newlyCreatedToken: PoolToken = await deployHelper.pool.getPoolToken(newPoolToken);
 
-                expect(await newlyCreatedToken.name()).eq(
-                    'Open Borrow Pool Tokens'
-                );
+                expect(await newlyCreatedToken.name()).eq('Open Borrow Pool Tokens');
                 expect(await newlyCreatedToken.symbol()).eq('OBPT');
                 expect(await newlyCreatedToken.decimals()).eq(18);
 
                 pool = await deployHelper.pool.getPool(generatedPoolAddress);
-                await pool
-                    .connect(borrower)
-                    .depositCollateral(_collateralAmount, false);
+                await pool.connect(borrower).depositCollateral(_collateralAmount, false);
             });
 
             it('Dummy test case here', async () => {

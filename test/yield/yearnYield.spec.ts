@@ -28,30 +28,20 @@ describe('Yearn Yield', async () => {
         strategyRegistry = await deployHelper.core.deployStrategyRegistry();
 
         //initialize
-        savingsAccount.initialize(
-            admin.address,
-            strategyRegistry.address,
-            mockCreditLinesAddress.address
-        );
+        savingsAccount.initialize(admin.address, strategyRegistry.address, mockCreditLinesAddress.address);
         strategyRegistry.initialize(admin.address, 10);
         yearnYield = await deployHelper.core.deployYearnYield();
 
-        await yearnYield
-            .connect(admin)
-            .initialize(admin.address, savingsAccount.address);
+        await yearnYield.connect(admin).initialize(admin.address, savingsAccount.address);
     });
 
     it('Update Protocol Address', async () => {
-        await yearnYield
-            .connect(admin)
-            .updateProtocolAddresses(Contracts.DAI, DAI_Yearn_Protocol_Address);
+        await yearnYield.connect(admin).updateProtocolAddresses(Contracts.DAI, DAI_Yearn_Protocol_Address);
     });
 
     it('Check DAI Liquidity Token and it mapping', async () => {
         const mappedToken = await yearnYield.liquidityToken(Contracts.DAI);
-        expect(mappedToken).eq(
-            ethers.utils.getAddress(DAI_Yearn_Protocol_Address)
-        );
+        expect(mappedToken).eq(ethers.utils.getAddress(DAI_Yearn_Protocol_Address));
     });
 
     describe('Failed Cases', async () => {
@@ -64,32 +54,20 @@ describe('Yearn Yield', async () => {
         });
 
         it('should throw error when a random account tries to change savings account', async () => {
-            await expect(
-                yearnYield
-                    .connect(randomAccount)
-                    .updateSavingsAccount(randomAccount.address)
-            ).to.be.revertedWith('Ownable: caller is not the owner');
+            await expect(yearnYield.connect(randomAccount).updateSavingsAccount(randomAccount.address)).to.be.revertedWith(
+                'Ownable: caller is not the owner'
+            );
         });
 
         it('should throw error when a random account tries update params', async () => {
             await expect(
-                yearnYield
-                    .connect(randomAccount)
-                    .updateProtocolAddresses(
-                        randomAccount.address,
-                        randomAccount.address
-                    )
+                yearnYield.connect(randomAccount).updateProtocolAddresses(randomAccount.address, randomAccount.address)
             ).to.be.revertedWith('Ownable: caller is not the owner');
         });
 
         it('should throw error when a random account tries to make emergency withdraw', async () => {
             await expect(
-                yearnYield
-                    .connect(randomAccount)
-                    .emergencyWithdraw(
-                        randomAccount.address,
-                        randomAccount.address
-                    )
+                yearnYield.connect(randomAccount).emergencyWithdraw(randomAccount.address, randomAccount.address)
             ).to.be.revertedWith('Ownable: caller is not the owner');
         });
     });

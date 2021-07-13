@@ -8,7 +8,5 @@ interface ICEther {
 
     function repayBorrowBehalf(address borrower) external payable;
 
-    function liquidateBorrow(address borrower, address cTokenCollateral)
-        external
-        payable;
+    function liquidateBorrow(address borrower, address cTokenCollateral) external payable;
 }

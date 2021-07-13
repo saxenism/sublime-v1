@@ -26,9 +26,7 @@ export default class DeployPoolContracts {
     }
 
     public async getRepayments(repaymentAddress: Address): Promise<Repayments> {
-        return await new Repayments__factory(this._deployerSigner).attach(
-            repaymentAddress
-        );
+        return await new Repayments__factory(this._deployerSigner).attach(repaymentAddress);
     }
 
     public async deployExtenstion(): Promise<Extension> {
@@ -36,9 +34,7 @@ export default class DeployPoolContracts {
     }
 
     public async getExtension(extensionAddress: Address): Promise<Extension> {
-        return await new Extension__factory(this._deployerSigner).attach(
-            extensionAddress
-        );
+        return await new Extension__factory(this._deployerSigner).attach(extensionAddress);
     }
 
     public async deployPool(): Promise<Pool> {
@@ -46,9 +42,7 @@ export default class DeployPoolContracts {
     }
 
     public async getPool(poolAddress: Address): Promise<Pool> {
-        return await new Pool__factory(this._deployerSigner).attach(
-            poolAddress
-        );
+        return await new Pool__factory(this._deployerSigner).attach(poolAddress);
     }
 
     public async deployPoolToken(): Promise<PoolToken> {
@@ -56,20 +50,14 @@ export default class DeployPoolContracts {
     }
 
     public async getPoolToken(poolTokenAddress: Address): Promise<PoolToken> {
-        return await new PoolToken__factory(this._deployerSigner).attach(
-            poolTokenAddress
-        );
+        return await new PoolToken__factory(this._deployerSigner).attach(poolTokenAddress);
     }
 
     public async deployPoolFactory(): Promise<PoolFactory> {
         return await new PoolFactory__factory(this._deployerSigner).deploy();
     }
 
-    public async getPoolFactory(
-        poolFactoryAddress: Address
-    ): Promise<PoolFactory> {
-        return await new PoolFactory__factory(this._deployerSigner).attach(
-            poolFactoryAddress
-        );
+    public async getPoolFactory(poolFactoryAddress: Address): Promise<PoolFactory> {
+        return await new PoolFactory__factory(this._deployerSigner).attach(poolFactoryAddress);
     }
 }

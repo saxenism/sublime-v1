@@ -1,16 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.0;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
+import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
+import '@openzeppelin/contracts/math/SafeMath.sol';
 
-import "../interfaces/IStrategyRegistry.sol";
+import '../interfaces/IStrategyRegistry.sol';
 
-contract StrategyRegistry is
-    Initializable,
-    OwnableUpgradeable,
-    IStrategyRegistry
-{
+contract StrategyRegistry is Initializable, OwnableUpgradeable, IStrategyRegistry {
     using SafeMath for uint256;
 
     address[] public strategies;
@@ -18,14 +14,8 @@ contract StrategyRegistry is
 
     mapping(address => bool) public override registry;
 
-    function initialize(address _owner, uint256 _maxStrategies)
-        public
-        initializer
-    {
-        require(
-            _maxStrategies != 0,
-            "StrategyRegistry::initialize maxStrategies cannot be zero"
-        );
+    function initialize(address _owner, uint256 _maxStrategies) public initializer {
+        require(_maxStrategies != 0, 'StrategyRegistry::initialize maxStrategies cannot be zero');
         __Ownable_init();
         super.transferOwnership(_owner);
 
@@ -33,10 +23,7 @@ contract StrategyRegistry is
     }
 
     function updateMaxStrategies(uint256 _maxStrategies) external onlyOwner {
-        require(
-            _maxStrategies != 0,
-            "StrategyRegistry::updateMaxStrategies should be more than zero"
-        );
+        require(_maxStrategies != 0, 'StrategyRegistry::updateMaxStrategies should be more than zero');
         maxStrategies = _maxStrategies;
     }
 
@@ -49,14 +36,8 @@ contract StrategyRegistry is
      * @param _strategy address of the strategy contract
      **/
     function addStrategy(address _strategy) external override onlyOwner {
-        require(
-            strategies.length.add(1) <= maxStrategies,
-            "StrategyRegistry::addStrategy - Can't add more strategies"
-        );
-        require(
-            !registry[_strategy],
-            "StrategyRegistry::addStrategy - Strategy already exists"
-        );
+        require(strategies.length.add(1) <= maxStrategies, "StrategyRegistry::addStrategy - Can't add more strategies");
+        require(!registry[_strategy], 'StrategyRegistry::addStrategy - Strategy already exists');
         registry[_strategy] = true;
         strategies.push(_strategy);
 
@@ -67,17 +48,10 @@ contract StrategyRegistry is
      * @dev Remove strategy to invest in.
      * @param _strategyIndex Index of the strategy to remove
      **/
-    function removeStrategy(uint256 _strategyIndex)
-        external
-        override
-        onlyOwner
-    {
+    function removeStrategy(uint256 _strategyIndex) external override onlyOwner {
         address _strategy = strategies[_strategyIndex];
         strategies[_strategyIndex] = strategies[
-            strategies.length.sub(
-                1,
-                "StrategyRegistry::removeStrategy - No strategies exist"
-            )
+            strategies.length.sub(1, 'StrategyRegistry::removeStrategy - No strategies exist')
         ];
         strategies.pop();
         registry[_strategy] = false;

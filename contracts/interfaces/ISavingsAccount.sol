@@ -3,40 +3,14 @@ pragma solidity 0.7.0;
 
 interface ISavingsAccount {
     //events
-    event Deposited(
-        address user,
-        uint256 amount,
-        address asset,
-        address strategy
-    );
-    event StrategySwitched(
-        address user,
-        address asset,
-        address currentStrategy,
-        address newStrategy
-    );
-    event Withdrawn(
-        address from,
-        address to,
-        uint256 amountReceived,
-        address token,
-        address strategy
-    );
+    event Deposited(address user, uint256 amount, address asset, address strategy);
+    event StrategySwitched(address user, address asset, address currentStrategy, address newStrategy);
+    event Withdrawn(address from, address to, uint256 amountReceived, address token, address strategy);
     event WithdrawnAll(address user, uint256 tokenReceived, address asset);
     event Approved(address token, address from, address to, uint256 amount);
-    event Transfer(
-        address token,
-        address strategy,
-        address from,
-        address to,
-        uint256 amount
-    );
+    event Transfer(address token, address strategy, address from, address to, uint256 amount);
 
-    event CreditLineAllowanceRefreshed(
-        address token,
-        address from,
-        uint256 amount
-    );
+    event CreditLineAllowanceRefreshed(address token, address from, uint256 amount);
 
     function depositTo(
         uint256 amount,
@@ -75,9 +49,7 @@ interface ISavingsAccount {
         bool withdrawShares
     ) external returns (uint256);
 
-    function withdrawAll(address _asset)
-        external
-        returns (uint256 tokenReceived);
+    function withdrawAll(address _asset) external returns (uint256 tokenReceived);
 
     function approve(
         address token,
@@ -121,7 +93,5 @@ interface ISavingsAccount {
         bool withdrawShares
     ) external returns (uint256 amountReceived);
 
-    function getTotalAsset(address _user, address _asset)
-        external
-        returns (uint256 _totalTokens);
+    function getTotalAsset(address _user, address _asset) external returns (uint256 _totalTokens);
 }

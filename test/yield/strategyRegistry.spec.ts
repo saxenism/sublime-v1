@@ -27,37 +27,25 @@ describe('Test Strategy Registry', async () => {
 
     describe('Add Strategy', async () => {
         it('Add a new stragegy', async () => {
-            await expect(
-                strategyRegistry
-                    .connect(admin)
-                    .addStrategy(randomStrategy.address)
-            )
+            await expect(strategyRegistry.connect(admin).addStrategy(randomStrategy.address))
                 .to.emit(strategyRegistry, 'StrategyAdded')
                 .withArgs(randomStrategy.address);
         });
 
         it('Get Strategies', async () => {
-            expect(await strategyRegistry.getStrategies()).to.include(
-                randomStrategy.address
-            );
+            expect(await strategyRegistry.getStrategies()).to.include(randomStrategy.address);
         });
     });
 
     describe('Failed cases', async () => {
         it('Should fail when tried to initialize twice', async () => {
-            await expect(
-                strategyRegistry.initialize(admin.address, 10)
-            ).to.be.revertedWith(
+            await expect(strategyRegistry.initialize(admin.address, 10)).to.be.revertedWith(
                 'Initializable: contract is already initialized'
             );
         });
 
         it('Should fail adding the same stragegy twice or more', async () => {
-            await expect(
-                strategyRegistry
-                    .connect(admin)
-                    .addStrategy(randomStrategy.address)
-            ).to.be.revertedWith(
+            await expect(strategyRegistry.connect(admin).addStrategy(randomStrategy.address)).to.be.revertedWith(
                 'StrategyRegistry::addStrategy - Strategy already exists'
             );
         });

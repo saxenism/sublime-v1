@@ -28,11 +28,7 @@ describe('Aave Yield', async () => {
         strategyRegistry = await deployHelper.core.deployStrategyRegistry();
 
         //initialize
-        savingsAccount.initialize(
-            admin.address,
-            strategyRegistry.address,
-            mockCreditLinesAddress.address
-        );
+        savingsAccount.initialize(admin.address, strategyRegistry.address, mockCreditLinesAddress.address);
         strategyRegistry.initialize(admin.address, 10);
         aaveYield = await deployHelper.core.deployAaveYield();
         await aaveYield
@@ -61,22 +57,14 @@ describe('Aave Yield', async () => {
         });
 
         it('should throw error when a random account tries to change savings account', async () => {
-            await expect(
-                aaveYield
-                    .connect(randomAccount)
-                    .updateSavingsAccount(randomAccount.address)
-            ).to.be.revertedWith('Ownable: caller is not the owner');
+            await expect(aaveYield.connect(randomAccount).updateSavingsAccount(randomAccount.address)).to.be.revertedWith(
+                'Ownable: caller is not the owner'
+            );
         });
 
         it('should throw error when a random account tries update params', async () => {
             await expect(
-                aaveYield
-                    .connect(randomAccount)
-                    .updateAaveAddresses(
-                        randomAccount.address,
-                        randomAccount.address,
-                        randomAccount.address
-                    )
+                aaveYield.connect(randomAccount).updateAaveAddresses(randomAccount.address, randomAccount.address, randomAccount.address)
             ).to.be.revertedWith('Ownable: caller is not the owner');
         });
 
@@ -88,12 +76,7 @@ describe('Aave Yield', async () => {
 
         it('should throw error when a random account tries to make emergency withdraw', async () => {
             await expect(
-                aaveYield
-                    .connect(randomAccount)
-                    .emergencyWithdraw(
-                        randomAccount.address,
-                        randomAccount.address
-                    )
+                aaveYield.connect(randomAccount).emergencyWithdraw(randomAccount.address, randomAccount.address)
             ).to.be.revertedWith('Ownable: caller is not the owner');
         });
     });

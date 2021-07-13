@@ -2,11 +2,11 @@
 
 pragma solidity 0.7.0;
 
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "../../interfaces/Invest/IyVault.sol";
+import '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
+import '../../interfaces/Invest/IyVault.sol';
 
-import "../../interfaces/Invest/IyVault.sol";
-import "./IController.sol";
+import '../../interfaces/Invest/IyVault.sol';
+import './IController.sol';
 
 /*
 
@@ -52,23 +52,23 @@ contract Strategy {
 
     // Controller only function for creating additional rewards from dust
     function withdraw(IERC20 _asset) external returns (uint256 balance) {
-        require(msg.sender == controller, "!controller");
+        require(msg.sender == controller, '!controller');
         balance = _asset.balanceOf(address(this));
         _asset.safeTransfer(controller, balance);
     }
 
     // Withdraw partial funds, normally used with a vault withdrawal
     function withdraw(uint256 _amount) external {
-        require(msg.sender == controller, "!controller");
+        require(msg.sender == controller, '!controller');
         address _vault = IController(controller).vaults(address(want));
-        require(_vault != address(0), "!vault"); // additional protection so we don't burn the funds
+        require(_vault != address(0), '!vault'); // additional protection so we don't burn the funds
 
         IERC20(want).safeTransfer(_vault, _amount);
     }
 
     // Withdraw all funds, normally used when migrating strategies
     function withdrawAll() external returns (uint256 balance) {
-        require(msg.sender == controller, "!controller");
+        require(msg.sender == controller, '!controller');
         balance = IERC20(want).balanceOf(address(this));
         address _vault = IController(controller).vaults(address(want));
         IERC20(want).safeTransfer(_vault, balance);
@@ -79,12 +79,12 @@ contract Strategy {
     }
 
     function setGovernance(address _governance) external {
-        require(msg.sender == governance, "!governance");
+        require(msg.sender == governance, '!governance');
         governance = _governance;
     }
 
     function setController(address _controller) external {
-        require(msg.sender == governance, "!governance");
+        require(msg.sender == governance, '!governance');
         controller = _controller;
     }
 }

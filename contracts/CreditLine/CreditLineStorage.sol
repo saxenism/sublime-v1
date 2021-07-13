@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.0;
 
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
+import '@openzeppelin/contracts/math/SafeMath.sol';
+import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 
 /**
  * @title Credit Line contract with Methods related to credit Line
@@ -15,16 +15,9 @@ contract CreditLineStorage is OwnableUpgradeable {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
-    enum creditLineStatus {
-        NOT_CREATED,
-        REQUESTED,
-        ACTIVE,
-        CLOSED,
-        CANCELLED,
-        LIQUIDATED
-    }
+    enum creditLineStatus {NOT_CREATED, REQUESTED, ACTIVE, CLOSED, CANCELLED, LIQUIDATED}
 
-    uint256 CreditLineCounter;
+    uint256 public CreditLineCounter;
 
     // assuming number of days in year is 365 more discussion is needed for this
     uint256 public constant yearInSeconds = 365 days;

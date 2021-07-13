@@ -6,7 +6,7 @@ import { AaveYield } from '../../typechain/AaveYield';
 import { CompoundYield } from '../../typechain/CompoundYield';
 import { YearnYield } from '../../typechain/YearnYield';
 import { PoolToken } from '../../typechain/PoolToken';
-import { CreditLine } from '@typechain/CreditLine';
+import { CreditLine } from '../../typechain/CreditLine';
 
 import { SavingsAccount__factory } from '../../typechain/factories/SavingsAccount__factory';
 import { StrategyRegistry__factory } from '../../typechain/factories/StrategyRegistry__factory';
@@ -29,26 +29,16 @@ export default class DeployCoreContracts {
         return await new SavingsAccount__factory(this._deployerSigner).deploy();
     }
 
-    public async getSavingsAccount(
-        savingsAccountAddress: Address
-    ): Promise<SavingsAccount> {
-        return await new SavingsAccount__factory(this._deployerSigner).attach(
-            savingsAccountAddress
-        );
+    public async getSavingsAccount(savingsAccountAddress: Address): Promise<SavingsAccount> {
+        return await new SavingsAccount__factory(this._deployerSigner).attach(savingsAccountAddress);
     }
 
     public async deployStrategyRegistry(): Promise<StrategyRegistry> {
-        return await new StrategyRegistry__factory(
-            this._deployerSigner
-        ).deploy();
+        return await new StrategyRegistry__factory(this._deployerSigner).deploy();
     }
 
-    public async getStrategyRegistry(
-        strategyRegistryAddress: Address
-    ): Promise<StrategyRegistry> {
-        return await new StrategyRegistry__factory(this._deployerSigner).attach(
-            strategyRegistryAddress
-        );
+    public async getStrategyRegistry(strategyRegistryAddress: Address): Promise<StrategyRegistry> {
+        return await new StrategyRegistry__factory(this._deployerSigner).attach(strategyRegistryAddress);
     }
 
     public async deployAaveYield(): Promise<AaveYield> {
@@ -56,33 +46,23 @@ export default class DeployCoreContracts {
     }
 
     public async getAaveYield(aaveYieldAddress: Address): Promise<AaveYield> {
-        return await new AaveYield__factory(this._deployerSigner).attach(
-            aaveYieldAddress
-        );
+        return await new AaveYield__factory(this._deployerSigner).attach(aaveYieldAddress);
     }
 
     public async deployCompoundYield(): Promise<CompoundYield> {
         return await new CompoundYield__factory(this._deployerSigner).deploy();
     }
 
-    public async getCompoundYield(
-        compoundYieldAddress: Address
-    ): Promise<CompoundYield> {
-        return await new CompoundYield__factory(this._deployerSigner).attach(
-            compoundYieldAddress
-        );
+    public async getCompoundYield(compoundYieldAddress: Address): Promise<CompoundYield> {
+        return await new CompoundYield__factory(this._deployerSigner).attach(compoundYieldAddress);
     }
 
     public async deployYearnYield(): Promise<YearnYield> {
         return await new YearnYield__factory(this._deployerSigner).deploy();
     }
 
-    public async getYearnYield(
-        yearnYieldAddress: Address
-    ): Promise<YearnYield> {
-        return await new YearnYield__factory(this._deployerSigner).attach(
-            yearnYieldAddress
-        );
+    public async getYearnYield(yearnYieldAddress: Address): Promise<YearnYield> {
+        return await new YearnYield__factory(this._deployerSigner).attach(yearnYieldAddress);
     }
 
     public async deployPoolToken(): Promise<PoolToken> {
@@ -90,9 +70,7 @@ export default class DeployCoreContracts {
     }
 
     public async getPoolToken(poolTokenAddress: Address): Promise<PoolToken> {
-        return await new PoolToken__factory(this._deployerSigner).attach(
-            poolTokenAddress
-        );
+        return await new PoolToken__factory(this._deployerSigner).attach(poolTokenAddress);
     }
 
     public async deployCreditLines(): Promise<CreditLine> {
@@ -100,8 +78,6 @@ export default class DeployCoreContracts {
     }
 
     public async getCreditLines(creditLinesAddress: Address): Promise<CreditLine> {
-        return await new CreditLine__factory(this._deployerSigner).attach(
-            creditLinesAddress
-        );
+        return await new CreditLine__factory(this._deployerSigner).attach(creditLinesAddress);
     }
 }

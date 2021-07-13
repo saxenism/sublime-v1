@@ -26,3 +26,5 @@ typechain/
 *.log
 
 flatten
+
+test.spec.ts

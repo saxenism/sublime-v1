@@ -27,23 +27,15 @@ describe('Compound Yield', async () => {
         strategyRegistry = await deployHelper.core.deployStrategyRegistry();
 
         //initialize
-        savingsAccount.initialize(
-            admin.address,
-            strategyRegistry.address,
-            mockCreditLinesAddress.address
-        );
+        savingsAccount.initialize(admin.address, strategyRegistry.address, mockCreditLinesAddress.address);
         strategyRegistry.initialize(admin.address, 10);
         compoundYield = await deployHelper.core.deployCompoundYield();
 
-        await compoundYield
-            .connect(admin)
-            .initialize(admin.address, savingsAccount.address);
+        await compoundYield.connect(admin).initialize(admin.address, savingsAccount.address);
     });
 
     it('Update Protocol Address', async () => {
-        await compoundYield
-            .connect(admin)
-            .updateProtocolAddresses(Contracts.DAI, Contracts.cDAI);
+        await compoundYield.connect(admin).updateProtocolAddresses(Contracts.DAI, Contracts.cDAI);
     });
 
     it('Check DAI Liquidity Token and it mapping', async () => {
@@ -61,32 +53,20 @@ describe('Compound Yield', async () => {
         });
 
         it('should throw error when a random account tries to change savings account', async () => {
-            await expect(
-                compoundYield
-                    .connect(randomAccount)
-                    .updateSavingsAccount(randomAccount.address)
-            ).to.be.revertedWith('Ownable: caller is not the owner');
+            await expect(compoundYield.connect(randomAccount).updateSavingsAccount(randomAccount.address)).to.be.revertedWith(
+                'Ownable: caller is not the owner'
+            );
         });
 
         it('should throw error when a random account tries update params', async () => {
             await expect(
-                compoundYield
-                    .connect(randomAccount)
-                    .updateProtocolAddresses(
-                        randomAccount.address,
-                        randomAccount.address
-                    )
+                compoundYield.connect(randomAccount).updateProtocolAddresses(randomAccount.address, randomAccount.address)
             ).to.be.revertedWith('Ownable: caller is not the owner');
         });
 
         it('should throw error when a random account tries to make emergency withdraw', async () => {
             await expect(
-                compoundYield
-                    .connect(randomAccount)
-                    .emergencyWithdraw(
-                        randomAccount.address,
-                        randomAccount.address
-                    )
+                compoundYield.connect(randomAccount).emergencyWithdraw(randomAccount.address, randomAccount.address)
             ).to.be.revertedWith('Ownable: caller is not the owner');
         });
     });

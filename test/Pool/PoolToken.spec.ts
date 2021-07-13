@@ -18,13 +18,7 @@ describe('Pool Token', async () => {
         [proxyAdmin, admin, dummyPool] = await ethers.getSigners();
         const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
         poolToken = await deployHelper.pool.deployPoolToken();
-        await poolToken
-            .connect(admin)
-            ['initialize(string,string,address)'](
-                poolTokenName,
-                poolTokenSymbol,
-                dummyPool.address
-            );
+        await poolToken.connect(admin)['initialize(string,string,address)'](poolTokenName, poolTokenSymbol, dummyPool.address);
     });
 
     it('Check Params', async () => {

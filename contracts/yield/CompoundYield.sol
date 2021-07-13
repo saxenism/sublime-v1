@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.7.0;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
+import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
+import '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
+import '@openzeppelin/contracts/math/SafeMath.sol';
 
-import "../interfaces/IYield.sol";
-import "../interfaces/Invest/ICEther.sol";
-import "../interfaces/Invest/ICToken.sol";
+import '../interfaces/IYield.sol';
+import '../interfaces/Invest/ICEther.sol';
+import '../interfaces/Invest/ICToken.sol';
+
+import 'hardhat/console.sol';
 
 /**
  * @title Yield contract
@@ -26,49 +28,30 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable {
     mapping(address => address) public override liquidityToken;
 
     modifier onlySavingsAccount {
-        require(
-            _msgSender() == savingsAccount,
-            "Invest: Only savings account can invoke"
-        );
+        require(_msgSender() == savingsAccount, 'Invest: Only savings account can invoke');
         _;
     }
 
-    function initialize(address _owner, address payable _savingsAccount)
-        public
-        initializer
-    {
+    function initialize(address _owner, address payable _savingsAccount) public initializer {
         __Ownable_init();
         super.transferOwnership(_owner);
 
-        require(_savingsAccount != address(0), "Invest: zero address");
+        require(_savingsAccount != address(0), 'Invest: zero address');
         savingsAccount = _savingsAccount;
     }
 
-    function updateSavingsAccount(address payable _savingsAccount)
-        external
-        onlyOwner
-    {
-        require(_savingsAccount != address(0), "Invest: zero address");
+    function updateSavingsAccount(address payable _savingsAccount) external onlyOwner {
+        require(_savingsAccount != address(0), 'Invest: zero address');
         savingsAccount = _savingsAccount;
     }
 
-    function updateProtocolAddresses(address _asset, address _to)
-        external
-        onlyOwner
-    {
-        require(_to != address(0), "Invest: zero address");
-        require(
-            liquidityToken[_asset] == address(0),
-            "Invest: Cannot update existing address"
-        );
+    function updateProtocolAddresses(address _asset, address _to) external onlyOwner {
+        require(_to != address(0), 'Invest: zero address');
+        require(liquidityToken[_asset] == address(0), 'Invest: Cannot update existing address');
         liquidityToken[_asset] = _to;
     }
 
-    function emergencyWithdraw(address _asset, address payable _wallet)
-        external
-        onlyOwner
-        returns (uint256 received)
-    {
+    function emergencyWithdraw(address _asset, address payable _wallet) external onlyOwner returns (uint256 received) {
         address investedTo = liquidityToken[_asset];
         uint256 amount = IERC20(investedTo).balanceOf(address(this));
 
@@ -93,18 +76,12 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable {
         address user,
         address asset,
         uint256 amount
-    )
-        public
-        payable
-        override
-        onlySavingsAccount
-        returns (uint256 sharesReceived)
-    {
-        require(amount != 0, "Invest: amount");
+    ) public payable override onlySavingsAccount returns (uint256 sharesReceived) {
+        require(amount != 0, 'Invest: amount');
 
         address investedTo = liquidityToken[asset];
         if (asset == address(0)) {
-            require(msg.value == amount, "Invest: ETH amount");
+            require(msg.value == amount, 'Invest: ETH amount');
             sharesReceived = _depositETH(investedTo, amount);
         } else {
             IERC20(asset).safeTransferFrom(user, address(this), amount);
@@ -119,13 +96,8 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable {
      * @param amount the amount of asset
      * @return received amount of tokens received
      **/
-    function unlockTokens(address asset, uint256 amount)
-        public
-        override
-        onlySavingsAccount
-        returns (uint256 received)
-    {
-        require(amount != 0, "Invest: amount");
+    function unlockTokens(address asset, uint256 amount) public override onlySavingsAccount returns (uint256 received) {
+        require(amount != 0, 'Invest: amount');
         address investedTo = liquidityToken[asset];
 
         if (asset == address(0)) {
@@ -139,17 +111,12 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable {
         emit UnlockedTokens(asset, received);
     }
 
-    function unlockShares(address asset, uint256 amount)
-        public
-        override
-        onlySavingsAccount
-        returns (uint256)
-    {
+    function unlockShares(address asset, uint256 amount) public override onlySavingsAccount returns (uint256) {
         if (amount == 0) {
             return 0;
         }
 
-        require(asset != address(0), "Asset address cannot be address(0)");
+        require(asset != address(0), 'Asset address cannot be address(0)');
         IERC20(asset).safeTransfer(savingsAccount, amount);
 
         emit UnlockedShares(asset, amount);
@@ -162,40 +129,26 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable {
      * @param asset the address of token locked
      * @return amount amount of underlying tokens
      **/
-    function getTokensForShares(uint256 shares, address asset)
-        public
-        override
-        returns (uint256 amount)
-    {
+    function getTokensForShares(uint256 shares, address asset) public override returns (uint256 amount) {
         //balanceOfUnderlying returns underlying balance for total shares
         if (shares == 0) return 0;
         address cToken = liquidityToken[asset];
-        amount = ICToken(cToken)
-            .balanceOfUnderlying(address(this))
-            .mul(shares)
-            .div(IERC20(cToken).balanceOf(address(this)));
+        amount = ICToken(cToken).balanceOfUnderlying(address(this)).mul(shares).div(
+            IERC20(cToken).balanceOf(address(this))
+        );
     }
 
-    function getSharesForTokens(uint256 amount, address asset)
-        external
-        override
-        returns (uint256 shares)
-    {
+    function getSharesForTokens(uint256 amount, address asset) external override returns (uint256 shares) {
         shares = (amount.mul(1e18)).div(getTokensForShares(1e18, asset));
     }
 
-    function _depositETH(address cToken, uint256 amount)
-        internal
-        returns (uint256 sharesReceived)
-    {
+    function _depositETH(address cToken, uint256 amount) internal returns (uint256 sharesReceived) {
         uint256 initialCTokenBalance = IERC20(cToken).balanceOf(address(this));
 
         //mint cToken
         ICEther(cToken).mint{value: amount}();
 
-        sharesReceived = IERC20(cToken).balanceOf(address(this)).sub(
-            initialCTokenBalance
-        );
+        sharesReceived = IERC20(cToken).balanceOf(address(this)).sub(initialCTokenBalance);
     }
 
     function _depositERC20(
@@ -204,23 +157,16 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable {
         uint256 amount
     ) internal returns (uint256 sharesReceived) {
         uint256 initialCTokenBalance = IERC20(cToken).balanceOf(address(this));
-
         //mint cToken
         IERC20(asset).approve(cToken, amount);
-        require(ICToken(cToken).mint(amount) == 0, "Error in minting tokens");
-
-        sharesReceived = IERC20(cToken).balanceOf(address(this)).sub(
-            initialCTokenBalance
-        );
+        require(ICToken(cToken).mint(amount) == 0, 'Error in minting tokens');
+        sharesReceived = IERC20(cToken).balanceOf(address(this)).sub(initialCTokenBalance);
     }
 
-    function _withdrawETH(address cToken, uint256 amount)
-        internal
-        returns (uint256 received)
-    {
+    function _withdrawETH(address cToken, uint256 amount) internal returns (uint256 received) {
         uint256 ethBalance = address(this).balance;
 
-        require(ICToken(cToken).redeem(amount) == 0, "Error in unwrapping");
+        require(ICToken(cToken).redeem(amount) == 0, 'Error in unwrapping');
 
         received = address(this).balance.sub(ethBalance);
     }
@@ -232,11 +178,9 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable {
     ) internal returns (uint256 tokensReceived) {
         uint256 initialAssetBalance = IERC20(asset).balanceOf(address(this));
 
-        require(ICToken(cToken).redeem(amount) == 0, "Error in unwrapping");
+        require(ICToken(cToken).redeem(amount) == 0, 'Error in unwrapping');
 
-        tokensReceived = IERC20(asset).balanceOf(address(this)).sub(
-            initialAssetBalance
-        );
+        tokensReceived = IERC20(asset).balanceOf(address(this)).sub(initialAssetBalance);
     }
 
     //to apply check
