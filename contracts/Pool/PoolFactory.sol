@@ -1,24 +1,24 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.0;
 
-import "../Proxy.sol";
-import "../interfaces/IPoolFactory.sol";
-import "../interfaces/IVerification.sol";
-import "../interfaces/IStrategyRegistry.sol";
-import "../interfaces/IRepayment.sol";
-import "../interfaces/IPriceOracle.sol";
-import "./PoolToken.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import '../Proxy.sol';
+import '../interfaces/IPoolFactory.sol';
+import '../interfaces/IVerification.sol';
+import '../interfaces/IStrategyRegistry.sol';
+import '../interfaces/IRepayment.sol';
+import '../interfaces/IPriceOracle.sol';
+import './PoolToken.sol';
+import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 
 contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
-    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
-    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    bytes32 public constant MINTER_ROLE = keccak256('MINTER_ROLE');
+    bytes32 public constant PAUSER_ROLE = keccak256('PAUSER_ROLE');
 
     /*
-    * @notice Used to define limits for the Open Borrow Pool parameters
-    * @param min the minimum threshold for the parameter
-    * @param max the maximum threshold for the parameter
-    */
+     * @notice Used to define limits for the Open Borrow Pool parameters
+     * @param min the minimum threshold for the parameter
+     * @param max the maximum threshold for the parameter
+     */
     struct Limits {
         // TODO: Optimize to uint128 or even less
         uint256 min;
@@ -47,210 +47,190 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     uint256 public override poolCancelPenalityFraction;
 
     /*
-    * @notice Used to mark assets supported for borrowing
-    */
+     * @notice Used to mark assets supported for borrowing
+     */
     mapping(address => bool) isBorrowToken;
 
     /*
-    * @notice Used to mark supported collateral assets
-    */
+     * @notice Used to mark supported collateral assets
+     */
     mapping(address => bool) isCollateralToken;
 
     /*
-    * @notice Used to keep track of valid pool addresses
-    */
+     * @notice Used to keep track of valid pool addresses
+     */
     mapping(address => bool) public override openBorrowPoolRegistry;
 
-
     /*
-    * @notice Used to set the min/max borrow amount for Open Borrow Pools
-    */
+     * @notice Used to set the min/max borrow amount for Open Borrow Pools
+     */
     Limits poolSizeLimit;
 
     /*
-    * @notice Used to set the min/max collateral ratio for Open Borrow Pools
-    */
+     * @notice Used to set the min/max collateral ratio for Open Borrow Pools
+     */
     Limits collateralRatioLimit;
 
     /*
-    * @notice Used to set the min/max borrow rates (interest rate provided by borrower) for Open Borrow Pools
-    */
+     * @notice Used to set the min/max borrow rates (interest rate provided by borrower) for Open Borrow Pools
+     */
     Limits borrowRateLimit;
 
     /*
-    * @notice used to set the min/max repayment interval for Open Borrow Pools
-    */
+     * @notice used to set the min/max repayment interval for Open Borrow Pools
+     */
     Limits repaymentIntervalLimit;
 
     /*
-    * @notice used to set the min/max number of repayment intervals for Open Borrow Pools
-    */
+     * @notice used to set the min/max number of repayment intervals for Open Borrow Pools
+     */
     Limits noOfRepaymentIntervalsLimit;
 
     /*
-    * @notice emitted when a Open Borrow Pool is created
-    * @param pool the address of the Open Borrow Pool
-    * @param borrower the address of the borrower who created the pool
-    * @param poolToken the address of the corresponding pool token for the Open Borrow Pool
-    */
+     * @notice emitted when a Open Borrow Pool is created
+     * @param pool the address of the Open Borrow Pool
+     * @param borrower the address of the borrower who created the pool
+     * @param poolToken the address of the corresponding pool token for the Open Borrow Pool
+     */
     event PoolCreated(address pool, address borrower, address poolToken);
 
-    
     event PoolInitSelectorUpdated(bytes4 updatedSelector);
     event PoolTokenInitFuncSelector(bytes4 updatedSelector);
 
     /*
-    * @notice emitted when the Pool.sol logic is updated
-    * @param updatedPoolLogic the address of the new Pool logic contract
-    */
+     * @notice emitted when the Pool.sol logic is updated
+     * @param updatedPoolLogic the address of the new Pool logic contract
+     */
     event PoolLogicUpdated(address updatedPoolLogic);
 
     /*
-    * @notice emitted when the user registry is updated
-    * @param updatedBorrowerRegistry address of the contract storing the user registry
-    */
+     * @notice emitted when the user registry is updated
+     * @param updatedBorrowerRegistry address of the contract storing the user registry
+     */
     event UserRegistryUpdated(address updatedBorrowerRegistry);
 
     /*
-    * @notice emitted when the strategy registry is updated
-    * @param updatedStrategyRegistry address of the contract storing the updated strategy registry
-    */
+     * @notice emitted when the strategy registry is updated
+     * @param updatedStrategyRegistry address of the contract storing the updated strategy registry
+     */
     event StrategyRegistryUpdated(address updatedStrategyRegistry);
 
     /*
-    * @notice emitted when the Repayments.sol logic is updated
-    * @param updatedRepaymentImpl the address of the new implementation of the Repayments logic
-    */
+     * @notice emitted when the Repayments.sol logic is updated
+     * @param updatedRepaymentImpl the address of the new implementation of the Repayments logic
+     */
     event RepaymentImplUpdated(address updatedRepaymentImpl);
 
     /*
-    * @notice emitted when the PoolToken.sol logic is updated
-    * @param updatedPoolTokenImpl address of the new implementation of the PoolToken logic
-    */
+     * @notice emitted when the PoolToken.sol logic is updated
+     * @param updatedPoolTokenImpl address of the new implementation of the PoolToken logic
+     */
     event PoolTokenImplUpdated(address updatedPoolTokenImpl);
 
     /*
-    * @notice emitted when the PriceOracle.sol is updated
-    * @param updatedPriceOracle address of the new implementation of the PriceOracle
-    */
+     * @notice emitted when the PriceOracle.sol is updated
+     * @param updatedPriceOracle address of the new implementation of the PriceOracle
+     */
     event PriceOracleUpdated(address updatedPriceOracle);
 
     /*
-    * @notice emitted when the collection period parameter for Open Borrow Pools is updated
-    * @param updatedCollectionPeriod the new value of the collection period for Open Borrow Pools
-    */
+     * @notice emitted when the collection period parameter for Open Borrow Pools is updated
+     * @param updatedCollectionPeriod the new value of the collection period for Open Borrow Pools
+     */
     event CollectionPeriodUpdated(uint256 updatedCollectionPeriod);
 
-    event MatchCollateralRatioIntervalUpdated(
-        uint256 updatedMatchCollateralRatioInterval
-    );
+    event MatchCollateralRatioIntervalUpdated(uint256 updatedMatchCollateralRatioInterval);
 
     /*
-    * @notice emitted when the marginCallDuration variable is updated
-    * @param updatedMarginCallDuration Duration (in seconds) for which a margin call is active
-    */
+     * @notice emitted when the marginCallDuration variable is updated
+     * @param updatedMarginCallDuration Duration (in seconds) for which a margin call is active
+     */
     event MarginCallDurationUpdated(uint256 updatedMarginCallDuration);
 
     /*
-    * @notice emitted when collateralVolatilityThreshold variable is updated
-    * @param updatedCollateralVolatilityThreshold Updated value of collateralVolatilityThreshold
-    */
-    event CollateralVolatilityThresholdUpdated(
-        uint256 updatedCollateralVolatilityThreshold
-    );
+     * @notice emitted when collateralVolatilityThreshold variable is updated
+     * @param updatedCollateralVolatilityThreshold Updated value of collateralVolatilityThreshold
+     */
+    event CollateralVolatilityThresholdUpdated(uint256 updatedCollateralVolatilityThreshold);
 
     /*
-    * @notice emitted when gracePeriodPenaltyFraction variable is updated
-    * @param updatedGracePeriodPenaltyFraction updated value of gracePeriodPenaltyFraction
-    */
-    event GracePeriodPenaltyFractionUpdated(
-        uint256 updatedGracePeriodPenaltyFraction
-    );
+     * @notice emitted when gracePeriodPenaltyFraction variable is updated
+     * @param updatedGracePeriodPenaltyFraction updated value of gracePeriodPenaltyFraction
+     */
+    event GracePeriodPenaltyFractionUpdated(uint256 updatedGracePeriodPenaltyFraction);
 
     /*
-    * @notice emitted when liquidatorRewardFraction variable is updated
-    * @param updatedLiquidatorRewardFraction updated value of liquidatorRewardFraction
-    */
-    event LiquidatorRewardFractionUpdated(
-        uint256 updatedLiquidatorRewardFraction
-    );
+     * @notice emitted when liquidatorRewardFraction variable is updated
+     * @param updatedLiquidatorRewardFraction updated value of liquidatorRewardFraction
+     */
+    event LiquidatorRewardFractionUpdated(uint256 updatedLiquidatorRewardFraction);
 
     /*
-    * @notice emitted when threhsolds for one of the parameters (poolSizeLimit, collateralRatioLimit, borrowRateLimit, repaymentIntervalLimit, noOfRepaymentIntervalsLimit) is updated
-    * @param limitType specifies the parameter whose limits are being updated
-    * @param max maximum threshold value for limitType
-    * @param min minimum threshold value for limitType
-    */
+     * @notice emitted when threhsolds for one of the parameters (poolSizeLimit, collateralRatioLimit, borrowRateLimit, repaymentIntervalLimit, noOfRepaymentIntervalsLimit) is updated
+     * @param limitType specifies the parameter whose limits are being updated
+     * @param max maximum threshold value for limitType
+     * @param min minimum threshold value for limitType
+     */
     event LimitsUpdated(string limitType, uint256 max, uint256 min);
 
     /*
-    * @notice emitted when the list of supported borrow assets is updated
-    * @param borrowToken address of the borrow asset
-    * @param isSupported true if borrowToken is a valid borrow asset, false if borrowToken is an invalid borrow asset
-    */
+     * @notice emitted when the list of supported borrow assets is updated
+     * @param borrowToken address of the borrow asset
+     * @param isSupported true if borrowToken is a valid borrow asset, false if borrowToken is an invalid borrow asset
+     */
     event BorrowTokenUpdated(address borrowToken, bool isSupported);
 
     /*
-    * @notice emitted when the list of supported collateral assets is updated
-    * @param collateralToken address of the collateral asset
-    * @param isSupported true if collateralToken is a valid collateral asset, false if collateralToken is an invalid collateral asset
-    */
+     * @notice emitted when the list of supported collateral assets is updated
+     * @param collateralToken address of the collateral asset
+     * @param isSupported true if collateralToken is a valid collateral asset, false if collateralToken is an invalid collateral asset
+     */
     event CollateralTokenUpdated(address collateralToken, bool isSupported);
 
     /*
-    * @notice functions affected by this modifier can only be invoked by the Pool
-    */
+     * @notice functions affected by this modifier can only be invoked by the Pool
+     */
     modifier onlyPool() {
-        require(
-            openBorrowPoolRegistry[msg.sender],
-            "PoolFactory::onlyPool - Only pool can destroy itself"
-        );
+        require(openBorrowPoolRegistry[msg.sender], 'PoolFactory::onlyPool - Only pool can destroy itself');
         _;
     }
 
-
     /*
-    * @notice functions affected by this modifier can only be invoked by the borrow of the Pool
-    */
+     * @notice functions affected by this modifier can only be invoked by the borrow of the Pool
+     */
     modifier onlyBorrower() {
         require(
             IVerification(userRegistry).isUser(msg.sender),
-            "PoolFactory::onlyBorrower - Only a valid Borrower can create Pool"
+            'PoolFactory::onlyBorrower - Only a valid Borrower can create Pool'
         );
         _;
     }
 
-
     /*
-    * @notice returns the owner of the pool
-    */
-    function owner()
-        public
-        view
-        override(IPoolFactory, OwnableUpgradeable)
-        returns (address)
-    {
+     * @notice returns the owner of the pool
+     */
+    function owner() public view override(IPoolFactory, OwnableUpgradeable) returns (address) {
         return OwnableUpgradeable.owner();
     }
 
     /*
-    * @notice invoked during deployment
-    * @param _userRegistry
-    * @param _strategyRegistry
-    * @param _admin
-    * @param _collectionPeriod
-    * @param _matchCollateralRatioInterval
-    * @param _marginCallDuration
-    * @param _collateralVolatilityThreshold
-    * @param _gracePeriodPenaltyFraction
-    * @param _poolInitFuncSelector
-    * @param _poolTokenInitFuncSelector
-    * @param _liquidatorRewardFraction
-    * @param _priceOracle
-    * @param _savingsAccount
-    * @param _extension
-    * @param _poolCancelPenaltyFraction
-    */
+     * @notice invoked during deployment
+     * @param _userRegistry
+     * @param _strategyRegistry
+     * @param _admin
+     * @param _collectionPeriod
+     * @param _matchCollateralRatioInterval
+     * @param _marginCallDuration
+     * @param _collateralVolatilityThreshold
+     * @param _gracePeriodPenaltyFraction
+     * @param _poolInitFuncSelector
+     * @param _poolTokenInitFuncSelector
+     * @param _liquidatorRewardFraction
+     * @param _priceOracle
+     * @param _savingsAccount
+     * @param _extension
+     * @param _poolCancelPenaltyFraction
+     */
 
     function initialize(
         address _userRegistry,
@@ -291,11 +271,11 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     }
 
     /*
-    * @notice invoked by admin to update logic for pool, repayment, and pool token contracts
-    * @param _poolImpl Address of new pool contract
-    * @param _repaymentImpl Address of new repayment contract
-    * @param _poolTokenImpl address of new pool token contract
-    */
+     * @notice invoked by admin to update logic for pool, repayment, and pool token contracts
+     * @param _poolImpl Address of new pool contract
+     * @param _repaymentImpl Address of new repayment contract
+     * @param _poolTokenImpl address of new pool token contract
+     */
     function setImplementations(
         address _poolImpl,
         address _repaymentImpl,
@@ -313,20 +293,20 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     // check _collateralAmount
     // check _salt
     /*
-    * @notice invoked when a new borrow pool is created. deploys a new pool for every borrow request
-    * @param _poolSize loan amount requested
-    * @param _minBorrowAmount minimum borrow amount for the loan to become active - expressed as a fraction of _poolSize
-    * @param _borrowTokenType borrow asset requested
-    * @param _collateralTokenType collateral asset requested
-    * @param _collateralRatio ideal pool collateral ratio set by the borrower
-    * @param _borrowRate interest rate provided by the borrower
-    * @param _repaymentInterval interval between the last dates of two repayment cycles
-    * @param _noOfRepaymentIntervals number of repayments to be made during the duration of the loan
-    * @param _poolSavingsStrategy savings strategy selected for the pool collateral
-    * @param _collateralAmount collateral amount deposited
-    * @param _transferFromSavingsAccount if true, initial collateral is transferred from borrower's savings account, if false, borrower transfers initial collateral deposit from wallet
-    * @param _salt
-    */
+     * @notice invoked when a new borrow pool is created. deploys a new pool for every borrow request
+     * @param _poolSize loan amount requested
+     * @param _minBorrowAmount minimum borrow amount for the loan to become active - expressed as a fraction of _poolSize
+     * @param _borrowTokenType borrow asset requested
+     * @param _collateralTokenType collateral asset requested
+     * @param _collateralRatio ideal pool collateral ratio set by the borrower
+     * @param _borrowRate interest rate provided by the borrower
+     * @param _repaymentInterval interval between the last dates of two repayment cycles
+     * @param _noOfRepaymentIntervals number of repayments to be made during the duration of the loan
+     * @param _poolSavingsStrategy savings strategy selected for the pool collateral
+     * @param _collateralAmount collateral amount deposited
+     * @param _transferFromSavingsAccount if true, initial collateral is transferred from borrower's savings account, if false, borrower transfers initial collateral deposit from wallet
+     * @param _salt
+     */
     function createPool(
         uint256 _poolSize,
         uint256 _minBorrowAmount,
@@ -341,22 +321,10 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         bool _transferFromSavingsAccount,
         bytes32 _salt
     ) external payable onlyBorrower {
-        require(
-            _minBorrowAmount <= _poolSize,
-            "PoolFactory::createPool - invalid min borrow amount"
-        );
-        require(
-            collateralVolatilityThreshold <= _collateralRatio,
-            "PoolFactory:createPool - Invalid collateral ratio"
-        );
-        require(
-            isBorrowToken[_borrowTokenType],
-            "PoolFactory::createPool - Invalid borrow token type"
-        );
-        require(
-            isCollateralToken[_collateralTokenType],
-            "PoolFactory::createPool - Invalid collateral token type"
-        );
+        require(_minBorrowAmount <= _poolSize, 'PoolFactory::createPool - invalid min borrow amount');
+        require(collateralVolatilityThreshold <= _collateralRatio, 'PoolFactory:createPool - Invalid collateral ratio');
+        require(isBorrowToken[_borrowTokenType], 'PoolFactory::createPool - Invalid borrow token type');
+        require(isCollateralToken[_collateralTokenType], 'PoolFactory::createPool - Invalid collateral token type');
         address[] memory tokens = new address[](2);
         tokens[0] = _collateralTokenType;
         tokens[1] = _borrowTokenType;
@@ -366,43 +334,27 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         );
         require(
             IStrategyRegistry(strategyRegistry).registry(_poolSavingsStrategy),
-            "PoolFactory::createPool - Invalid strategy"
+            'PoolFactory::createPool - Invalid strategy'
         );
         require(
             isWithinLimits(_poolSize, poolSizeLimit.min, poolSizeLimit.max),
-            "PoolFactory::createPool - PoolSize not within limits"
+            'PoolFactory::createPool - PoolSize not within limits'
         );
         require(
-            isWithinLimits(
-                _collateralRatio,
-                collateralRatioLimit.min,
-                collateralRatioLimit.max
-            ),
-            "PoolFactory::createPool - Collateral Ratio not within limits"
+            isWithinLimits(_collateralRatio, collateralRatioLimit.min, collateralRatioLimit.max),
+            'PoolFactory::createPool - Collateral Ratio not within limits'
         );
         require(
-            isWithinLimits(
-                _borrowRate,
-                borrowRateLimit.min,
-                borrowRateLimit.max
-            ),
-            "PoolFactory::createPool - Borrow rate not within limits"
+            isWithinLimits(_borrowRate, borrowRateLimit.min, borrowRateLimit.max),
+            'PoolFactory::createPool - Borrow rate not within limits'
         );
         require(
-            isWithinLimits(
-                _noOfRepaymentIntervals,
-                noOfRepaymentIntervalsLimit.min,
-                noOfRepaymentIntervalsLimit.max
-            ),
-            "PoolFactory::createPool - Loan duration not within limits"
+            isWithinLimits(_noOfRepaymentIntervals, noOfRepaymentIntervalsLimit.min, noOfRepaymentIntervalsLimit.max),
+            'PoolFactory::createPool - Loan duration not within limits'
         );
         require(
-            isWithinLimits(
-                _repaymentInterval,
-                repaymentIntervalLimit.min,
-                repaymentIntervalLimit.max
-            ),
-            "PoolFactory::createPool - Repayment interval not within limits"
+            isWithinLimits(_repaymentInterval, repaymentIntervalLimit.min, repaymentIntervalLimit.max),
+            'PoolFactory::createPool - Repayment interval not within limits'
         );
         bytes memory data =
             abi.encodeWithSelector(
@@ -425,24 +377,14 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
 
         bytes32 salt = keccak256(abi.encodePacked(_salt, msg.sender));
         bytes memory bytecode =
-            abi.encodePacked(
-                type(SublimeProxy).creationCode,
-                abi.encode(poolImpl, address(0x01), data)
-            );
-        uint256 amount =
-            _collateralTokenType == address(0) ? _collateralAmount : 0;
+            abi.encodePacked(type(SublimeProxy).creationCode, abi.encode(poolImpl, address(0x01), data));
+        uint256 amount = _collateralTokenType == address(0) ? _collateralAmount : 0;
 
         address pool = _deploy(amount, salt, bytecode);
 
         bytes memory tokenData =
-            abi.encodeWithSelector(
-                poolTokenInitFuncSelector,
-                "Open Borrow Pool Tokens",
-                "OBPT",
-                pool
-            );
-        address poolToken =
-            address(new SublimeProxy(poolTokenImpl, address(0), tokenData));
+            abi.encodeWithSelector(poolTokenInitFuncSelector, 'Open Borrow Pool Tokens', 'OBPT', pool);
+        address poolToken = address(new SublimeProxy(poolTokenImpl, address(0), tokenData));
         IPool(pool).setPoolToken(poolToken);
         openBorrowPoolRegistry[pool] = true;
         emit PoolCreated(pool, msg.sender, poolToken);
@@ -467,20 +409,20 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         bytes32 salt,
         bytes memory bytecode
     ) internal returns (address addr) {
-        require(bytecode.length != 0, "Create2: bytecode length is zero");
+        require(bytecode.length != 0, 'Create2: bytecode length is zero');
         // solhint-disable-next-line no-inline-assembly
         assembly {
             addr := create2(amount, add(bytecode, 0x20), mload(bytecode), salt)
         }
-        require(addr != address(0), "Create2: Failed on deploy");
+        require(addr != address(0), 'Create2: Failed on deploy');
     }
 
     /*
-    * @notice invoked to check if pool parameters are within thresholds
-    * @param _value supplied value of the parameter
-    * @param _min minimum threshold of the parameter
-    * @param _max maximum threshold of the parameter
-    */
+     * @notice invoked to check if pool parameters are within thresholds
+     * @param _value supplied value of the parameter
+     * @param _min minimum threshold of the parameter
+     * @param _max maximum threshold of the parameter
+     */
     function isWithinLimits(
         uint256 _value,
         uint256 _min,
@@ -501,18 +443,12 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         delete openBorrowPoolRegistry[msg.sender];
     }
 
-    function updateSupportedBorrowTokens(
-        address _borrowToken,
-        bool _isSupported
-    ) external onlyOwner {
+    function updateSupportedBorrowTokens(address _borrowToken, bool _isSupported) external onlyOwner {
         isBorrowToken[_borrowToken] = _isSupported;
         emit BorrowTokenUpdated(_borrowToken, _isSupported);
     }
 
-    function updateSupportedCollateralTokens(
-        address _collateralToken,
-        bool _isSupported
-    ) external onlyOwner {
+    function updateSupportedCollateralTokens(address _collateralToken, bool _isSupported) external onlyOwner {
         isCollateralToken[_collateralToken] = _isSupported;
         emit CollateralTokenUpdated(_collateralToken, _isSupported);
     }
@@ -522,10 +458,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         emit PoolInitSelectorUpdated(_functionId);
     }
 
-    function updatePoolTokenInitFuncSelector(bytes4 _functionId)
-        external
-        onlyOwner
-    {
+    function updatePoolTokenInitFuncSelector(bytes4 _functionId) external onlyOwner {
         poolTokenInitFuncSelector = _functionId;
         emit PoolTokenInitFuncSelector(_functionId);
     }
@@ -540,10 +473,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         emit UserRegistryUpdated(_userRegistry);
     }
 
-    function updateStrategyRegistry(address _strategyRegistry)
-        external
-        onlyOwner
-    {
+    function updateStrategyRegistry(address _strategyRegistry) external onlyOwner {
         strategyRegistry = _strategyRegistry;
         emit StrategyRegistryUpdated(_strategyRegistry);
     }
@@ -563,91 +493,58 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         emit PriceOracleUpdated(_priceOracle);
     }
 
-    function updateCollectionPeriod(uint256 _collectionPeriod)
-        external
-        onlyOwner
-    {
+    function updateCollectionPeriod(uint256 _collectionPeriod) external onlyOwner {
         collectionPeriod = _collectionPeriod;
         emit CollectionPeriodUpdated(_collectionPeriod);
     }
 
-    function updateMatchCollateralRatioInterval(
-        uint256 _matchCollateralRatioInterval
-    ) external onlyOwner {
+    function updateMatchCollateralRatioInterval(uint256 _matchCollateralRatioInterval) external onlyOwner {
         matchCollateralRatioInterval = _matchCollateralRatioInterval;
         emit MatchCollateralRatioIntervalUpdated(_matchCollateralRatioInterval);
     }
 
-    function updateMarginCallDuration(uint256 _marginCallDuration)
-        external
-        onlyOwner
-    {
+    function updateMarginCallDuration(uint256 _marginCallDuration) external onlyOwner {
         marginCallDuration = _marginCallDuration;
         emit MarginCallDurationUpdated(_marginCallDuration);
     }
 
-    function updateCollateralVolatilityThreshold(
-        uint256 _collateralVolatilityThreshold
-    ) external onlyOwner {
+    function updateCollateralVolatilityThreshold(uint256 _collateralVolatilityThreshold) external onlyOwner {
         collateralVolatilityThreshold = _collateralVolatilityThreshold;
-        emit CollateralVolatilityThresholdUpdated(
-            _collateralVolatilityThreshold
-        );
+        emit CollateralVolatilityThresholdUpdated(_collateralVolatilityThreshold);
     }
 
-    function updateGracePeriodPenaltyFraction(
-        uint256 _gracePeriodPenaltyFraction
-    ) external onlyOwner {
+    function updateGracePeriodPenaltyFraction(uint256 _gracePeriodPenaltyFraction) external onlyOwner {
         gracePeriodPenaltyFraction = _gracePeriodPenaltyFraction;
         emit GracePeriodPenaltyFractionUpdated(_gracePeriodPenaltyFraction);
     }
 
-
-    function updateLiquidatorRewardFraction(uint256 _liquidatorRewardFraction)
-        external
-        onlyOwner
-    {
+    function updateLiquidatorRewardFraction(uint256 _liquidatorRewardFraction) external onlyOwner {
         liquidatorRewardFraction = _liquidatorRewardFraction;
         emit LiquidatorRewardFractionUpdated(_liquidatorRewardFraction);
     }
 
-    function updatePoolSizeLimit(uint256 _min, uint256 _max)
-        external
-        onlyOwner
-    {
+    function updatePoolSizeLimit(uint256 _min, uint256 _max) external onlyOwner {
         poolSizeLimit = Limits(_min, _max);
-        emit LimitsUpdated("PoolSize", _min, _max);
+        emit LimitsUpdated('PoolSize', _min, _max);
     }
 
-    function updateCollateralRatioLimit(uint256 _min, uint256 _max)
-        external
-        onlyOwner
-    {
+    function updateCollateralRatioLimit(uint256 _min, uint256 _max) external onlyOwner {
         collateralRatioLimit = Limits(_min, _max);
-        emit LimitsUpdated("CollateralRatio", _min, _max);
+        emit LimitsUpdated('CollateralRatio', _min, _max);
     }
 
-    function updateBorrowRateLimit(uint256 _min, uint256 _max)
-        external
-        onlyOwner
-    {
+    function updateBorrowRateLimit(uint256 _min, uint256 _max) external onlyOwner {
         borrowRateLimit = Limits(_min, _max);
-        emit LimitsUpdated("BorrowRate", _min, _max);
+        emit LimitsUpdated('BorrowRate', _min, _max);
     }
 
-    function updateRepaymentIntervalLimit(uint256 _min, uint256 _max)
-        external
-        onlyOwner
-    {
+    function updateRepaymentIntervalLimit(uint256 _min, uint256 _max) external onlyOwner {
         repaymentIntervalLimit = Limits(_min, _max);
-        emit LimitsUpdated("RepaymentInterval", _min, _max);
+        emit LimitsUpdated('RepaymentInterval', _min, _max);
     }
 
-    function updateNoOfRepaymentIntervalsLimit(uint256 _min, uint256 _max)
-        external
-        onlyOwner
-    {
+    function updateNoOfRepaymentIntervalsLimit(uint256 _min, uint256 _max) external onlyOwner {
         noOfRepaymentIntervalsLimit = Limits(_min, _max);
-        emit LimitsUpdated("NoOfRepaymentIntervals", _min, _max);
+        emit LimitsUpdated('NoOfRepaymentIntervals', _min, _max);
     }
 }
