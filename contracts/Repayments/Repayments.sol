@@ -147,7 +147,10 @@ contract Repayments is RepaymentStorage, IRepayment {
         override
         returns (uint256)
     {
-        uint256 _instalmentsCompletedRounded = getInstalmentsCompleted(_poolID);
+        uint256 _instalmentsCompleted = getInstalmentsCompleted(_poolID);
+        if(_instalmentsCompleted == repaymentConstants[_poolID].numberOfTotalRepayments) {
+            return 0;
+        }
         uint256 _loanExtensionPeriod =
             repaymentVars[_poolID].loanExtensionPeriod;
         uint256 _repaymentInterval =
@@ -155,20 +158,20 @@ contract Repayments is RepaymentStorage, IRepayment {
         uint256 _loanStartTime = repaymentConstants[_poolID].loanStartTime;
         uint256 _nextInstalmentDeadline;
 
-        if (_loanExtensionPeriod > _instalmentsCompletedRounded) {
+        if (_loanExtensionPeriod > _instalmentsCompleted) {
             _nextInstalmentDeadline = (
-                (_instalmentsCompletedRounded.add(10**30).add(10**30)).mul(
+                (_instalmentsCompleted.add(10**30).add(10**30)).mul(
                     _repaymentInterval
                 ).div(10**30)
             )
                 .add(_loanStartTime);
         } else {
             _nextInstalmentDeadline = (
-                (_instalmentsCompletedRounded.add(10**30)).mul(_repaymentInterval).div(10**30)
+                (_instalmentsCompleted.add(10**30)).mul(_repaymentInterval).div(10**30)
             )
                 .add(_loanStartTime);
         }
-        console.log("_nextInstalmentDeadline", _nextInstalmentDeadline, (_instalmentsCompletedRounded.add(10**30)).mul(_repaymentInterval), _loanStartTime.div(10**30));
+        console.log("_nextInstalmentDeadline", _nextInstalmentDeadline, (_instalmentsCompleted.add(10**30)).mul(_repaymentInterval), _loanStartTime.div(10**30));
         return _nextInstalmentDeadline;
     }
 
@@ -231,10 +234,18 @@ contract Repayments is RepaymentStorage, IRepayment {
         override
         returns (bool)
     {
+        uint256 _repaymentInterval =
+            repaymentConstants[_poolID].repaymentInterval;
         uint256 _currentTime = block.timestamp.mul(10**30);
-        uint256 _instalmentDeadline = getNextInstalmentDeadline(_poolID);
+        uint256 _gracePeriodFraction =
+            repaymentConstants[_poolID].gracePeriodFraction;
+        uint256 _nextInstalmentDeadline = getNextInstalmentDeadline(_poolID);
+        uint256 _gracePeriodDeadline =
+            _nextInstalmentDeadline.add(
+                _gracePeriodFraction.mul(_repaymentInterval).div(10**30)
+            );
 
-        if (_currentTime > _instalmentDeadline) return true;
+        if (_currentTime > _gracePeriodDeadline) return true;
         else return false;
     }
 
@@ -350,6 +361,7 @@ contract Repayments is RepaymentStorage, IRepayment {
                         .div(10**30);
                 _amount = _amount.sub(_penalty);
                 _amountRequired = _amountRequired.add(_penalty);
+                console.log("_Grace Peanlity", _penalty);
             }
 
             if (_amount < _interestLeft) {

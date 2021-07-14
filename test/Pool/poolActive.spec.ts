@@ -79,6 +79,8 @@ describe.only("Pool Active stage", async () => {
     let Binance7: any;
     let WhaleAccount: any;
 
+    const scaler: BigNumberish = BigNumber.from(10).pow(30);
+
     before(async () => {
         [proxyAdmin, admin, mockCreditLines, borrower, lender, lender1, random] = await ethers.getSigners();
         const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
@@ -395,8 +397,8 @@ describe.only("Pool Active stage", async () => {
 
             context("Borrower should repay interest", async () => {
                 it("Repay interest for first  repay period", async () => {
-                    const repayAmount = createPoolParams._borrowRate.mul(amount.add(amount1)).mul(createPoolParams._repaymentInterval).div(60*60*24*365).div(BigNumber.from(10).pow(30))
-                    const interestForCurrentPeriod = (await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address)).div(BigNumber.from(10).pow(30));
+                    const repayAmount = createPoolParams._borrowRate.mul(amount.add(amount1)).mul(createPoolParams._repaymentInterval).div(60*60*24*365).div(scaler)
+                    const interestForCurrentPeriod = (await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address)).div(scaler);
                     assert(
                         interestForCurrentPeriod.toString() == repayAmount.toString(),
                         `Incorrect interest for period 1. Actual: ${interestForCurrentPeriod.toString()} Expected: ${repayAmount.toString()}`
@@ -406,7 +408,7 @@ describe.only("Pool Active stage", async () => {
                 });
 
                 it("Can repay for second repayment period in first repay period", async () => {
-                    const repayAmount = createPoolParams._borrowRate.mul(amount.add(amount1)).mul(createPoolParams._repaymentInterval).div(60*60*24*365).div(BigNumber.from(10).pow(30))
+                    const repayAmount = createPoolParams._borrowRate.mul(amount.add(amount1)).mul(createPoolParams._repaymentInterval).div(60*60*24*365).div(scaler)
                     
                     await borrowToken.connect(random).approve(repaymentImpl.address, repayAmount.add(10));
                     await repaymentImpl.connect(random).repayAmount(pool.address, repayAmount.add(10));
@@ -415,45 +417,45 @@ describe.only("Pool Active stage", async () => {
                 });  
 
                 it("Repay in grace period, with penality", async () => {
-                    const endOfPeriod:BigNumber = (await repaymentImpl.getNextInstalmentDeadline(pool.address)).div(BigNumber.from(10).pow(30));
-                    const gracePeriod:BigNumber = repaymentParams.gracePeriodFraction.mul(createPoolParams._repaymentInterval).div(BigNumber.from(10).pow(30));
+                    const endOfPeriod:BigNumber = (await repaymentImpl.getNextInstalmentDeadline(pool.address)).div(scaler);
+                    const gracePeriod:BigNumber = repaymentParams.gracePeriodFraction.mul(createPoolParams._repaymentInterval).div(scaler);
 
                     await blockTravel(network, parseInt(endOfPeriod.add(gracePeriod).sub(10).toString()));
 
-                    const repayAmount = createPoolParams._borrowRate.mul(amount.add(amount1)).mul(createPoolParams._repaymentInterval).div(60*60*24*365).div(BigNumber.from(10).pow(30))
-                    const repayAmountWithPenality = repayAmount.add(1).add(repaymentParams.gracePenalityRate.mul(await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address)).div(BigNumber.from(10).pow(60)));
+                    const repayAmount = createPoolParams._borrowRate.mul(amount.add(amount1)).mul(createPoolParams._repaymentInterval).div(60*60*24*365);
+                    const repayAmountWithPenality = (repayAmount.add(scaler).add(repaymentParams.gracePenalityRate.mul(await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address)).div(scaler))).div(scaler);
                     await borrowToken.connect(random).approve(repaymentImpl.address, repayAmountWithPenality);
                     // await expect(
                     //     repaymentImpl.connect(random).repayAmount(pool.address, repayAmount)
                     // ).to.be.revertedWith("");
-                    console.log("repayAmountWithPenality", repayAmountWithPenality.toString(), repayAmount.toString());
+                    console.log("repayAmountWithPenality", repayAmountWithPenality.toString(), repayAmount.div(scaler).toString());
                     await repaymentImpl.connect(random).repayAmount(pool.address, repayAmountWithPenality);
-                    const interestForCurrentPeriod = (await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address)).div(BigNumber.from(10).pow(30));
+                    const interestForCurrentPeriod = (await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address));
                     assert(
-                        interestForCurrentPeriod.toString() == repayAmount.toString(),
+                        interestForCurrentPeriod.div(scaler).toString() == repayAmount.sub(scaler).div(scaler).toString(),
                         `Repay amount for the current period not correctly recorded. Actual: ${interestForCurrentPeriod.toString()} Expected: ${repayAmount.toString()}`
                     );
                 });
 
                 it("Repay for next period after repayment in grace period", async () => {
-                    const endOfPeriod:BigNumber = (await repaymentImpl.getNextInstalmentDeadline(pool.address)).div(BigNumber.from(10).pow(30));
-                    const gracePeriod:BigNumber = repaymentParams.gracePeriodFraction.mul(createPoolParams._repaymentInterval).div(BigNumber.from(10).pow(30));
+                    const endOfPeriod:BigNumber = (await repaymentImpl.getNextInstalmentDeadline(pool.address)).div(scaler);
+                    const gracePeriod:BigNumber = repaymentParams.gracePeriodFraction.mul(createPoolParams._repaymentInterval).div(scaler);
                     
                     await blockTravel(network, parseInt(endOfPeriod.add(gracePeriod).sub(10).toString()));
 
-                    const repayAmount = createPoolParams._borrowRate.mul(amount.add(amount1)).mul(createPoolParams._repaymentInterval).div(60*60*24*365).div(BigNumber.from(10).pow(30))
-                    const repayAmountWithPenality = repayAmount.add(repaymentParams.gracePenalityRate.mul(await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address))).div(BigNumber.from(10).pow(60));
+                    const repayAmount = createPoolParams._borrowRate.mul(amount.add(amount1)).mul(createPoolParams._repaymentInterval).div(60*60*24*365);
+                    const repayAmountWithPenality = (repayAmount.add(scaler).add(repaymentParams.gracePenalityRate.mul(await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address)).div(scaler))).div(scaler);
                     await borrowToken.connect(random).approve(repaymentImpl.address, repayAmountWithPenality.add(20));
                     await repaymentImpl.connect(random).repayAmount(pool.address, repayAmountWithPenality.add(20));
-                    const interestForCurrentPeriod = (await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address)).div(BigNumber.from(10).pow(30));
+                    const interestForCurrentPeriod = (await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address)).div(scaler);
                     assert(
-                        interestForCurrentPeriod.toString() == repayAmount.sub(20).toString(),
-                        `Extra repayment in grace period not correctly recorded. Actual: ${interestForCurrentPeriod.toString()} Expected: ${repayAmount.sub(20)}`
+                        interestForCurrentPeriod.toString() == repayAmount.div(scaler).sub(1).sub(20).toString(),
+                        `Extra repayment in grace period not correctly recorded. Actual: ${interestForCurrentPeriod.toString()} Expected: ${repayAmount.div(scaler).sub(1).sub(20)}`
                     );
                 });
 
                 it("Can't liquidate in grace period", async () => {
-                    const endOfPeriod:BigNumber = (await repaymentImpl.getNextInstalmentDeadline(pool.address)).div(BigNumber.from(10).pow(30));
+                    const endOfPeriod:BigNumber = (await repaymentImpl.getNextInstalmentDeadline(pool.address)).div(scaler);
 
                     await blockTravel(network, parseInt(endOfPeriod.add(10).toString()));
 
