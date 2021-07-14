@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.0;
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "../interfaces/IPoolFactory.sol";
+import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
+import '../interfaces/IPoolFactory.sol';
 
 contract RepaymentStorage is OwnableUpgradeable {
     address internal _owner;

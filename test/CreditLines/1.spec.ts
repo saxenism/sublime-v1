@@ -1,7 +1,7 @@
-import { ethers, network } from "hardhat";
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
-import { expect } from "chai";
+import { ethers, network } from 'hardhat';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import { BigNumber, BigNumberish } from '@ethersproject/bignumber';
+import { expect } from 'chai';
 
 import {
   aaveYieldParams,
@@ -430,44 +430,220 @@ describe("Credit Lines", async () => {
         .withArgs(borrowerCreditLine);
     });
 
-    describe("Failed cases", async () => {
-      it("Cannot deposit into invalid credit line hash", async () => {
-        let randomInvalidHash =
-          "0x0000000011111111000000001111111100000000111111110000000011111111";
-        await expect(
-          creditLine
-            .connect(borrower)
-            .depositCollateral(
-              Contracts.LINK,
-              BigNumber.from("123123123"),
-              randomInvalidHash,
-              false
-            )
-        ).to.be.revertedWith(" Credit line does not exist");
+    describe('Create Credit Lines Contract', async () => {
+        let creditLine: CreditLine;
+        let poolFactory: PoolFactory;
+        let extenstion: Extension;
 
-        await expect(
-          creditLine
-            .connect(borrower)
-            .depositCollateral(
-              Contracts.LINK,
-              BigNumber.from("123123123"),
-              randomInvalidHash,
-              true
-            )
-        ).to.be.revertedWith(" Credit line does not exist");
-      });
+        let borrowerCreditLine: BytesLike;
+        let lenderCreditLine: BytesLike;
 
-      it("should fail if any other user/address is trying to accept the credit line", async () => {
-        await expect(
-          creditLine
-            .connect(lender)
-            .acceptCreditLineBorrower(borrowerCreditLine)
-        ).to.be.revertedWith("Only credit line Borrower can access");
-      });
+        before(async () => {
+            const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
+            creditLine = await deployHelper.core.deployCreditLines();
+            poolFactory = await deployHelper.pool.deployPoolFactory();
+            extenstion = await deployHelper.pool.deployExtenstion();
+            await savingsAccount.connect(admin).updateCreditLine(creditLine.address);
+        });
+
+        it('Initialize required contracts', async () => {
+            await extenstion.connect(admin).initialize(poolFactory.address, extensionParams.votingPassRatio);
+
+            let {
+                _collectionPeriod,
+                _marginCallDuration,
+                _collateralVolatilityThreshold,
+                _gracePeriodPenaltyFraction,
+                _liquidatorRewardFraction,
+                _matchCollateralRatioInterval,
+                _poolInitFuncSelector,
+                _poolTokenInitFuncSelector,
+                _poolCancelPenalityFraction,
+            } = testPoolFactoryParams;
+
+            await poolFactory
+                .connect(admin)
+                .initialize(
+                    verification.address,
+                    strategyRegistry.address,
+                    admin.address,
+                    _collectionPeriod,
+                    _matchCollateralRatioInterval,
+                    _marginCallDuration,
+                    _collateralVolatilityThreshold,
+                    _gracePeriodPenaltyFraction,
+                    _poolInitFuncSelector,
+                    _poolTokenInitFuncSelector,
+                    _liquidatorRewardFraction,
+                    priceOracle.address,
+                    savingsAccount.address,
+                    extenstion.address,
+                    _poolCancelPenalityFraction
+                );
+
+            await creditLine.connect(admin).initialize(yearnYield.address, poolFactory.address, strategyRegistry.address);
+        });
+
+        it('Check global variables', async () => {
+            expect(await creditLine.CreditLineCounter()).to.eq(0);
+            expect(await creditLine.PoolFactory()).to.eq(poolFactory.address);
+            expect(await creditLine.strategyRegistry()).to.eq(strategyRegistry.address);
+            expect(await creditLine.defaultStrategy()).to.eq(yearnYield.address);
+        });
+
+        it('Request Credit Line to lender', async () => {
+            let _lender: string = lender.address;
+            let _borrowLimit: BigNumberish = BigNumber.from('10').mul('1000000000000000000');
+            let _liquidationThreshold: BigNumberish = BigNumber.from(100);
+            let _borrowRate: BigNumberish = BigNumber.from(100);
+            let _autoLiquidation: boolean = true;
+            let _collateralRatio: BigNumberish = BigNumber.from(250);
+            let _borrowAsset: string = Contracts.DAI;
+            let _collateralAsset: string = Contracts.LINK;
+
+            let values = await creditLine
+                .connect(borrower)
+                .callStatic.requestCreditLineToLender(
+                    _lender,
+                    _borrowLimit,
+                    _liquidationThreshold,
+                    _borrowRate,
+                    _autoLiquidation,
+                    _collateralRatio,
+                    _borrowAsset,
+                    _collateralAsset
+                );
+
+            await expect(
+                creditLine
+                    .connect(borrower)
+                    .requestCreditLineToLender(
+                        _lender,
+                        _borrowLimit,
+                        _liquidationThreshold,
+                        _borrowRate,
+                        _autoLiquidation,
+                        _collateralRatio,
+                        _borrowAsset,
+                        _collateralAsset
+                    )
+            )
+                .to.emit(creditLine, 'CreditLineRequestedToLender')
+                .withArgs(values, lender.address, borrower.address);
+
+            lenderCreditLine = values;
+            let creditLineInfo = await creditLine.creditLineInfo(values);
+            //   console.log({ creditLineInfo });
+        });
+
+        it('Request Credit Line to borrower', async () => {
+            let _borrower: string = borrower.address;
+            let _borrowLimit: BigNumberish = BigNumber.from('10').mul('1000000000000000000');
+            let _liquidationThreshold: BigNumberish = BigNumber.from(100);
+            let _borrowRate: BigNumberish = BigNumber.from(100);
+            let _autoLiquidation: boolean = true;
+            let _collateralRatio: BigNumberish = BigNumber.from(250);
+            let _borrowAsset: string = Contracts.DAI;
+            let _collateralAsset: string = Contracts.LINK;
+
+            let values = await creditLine
+                .connect(lender)
+                .callStatic.requestCreditLineToBorrower(
+                    _borrower,
+                    _borrowLimit,
+                    _liquidationThreshold,
+                    _borrowRate,
+                    _autoLiquidation,
+                    _collateralRatio,
+                    _borrowAsset,
+                    _collateralAsset
+                );
+
+            await expect(
+                creditLine
+                    .connect(lender)
+                    .requestCreditLineToBorrower(
+                        _borrower,
+                        _borrowLimit,
+                        _liquidationThreshold,
+                        _borrowRate,
+                        _autoLiquidation,
+                        _collateralRatio,
+                        _borrowAsset,
+                        _collateralAsset
+                    )
+            )
+                .to.emit(creditLine, 'CreditLineRequestedToBorrower')
+                .withArgs(values, lender.address, borrower.address);
+
+            borrowerCreditLine = values;
+            let creditLineInfo = await creditLine.creditLineInfo(values);
+            // console.log({ creditLineInfo });
+        });
+
+        it('Accept Credit Line (Borrower)', async () => {
+            await expect(creditLine.connect(borrower).acceptCreditLineBorrower(borrowerCreditLine))
+                .to.emit(creditLine, 'CreditLineAccepted')
+                .withArgs(borrowerCreditLine);
+        });
+
+        it('Deposit Collateral into existing credit line (not from savings account)', async () => {
+            // console.log({ borrowerCreditLine, lenderCreditLine });
+            // console.log(await creditLine.creditLineInfo(borrowerCreditLine));
+            let valueToTest = BigNumber.from('25').mul('1000000000000000000');
+
+            await LinkTokenContract.connect(admin).transfer(borrower.address, valueToTest);
+            await LinkTokenContract.connect(borrower).approve(creditLine.address, valueToTest); // yearn yield is the default strategy in this case
+
+            await creditLine.connect(borrower).depositCollateral(Contracts.LINK, valueToTest, borrowerCreditLine, false);
+        });
+
+        it('Deposit Collateral into existing credit line (from savings account)', async () => {
+            // console.log({ borrowerCreditLine, lenderCreditLine });
+            // console.log(await creditLine.creditLineInfo(borrowerCreditLine));
+            let valueToTest = BigNumber.from('25').mul('1000000000000000000');
+
+            await LinkTokenContract.connect(admin).transfer(borrower.address, valueToTest.mul(3));
+            await LinkTokenContract.connect(borrower).approve(savingsAccount.address, valueToTest);
+
+            await LinkTokenContract.connect(borrower).approve(yearnYield.address, valueToTest.mul(2));
+
+            await savingsAccount.connect(borrower).depositTo(valueToTest, LinkTokenContract.address, zeroAddress, borrower.address);
+            await savingsAccount
+                .connect(borrower)
+                .depositTo(valueToTest.mul(2), LinkTokenContract.address, yearnYield.address, borrower.address);
+            await savingsAccount.connect(borrower).approve(Contracts.LINK, creditLine.address, valueToTest.mul(2));
+
+            await creditLine.connect(borrower).depositCollateral(Contracts.LINK, valueToTest, borrowerCreditLine, true);
+        });
+
+        it('Close Credit Line', async () => {
+            await expect(creditLine.connect(borrower).closeCreditLine(borrowerCreditLine))
+                .to.emit(creditLine, 'CreditLineClosed')
+                .withArgs(borrowerCreditLine);
+        });
+
+        describe('Failed cases', async () => {
+            it('Cannot deposit into invalid credit line hash', async () => {
+                let randomInvalidHash = '0x0000000011111111000000001111111100000000111111110000000011111111';
+                await expect(
+                    creditLine.connect(borrower).depositCollateral(Contracts.LINK, BigNumber.from('123123123'), randomInvalidHash, false)
+                ).to.be.revertedWith('Credit line does not exist');
+
+                await expect(
+                    creditLine.connect(borrower).depositCollateral(Contracts.LINK, BigNumber.from('123123123'), randomInvalidHash, true)
+                ).to.be.revertedWith('Credit line does not exist');
+            });
+
+            it('should fail if any other user/address is trying to accept the credit line', async () => {
+                await expect(creditLine.connect(lender).acceptCreditLineBorrower(borrowerCreditLine)).to.be.revertedWith(
+                    'Only credit line Borrower can access'
+                );
+            });
+        });
     });
-  });
 });
 
 function print(data: any) {
-  console.log(JSON.stringify(data, null, 4));
+    console.log(JSON.stringify(data, null, 4));
 }

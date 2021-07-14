@@ -5,11 +5,11 @@
 
 pragma solidity 0.7.0;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/GSN/Context.sol";
+import '@openzeppelin/contracts/math/SafeMath.sol';
+import '@openzeppelin/contracts/utils/Address.sol';
+import '@openzeppelin/contracts/GSN/Context.sol';
 
-import "./IController.sol";
+import './IController.sol';
 
 contract ERC20 is Context {
     using SafeMath for uint256;
@@ -21,11 +21,7 @@ contract ERC20 is Context {
     uint256 private _totalSupply;
 
     event Transfer(address indexed from, address indexed to, uint256 value);
-    event Approval(
-        address indexed owner,
-        address indexed spender,
-        uint256 value
-    );
+    event Approval(address indexed owner, address indexed spender, uint256 value);
 
     function totalSupply() public view returns (uint256) {
         return _totalSupply;
@@ -40,11 +36,7 @@ contract ERC20 is Context {
         return true;
     }
 
-    function allowance(address owner, address spender)
-        public
-        view
-        returns (uint256)
-    {
+    function allowance(address owner, address spender) public view returns (uint256) {
         return _allowances[owner][spender];
     }
 
@@ -62,37 +54,21 @@ contract ERC20 is Context {
         _approve(
             sender,
             _msgSender(),
-            _allowances[sender][_msgSender()].sub(
-                amount,
-                "ERC20: transfer amount exceeds allowance"
-            )
+            _allowances[sender][_msgSender()].sub(amount, 'ERC20: transfer amount exceeds allowance')
         );
         return true;
     }
 
-    function increaseAllowance(address spender, uint256 addedValue)
-        public
-        returns (bool)
-    {
-        _approve(
-            _msgSender(),
-            spender,
-            _allowances[_msgSender()][spender].add(addedValue)
-        );
+    function increaseAllowance(address spender, uint256 addedValue) public returns (bool) {
+        _approve(_msgSender(), spender, _allowances[_msgSender()][spender].add(addedValue));
         return true;
     }
 
-    function decreaseAllowance(address spender, uint256 subtractedValue)
-        public
-        returns (bool)
-    {
+    function decreaseAllowance(address spender, uint256 subtractedValue) public returns (bool) {
         _approve(
             _msgSender(),
             spender,
-            _allowances[_msgSender()][spender].sub(
-                subtractedValue,
-                "ERC20: decreased allowance below zero"
-            )
+            _allowances[_msgSender()][spender].sub(subtractedValue, 'ERC20: decreased allowance below zero')
         );
         return true;
     }
@@ -102,19 +78,16 @@ contract ERC20 is Context {
         address recipient,
         uint256 amount
     ) internal {
-        require(sender != address(0), "ERC20: transfer from the zero address");
-        require(recipient != address(0), "ERC20: transfer to the zero address");
+        require(sender != address(0), 'ERC20: transfer from the zero address');
+        require(recipient != address(0), 'ERC20: transfer to the zero address');
 
-        _balances[sender] = _balances[sender].sub(
-            amount,
-            "ERC20: transfer amount exceeds balance"
-        );
+        _balances[sender] = _balances[sender].sub(amount, 'ERC20: transfer amount exceeds balance');
         _balances[recipient] = _balances[recipient].add(amount);
         emit Transfer(sender, recipient, amount);
     }
 
     function _mint(address account, uint256 amount) internal {
-        require(account != address(0), "ERC20: mint to the zero address");
+        require(account != address(0), 'ERC20: mint to the zero address');
 
         _totalSupply = _totalSupply.add(amount);
         _balances[account] = _balances[account].add(amount);
@@ -122,12 +95,9 @@ contract ERC20 is Context {
     }
 
     function _burn(address account, uint256 amount) internal {
-        require(account != address(0), "ERC20: burn from the zero address");
+        require(account != address(0), 'ERC20: burn from the zero address');
 
-        _balances[account] = _balances[account].sub(
-            amount,
-            "ERC20: burn amount exceeds balance"
-        );
+        _balances[account] = _balances[account].sub(amount, 'ERC20: burn amount exceeds balance');
         _totalSupply = _totalSupply.sub(amount);
         emit Transfer(account, address(0), amount);
     }
@@ -137,8 +107,8 @@ contract ERC20 is Context {
         address spender,
         uint256 amount
     ) internal {
-        require(owner != address(0), "ERC20: approve from the zero address");
-        require(spender != address(0), "ERC20: approve to the zero address");
+        require(owner != address(0), 'ERC20: approve from the zero address');
+        require(spender != address(0), 'ERC20: approve to the zero address');
 
         _allowances[owner][spender] = amount;
         emit Approval(owner, spender, amount);
@@ -149,10 +119,7 @@ contract ERC20 is Context {
         _approve(
             account,
             _msgSender(),
-            _allowances[account][_msgSender()].sub(
-                amount,
-                "ERC20: burn amount exceeds allowance"
-            )
+            _allowances[account][_msgSender()].sub(amount, 'ERC20: burn amount exceeds allowance')
         );
     }
 }
@@ -194,10 +161,7 @@ library SafeERC20 {
         address to,
         uint256 value
     ) internal {
-        callOptionalReturn(
-            token,
-            abi.encodeWithSelector(token.transfer.selector, to, value)
-        );
+        callOptionalReturn(token, abi.encodeWithSelector(token.transfer.selector, to, value));
     }
 
     function safeTransferFrom(
@@ -206,10 +170,7 @@ library SafeERC20 {
         address to,
         uint256 value
     ) internal {
-        callOptionalReturn(
-            token,
-            abi.encodeWithSelector(token.transferFrom.selector, from, to, value)
-        );
+        callOptionalReturn(token, abi.encodeWithSelector(token.transferFrom.selector, from, to, value));
     }
 
     function safeApprove(
@@ -219,12 +180,9 @@ library SafeERC20 {
     ) internal {
         require(
             (value == 0) || (token.allowance(address(this), spender) == 0),
-            "SafeERC20: approve from non-zero to non-zero allowance"
+            'SafeERC20: approve from non-zero to non-zero allowance'
         );
-        callOptionalReturn(
-            token,
-            abi.encodeWithSelector(token.approve.selector, spender, value)
-        );
+        callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, value));
     }
 
     function safeIncreaseAllowance(
@@ -232,16 +190,8 @@ library SafeERC20 {
         address spender,
         uint256 value
     ) internal {
-        uint256 newAllowance =
-            token.allowance(address(this), spender).add(value);
-        callOptionalReturn(
-            token,
-            abi.encodeWithSelector(
-                token.approve.selector,
-                spender,
-                newAllowance
-            )
-        );
+        uint256 newAllowance = token.allowance(address(this), spender).add(value);
+        callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, newAllowance));
     }
 
     function safeDecreaseAllowance(
@@ -250,34 +200,21 @@ library SafeERC20 {
         uint256 value
     ) internal {
         uint256 newAllowance =
-            token.allowance(address(this), spender).sub(
-                value,
-                "SafeERC20: decreased allowance below zero"
-            );
-        callOptionalReturn(
-            token,
-            abi.encodeWithSelector(
-                token.approve.selector,
-                spender,
-                newAllowance
-            )
-        );
+            token.allowance(address(this), spender).sub(value, 'SafeERC20: decreased allowance below zero');
+        callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, newAllowance));
     }
 
     function callOptionalReturn(ERC20 token, bytes memory data) private {
-        require(address(token).isContract(), "SafeERC20: call to non-contract");
+        require(address(token).isContract(), 'SafeERC20: call to non-contract');
 
         // solhint-disable-next-line avoid-low-level-calls
         (bool success, bytes memory returndata) = address(token).call(data);
-        require(success, "SafeERC20: low-level call failed");
+        require(success, 'SafeERC20: low-level call failed');
 
         if (returndata.length > 0) {
             // Return data is optional
             // solhint-disable-next-line max-line-length
-            require(
-                abi.decode(returndata, (bool)),
-                "SafeERC20: ERC20 operation did not succeed"
-            );
+            require(abi.decode(returndata, (bool)), 'SafeERC20: ERC20 operation did not succeed');
         }
     }
 }
@@ -306,8 +243,8 @@ contract yVault is ERC20, ERC20Detailed {
 
     constructor(address _token, address _controller)
         ERC20Detailed(
-            string(abi.encodePacked("yearn ", ERC20Detailed(_token).name())),
-            string(abi.encodePacked("y", ERC20Detailed(_token).symbol())),
+            string(abi.encodePacked('yearn ', ERC20Detailed(_token).name())),
+            string(abi.encodePacked('y', ERC20Detailed(_token).symbol())),
             ERC20Detailed(_token).decimals()
         )
     {
@@ -317,24 +254,21 @@ contract yVault is ERC20, ERC20Detailed {
     }
 
     function balance() public view returns (uint256) {
-        return
-            token.balanceOf(address(this)).add(
-                IController(controller).balanceOf(address(token))
-            );
+        return token.balanceOf(address(this)).add(IController(controller).balanceOf(address(token)));
     }
 
     function setMin(uint256 _min) external {
-        require(msg.sender == governance, "!governance");
+        require(msg.sender == governance, '!governance');
         min = _min;
     }
 
     function setGovernance(address _governance) public {
-        require(msg.sender == governance, "!governance");
+        require(msg.sender == governance, '!governance');
         governance = _governance;
     }
 
     function setController(address _controller) public {
-        require(msg.sender == governance, "!governance");
+        require(msg.sender == governance, '!governance');
         controller = _controller;
     }
 
@@ -395,8 +329,8 @@ contract yVault is ERC20, ERC20Detailed {
 
     // Used to swap any borrowed reserve over the debt limit to liquidate to 'token'
     function harvest(address reserve, uint256 amount) external {
-        require(msg.sender == controller, "!controller");
-        require(reserve != address(token), "token");
+        require(msg.sender == controller, '!controller');
+        require(reserve != address(token), 'token');
         ERC20(reserve).safeTransfer(controller, amount);
     }
 

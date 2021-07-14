@@ -8,11 +8,7 @@ interface IYield {
      * @param investedTo the address of contract to invest in
      * @param lpTokensReceived the amount of shares received
      **/
-    event LockedTokens(
-        address user,
-        address investedTo,
-        uint256 lpTokensReceived
-    );
+    event LockedTokens(address user, address investedTo, uint256 lpTokensReceived);
 
     /**
      * @dev emitted when tokens are unlocked/redeemed
@@ -28,10 +24,7 @@ interface IYield {
      * @param asset the address of underlying token
      * @return tokenAddress address of liquidity token
      **/
-    function liquidityToken(address asset)
-        external
-        view
-        returns (address tokenAddress);
+    function liquidityToken(address asset) external view returns (address tokenAddress);
 
     /**
      * @dev Used to lock tokens in available protocol
@@ -52,13 +45,9 @@ interface IYield {
      * @param amount the amount of liquidity shares to unlock
      * @return tokensReceived amount of tokens received
      **/
-    function unlockTokens(address asset, uint256 amount)
-        external
-        returns (uint256 tokensReceived);
+    function unlockTokens(address asset, uint256 amount) external returns (uint256 tokensReceived);
 
-    function unlockShares(address asset, uint256 amount)
-        external
-        returns (uint256 received);
+    function unlockShares(address asset, uint256 amount) external returns (uint256 received);
 
     /**
      * @dev Used to get amount of underlying tokens for current number of shares
@@ -66,11 +55,7 @@ interface IYield {
      * @param asset the address of token locked
      * @return amount amount of underlying tokens
      **/
-    function getTokensForShares(uint256 shares, address asset)
-        external
-        returns (uint256 amount);
+    function getTokensForShares(uint256 shares, address asset) external returns (uint256 amount);
 
-    function getSharesForTokens(uint256 amount, address asset)
-        external
-        returns (uint256 shares);
+    function getSharesForTokens(uint256 amount, address asset) external returns (uint256 shares);
 }

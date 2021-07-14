@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.7.0;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
+import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
+import '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
+import '@openzeppelin/contracts/math/SafeMath.sol';
 
-import "../interfaces/IYield.sol";
-import "../interfaces/Invest/IyVault.sol";
+import '../interfaces/IYield.sol';
+import '../interfaces/Invest/IyVault.sol';
 
-import "hardhat/console.sol";
+import 'hardhat/console.sol';
 
 /**
  * @title Yield contract
@@ -27,49 +27,30 @@ contract YearnYield is IYield, Initializable, OwnableUpgradeable {
     mapping(address => address) public override liquidityToken;
 
     modifier onlySavingsAccount {
-        require(
-            _msgSender() == savingsAccount,
-            "Invest: Only savings account can invoke"
-        );
+        require(_msgSender() == savingsAccount, 'Invest: Only savings account can invoke');
         _;
     }
 
-    function initialize(address _owner, address payable _savingsAccount)
-        public
-        initializer
-    {
+    function initialize(address _owner, address payable _savingsAccount) public initializer {
         __Ownable_init();
         super.transferOwnership(_owner);
 
-        require(_savingsAccount != address(0), "Invest: zero address");
+        require(_savingsAccount != address(0), 'Invest: zero address');
         savingsAccount = _savingsAccount;
     }
 
-    function updateSavingsAccount(address payable _savingsAccount)
-        external
-        onlyOwner
-    {
-        require(_savingsAccount != address(0), "Invest: zero address");
+    function updateSavingsAccount(address payable _savingsAccount) external onlyOwner {
+        require(_savingsAccount != address(0), 'Invest: zero address');
         savingsAccount = _savingsAccount;
     }
 
-    function updateProtocolAddresses(address asset, address to)
-        external
-        onlyOwner
-    {
-        require(to != address(0), "Invest: zero address");
-        require(
-            liquidityToken[asset] == address(0),
-            "Invest: Cannot update existing address"
-        );
+    function updateProtocolAddresses(address asset, address to) external onlyOwner {
+        require(to != address(0), 'Invest: zero address');
+        require(liquidityToken[asset] == address(0), 'Invest: Cannot update existing address');
         liquidityToken[asset] = to;
     }
 
-    function emergencyWithdraw(address _asset, address payable _wallet)
-        external
-        onlyOwner
-        returns (uint256 received)
-    {
+    function emergencyWithdraw(address _asset, address payable _wallet) external onlyOwner returns (uint256 received) {
         address investedTo = liquidityToken[_asset];
         uint256 amount = IERC20(investedTo).balanceOf(address(this));
 
@@ -94,18 +75,12 @@ contract YearnYield is IYield, Initializable, OwnableUpgradeable {
         address user,
         address asset,
         uint256 amount
-    )
-        public
-        payable
-        override
-        onlySavingsAccount
-        returns (uint256 sharesReceived)
-    {
-        require(amount != 0, "Invest: amount");
+    ) public payable override onlySavingsAccount returns (uint256 sharesReceived) {
+        require(amount != 0, 'Invest: amount');
 
         address investedTo = liquidityToken[asset];
         if (asset == address(0)) {
-            require(msg.value == amount, "Invest: ETH amount");
+            require(msg.value == amount, 'Invest: ETH amount');
             sharesReceived = _depositETH(investedTo, amount);
         } else {
             IERC20(asset).safeTransferFrom(user, address(this), amount);
@@ -121,13 +96,8 @@ contract YearnYield is IYield, Initializable, OwnableUpgradeable {
      * @param amount the amount of asset
      * @return received amount of tokens received
      **/
-    function unlockTokens(address asset, uint256 amount)
-        public
-        override
-        onlySavingsAccount
-        returns (uint256 received)
-    {
-        require(amount != 0, "Invest: amount");
+    function unlockTokens(address asset, uint256 amount) public override onlySavingsAccount returns (uint256 received) {
+        require(amount != 0, 'Invest: amount');
         address investedTo = liquidityToken[asset];
 
         if (asset == address(0)) {
@@ -141,17 +111,12 @@ contract YearnYield is IYield, Initializable, OwnableUpgradeable {
         emit UnlockedTokens(asset, received);
     }
 
-    function unlockShares(address asset, uint256 amount)
-        public
-        override
-        onlySavingsAccount
-        returns (uint256)
-    {
+    function unlockShares(address asset, uint256 amount) public override onlySavingsAccount returns (uint256) {
         if (amount == 0) {
             return 0;
         }
 
-        require(asset != address(0), "Asset address cannot be address(0)");
+        require(asset != address(0), 'Asset address cannot be address(0)');
         IERC20(asset).safeTransfer(savingsAccount, amount);
 
         emit UnlockedShares(asset, amount);
@@ -163,40 +128,22 @@ contract YearnYield is IYield, Initializable, OwnableUpgradeable {
      * @param shares the amount of shares
      * @return amount amount of underlying tokens
      **/
-    function getTokensForShares(uint256 shares, address asset)
-        public
-        view
-        override
-        returns (uint256 amount)
-    {
+    function getTokensForShares(uint256 shares, address asset) public view override returns (uint256 amount) {
         if (shares == 0) return 0;
-        amount = IyVault(liquidityToken[asset])
-            .getPricePerFullShare()
-            .mul(shares)
-            .div(1e18);
+        amount = IyVault(liquidityToken[asset]).getPricePerFullShare().mul(shares).div(1e18);
     }
 
-    function getSharesForTokens(uint256 amount, address asset)
-        external
-        view
-        override
-        returns (uint256 shares)
-    {
+    function getSharesForTokens(uint256 amount, address asset) external view override returns (uint256 shares) {
         shares = (amount.mul(1e18)).div(getTokensForShares(1e18, asset));
     }
 
-    function _depositETH(address vault, uint256 amount)
-        internal
-        returns (uint256 sharesReceived)
-    {
+    function _depositETH(address vault, uint256 amount) internal returns (uint256 sharesReceived) {
         uint256 initialTokenBalance = IERC20(vault).balanceOf(address(this));
 
         //mint vault
         IyVault(vault).depositETH{value: amount}();
 
-        sharesReceived = IERC20(vault).balanceOf(address(this)).sub(
-            initialTokenBalance
-        );
+        sharesReceived = IERC20(vault).balanceOf(address(this)).sub(initialTokenBalance);
     }
 
     function _depositERC20(
@@ -210,15 +157,10 @@ contract YearnYield is IYield, Initializable, OwnableUpgradeable {
         IERC20(asset).approve(vault, amount);
         IyVault(vault).deposit(amount);
 
-        sharesReceived = IERC20(vault).balanceOf(address(this)).sub(
-            sharesBefore
-        );
+        sharesReceived = IERC20(vault).balanceOf(address(this)).sub(sharesBefore);
     }
 
-    function _withdrawETH(address vault, uint256 amount)
-        internal
-        returns (uint256 received)
-    {
+    function _withdrawETH(address vault, uint256 amount) internal returns (uint256 received) {
         uint256 ethBalance = address(this).balance;
 
         IyVault(vault).withdrawETH(amount);
@@ -236,9 +178,7 @@ contract YearnYield is IYield, Initializable, OwnableUpgradeable {
         //withdraw collateral from vault
         IyVault(vault).withdraw(amount);
 
-        tokensReceived = IERC20(asset).balanceOf(address(this)).sub(
-            initialAssetBalance
-        );
+        tokensReceived = IERC20(asset).balanceOf(address(this)).sub(initialAssetBalance);
     }
 
     //to apply check

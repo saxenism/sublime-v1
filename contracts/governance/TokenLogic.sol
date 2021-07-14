@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.0;
 pragma experimental ABIEncoderV2;
-import "@openzeppelin/contracts/proxy/Initializable.sol";
+import '@openzeppelin/contracts/proxy/Initializable.sol';
 
 contract TokenLogic is Initializable {
     /// @notice EIP-20 token name for this token
@@ -54,28 +54,16 @@ contract TokenLogic is Initializable {
     address public admin;
 
     /// @notice An event thats emitted when an account changes its delegate
-    event DelegateChanged(
-        address indexed delegator,
-        address indexed fromDelegate,
-        address indexed toDelegate
-    );
+    event DelegateChanged(address indexed delegator, address indexed fromDelegate, address indexed toDelegate);
 
     /// @notice An event thats emitted when a delegate account's vote balance changes
-    event DelegateVotesChanged(
-        address indexed delegate,
-        uint256 previousBalance,
-        uint256 newBalance
-    );
+    event DelegateVotesChanged(address indexed delegate, uint256 previousBalance, uint256 newBalance);
 
     /// @notice The standard EIP-20 transfer event
     event Transfer(address indexed from, address indexed to, uint256 amount);
 
     /// @notice The standard EIP-20 approval event
-    event Approval(
-        address indexed owner,
-        address indexed spender,
-        uint256 amount
-    );
+    event Approval(address indexed owner, address indexed spender, uint256 amount);
 
     /**
      * @notice Initializer a new Token token
@@ -83,40 +71,27 @@ contract TokenLogic is Initializable {
      */
     function initialize(address account, address bridge) public initializer {
         createConstants();
-        require(
-            account != bridge,
-            "Bridge and account should not be the same address"
-        );
+        require(account != bridge, 'Bridge and account should not be the same address');
         balances[bridge] = uint96(bridgeSupply);
         delegates[bridge][address(0)] = uint96(bridgeSupply);
         emit Transfer(address(0), bridge, bridgeSupply);
 
         uint96 remainingSupply =
-            sub96(
-                uint96(totalSupply),
-                uint96(bridgeSupply),
-                "Token: Subtraction overflow in the constructor"
-            );
+            sub96(uint96(totalSupply), uint96(bridgeSupply), 'Token: Subtraction overflow in the constructor');
         balances[account] = remainingSupply;
         delegates[account][address(0)] = remainingSupply;
         emit Transfer(address(0), account, uint256(remainingSupply));
     }
 
     function createConstants() internal {
-        name = "Sublime";
-        symbol = "LIME";
+        name = 'Sublime';
+        symbol = 'LIME';
         decimals = 18;
         totalSupply = 10000e18;
         bridgeSupply = 7000e18;
-        DOMAIN_TYPEHASH = keccak256(
-            "EIP712Domain(string name,uint256 chainId,address verifyingContract)"
-        );
-        DELEGATION_TYPEHASH = keccak256(
-            "Delegation(address delegatee,uint256 nonce,uint256 expiry,uint96 amount)"
-        );
-        UNDELEGATION_TYPEHASH = keccak256(
-            "Unelegation(address delegatee,uint256 nonce,uint256 expiry,uint96 amount)"
-        );
+        DOMAIN_TYPEHASH = keccak256('EIP712Domain(string name,uint256 chainId,address verifyingContract)');
+        DELEGATION_TYPEHASH = keccak256('Delegation(address delegatee,uint256 nonce,uint256 expiry,uint96 amount)');
+        UNDELEGATION_TYPEHASH = keccak256('Unelegation(address delegatee,uint256 nonce,uint256 expiry,uint96 amount)');
         admin = msg.sender;
         // enableAllTranfers = true; //This is only for testing, will be false
     }
@@ -127,11 +102,7 @@ contract TokenLogic is Initializable {
      * @param spender The address of the account spending the funds
      * @return The number of tokens approved
      */
-    function allowance(address account, address spender)
-        external
-        view
-        returns (uint256)
-    {
+    function allowance(address account, address spender) external view returns (uint256) {
         return allowances[account][spender];
     }
 
@@ -143,18 +114,12 @@ contract TokenLogic is Initializable {
      * @param rawAmount The number of tokens that are approved (2^256-1 means infinite)
      * @return Whether or not the approval succeeded
      */
-    function approve(address spender, uint256 rawAmount)
-        external
-        returns (bool)
-    {
+    function approve(address spender, uint256 rawAmount) external returns (bool) {
         uint96 amount;
         if (rawAmount == uint256(-1)) {
             amount = uint96(-1);
         } else {
-            amount = safe96(
-                rawAmount,
-                "Token::approve: amount exceeds 96 bits"
-            );
+            amount = safe96(rawAmount, 'Token::approve: amount exceeds 96 bits');
         }
 
         allowances[msg.sender][spender] = amount;
@@ -163,47 +128,35 @@ contract TokenLogic is Initializable {
         return true;
     }
 
-    function increaseAllowance(address spender, uint256 addedAmount)
-        external
-        returns (bool)
-    {
+    function increaseAllowance(address spender, uint256 addedAmount) external returns (bool) {
         uint96 amount;
         if (addedAmount == uint256(-1)) {
             amount = uint96(-1);
         } else {
-            amount = safe96(
-                addedAmount,
-                "Token::approve: addedAmount exceeds 96 bits"
-            );
+            amount = safe96(addedAmount, 'Token::approve: addedAmount exceeds 96 bits');
         }
 
         allowances[msg.sender][spender] = add96(
             allowances[msg.sender][spender],
             amount,
-            "Token: increaseAllowance allowance value overflows"
+            'Token: increaseAllowance allowance value overflows'
         );
         emit Approval(msg.sender, spender, allowances[msg.sender][spender]);
         return true;
     }
 
-    function decreaseAllowance(address spender, uint256 removedAmount)
-        external
-        returns (bool)
-    {
+    function decreaseAllowance(address spender, uint256 removedAmount) external returns (bool) {
         uint96 amount;
         if (removedAmount == uint256(-1)) {
             amount = uint96(-1);
         } else {
-            amount = safe96(
-                removedAmount,
-                "Token::approve: removedAmount exceeds 96 bits"
-            );
+            amount = safe96(removedAmount, 'Token::approve: removedAmount exceeds 96 bits');
         }
 
         allowances[msg.sender][spender] = sub96(
             allowances[msg.sender][spender],
             amount,
-            "Token: decreaseAllowance allowance value underflows"
+            'Token: decreaseAllowance allowance value underflows'
         );
         emit Approval(msg.sender, spender, allowances[msg.sender][spender]);
         return true;
@@ -225,8 +178,7 @@ contract TokenLogic is Initializable {
      * @return Whether or not the transfer succeeded
      */
     function transfer(address dst, uint256 rawAmount) external returns (bool) {
-        uint96 amount =
-            safe96(rawAmount, "Token::transfer: amount exceeds 96 bits");
+        uint96 amount = safe96(rawAmount, 'Token::transfer: amount exceeds 96 bits');
         _transferTokens(msg.sender, dst, amount);
         return true;
     }
@@ -245,16 +197,11 @@ contract TokenLogic is Initializable {
     ) external returns (bool) {
         address spender = msg.sender;
         uint96 spenderAllowance = allowances[src][spender];
-        uint96 amount =
-            safe96(rawAmount, "Token::approve: amount exceeds 96 bits");
+        uint96 amount = safe96(rawAmount, 'Token::approve: amount exceeds 96 bits');
 
         if (spender != src && spenderAllowance != uint96(-1)) {
             uint96 newAllowance =
-                sub96(
-                    spenderAllowance,
-                    amount,
-                    "Token::transferFrom: transfer amount exceeds spender allowance"
-                );
+                sub96(spenderAllowance, amount, 'Token::transferFrom: transfer amount exceeds spender allowance');
             allowances[src][spender] = newAllowance;
 
             emit Approval(src, spender, newAllowance);
@@ -295,41 +242,13 @@ contract TokenLogic is Initializable {
         uint96 amount
     ) public {
         bytes32 domainSeparator =
-            keccak256(
-                abi.encode(
-                    DOMAIN_TYPEHASH,
-                    keccak256(bytes(name)),
-                    getChainId(),
-                    address(this)
-                )
-            );
-        bytes32 structHash =
-            keccak256(
-                abi.encode(
-                    DELEGATION_TYPEHASH,
-                    delegatee,
-                    nonce,
-                    expiry,
-                    amount
-                )
-            );
-        bytes32 digest =
-            keccak256(
-                abi.encodePacked("\x19\x01", domainSeparator, structHash)
-            );
+            keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)), getChainId(), address(this)));
+        bytes32 structHash = keccak256(abi.encode(DELEGATION_TYPEHASH, delegatee, nonce, expiry, amount));
+        bytes32 digest = keccak256(abi.encodePacked('\x19\x01', domainSeparator, structHash));
         address signatory = ecrecover(digest, v, r, s);
-        require(
-            signatory != address(0),
-            "Token::delegateBySig: invalid signature"
-        );
-        require(
-            nonce == nonces[signatory]++,
-            "Token::delegateBySig: invalid nonce"
-        );
-        require(
-            block.timestamp <= expiry,
-            "Token::delegateBySig: signature expired"
-        );
+        require(signatory != address(0), 'Token::delegateBySig: invalid signature');
+        require(nonce == nonces[signatory]++, 'Token::delegateBySig: invalid nonce');
+        require(block.timestamp <= expiry, 'Token::delegateBySig: signature expired');
         return _delegate(signatory, delegatee, amount);
     }
 
@@ -343,41 +262,13 @@ contract TokenLogic is Initializable {
         uint96 amount
     ) public {
         bytes32 domainSeparator =
-            keccak256(
-                abi.encode(
-                    DOMAIN_TYPEHASH,
-                    keccak256(bytes(name)),
-                    getChainId(),
-                    address(this)
-                )
-            );
-        bytes32 structHash =
-            keccak256(
-                abi.encode(
-                    UNDELEGATION_TYPEHASH,
-                    delegatee,
-                    nonce,
-                    expiry,
-                    amount
-                )
-            );
-        bytes32 digest =
-            keccak256(
-                abi.encodePacked("\x19\x01", domainSeparator, structHash)
-            );
+            keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)), getChainId(), address(this)));
+        bytes32 structHash = keccak256(abi.encode(UNDELEGATION_TYPEHASH, delegatee, nonce, expiry, amount));
+        bytes32 digest = keccak256(abi.encodePacked('\x19\x01', domainSeparator, structHash));
         address signatory = ecrecover(digest, v, r, s);
-        require(
-            signatory != address(0),
-            "Token::undelegateBySig: invalid signature"
-        );
-        require(
-            nonce == nonces[signatory]++,
-            "Token::undelegateBySig: invalid nonce"
-        );
-        require(
-            block.timestamp <= expiry,
-            "Token::undelegateBySig: signature expired"
-        );
+        require(signatory != address(0), 'Token::undelegateBySig: invalid signature');
+        require(nonce == nonces[signatory]++, 'Token::undelegateBySig: invalid nonce');
+        require(block.timestamp <= expiry, 'Token::undelegateBySig: signature expired');
         return _undelegate(signatory, delegatee, amount);
     }
 
@@ -388,10 +279,7 @@ contract TokenLogic is Initializable {
      */
     function getCurrentVotes(address account) external view returns (uint96) {
         uint32 nCheckpoints = numCheckpoints[account];
-        return
-            nCheckpoints != 0
-                ? checkpoints[account][nCheckpoints - 1].votes
-                : 0;
+        return nCheckpoints != 0 ? checkpoints[account][nCheckpoints - 1].votes : 0;
     }
 
     /**
@@ -401,15 +289,8 @@ contract TokenLogic is Initializable {
      * @param blockNumber The block number to get the vote balance at
      * @return The number of votes the account had as of the given block
      */
-    function getPriorVotes(address account, uint256 blockNumber)
-        public
-        view
-        returns (uint96)
-    {
-        require(
-            blockNumber < block.number,
-            "Token::getPriorVotes: not yet determined"
-        );
+    function getPriorVotes(address account, uint256 blockNumber) public view returns (uint96) {
+        require(blockNumber < block.number, 'Token::getPriorVotes: not yet determined');
 
         uint32 nCheckpoints = numCheckpoints[account];
         if (nCheckpoints == 0) {
@@ -450,13 +331,9 @@ contract TokenLogic is Initializable {
         delegates[delegator][address(0)] = sub96(
             delegates[delegator][address(0)],
             amount,
-            "Token: delegates underflow"
+            'Token: delegates underflow'
         );
-        delegates[delegator][delegatee] = add96(
-            delegates[delegator][delegatee],
-            amount,
-            "Token: delegates overflow"
-        );
+        delegates[delegator][delegatee] = add96(delegates[delegator][delegatee], amount, 'Token: delegates overflow');
 
         emit DelegateChanged(delegator, address(0), delegatee);
 
@@ -471,12 +348,12 @@ contract TokenLogic is Initializable {
         delegates[delegator][delegatee] = sub96(
             delegates[delegator][delegatee],
             amount,
-            "Token: undelegates underflow"
+            'Token: undelegates underflow'
         );
         delegates[delegator][address(0)] = add96(
             delegates[delegator][address(0)],
             amount,
-            "Token: delegates underflow"
+            'Token: delegates underflow'
         );
         emit DelegateChanged(delegator, delegatee, address(0));
         _moveDelegates(delegatee, address(0), amount);
@@ -487,39 +364,25 @@ contract TokenLogic is Initializable {
         address dst,
         uint96 amount
     ) internal {
-        require(
-            src != address(0),
-            "Token::_transferTokens: cannot transfer from the zero address"
-        );
+        require(src != address(0), 'Token::_transferTokens: cannot transfer from the zero address');
         require(
             delegates[src][address(0)] >= amount,
-            "Token: _transferTokens: undelegated amount should be greater than transfer amount"
+            'Token: _transferTokens: undelegated amount should be greater than transfer amount'
         );
-        require(
-            dst != address(0),
-            "Token::_transferTokens: cannot transfer to the zero address"
-        );
+        require(dst != address(0), 'Token::_transferTokens: cannot transfer to the zero address');
 
-        balances[src] = sub96(
-            balances[src],
-            amount,
-            "Token::_transferTokens: transfer amount exceeds balance"
-        );
+        balances[src] = sub96(balances[src], amount, 'Token::_transferTokens: transfer amount exceeds balance');
         delegates[src][address(0)] = sub96(
             delegates[src][address(0)],
             amount,
-            "Token: _tranferTokens: undelegate subtraction error"
+            'Token: _tranferTokens: undelegate subtraction error'
         );
 
-        balances[dst] = add96(
-            balances[dst],
-            amount,
-            "Token::_transferTokens: transfer amount overflows"
-        );
+        balances[dst] = add96(balances[dst], amount, 'Token::_transferTokens: transfer amount overflows');
         delegates[dst][address(0)] = add96(
             delegates[dst][address(0)],
             amount,
-            "Token: _transferTokens: undelegate addition error"
+            'Token: _transferTokens: undelegate addition error'
         );
         emit Transfer(src, dst, amount);
 
@@ -534,31 +397,15 @@ contract TokenLogic is Initializable {
         if (srcRep != dstRep && amount != 0) {
             if (srcRep != address(0)) {
                 uint32 srcRepNum = numCheckpoints[srcRep];
-                uint96 srcRepOld =
-                    srcRepNum != 0
-                        ? checkpoints[srcRep][srcRepNum - 1].votes
-                        : 0;
-                uint96 srcRepNew =
-                    sub96(
-                        srcRepOld,
-                        amount,
-                        "Token::_moveVotes: vote amount underflows"
-                    );
+                uint96 srcRepOld = srcRepNum != 0 ? checkpoints[srcRep][srcRepNum - 1].votes : 0;
+                uint96 srcRepNew = sub96(srcRepOld, amount, 'Token::_moveVotes: vote amount underflows');
                 _writeCheckpoint(srcRep, srcRepNum, srcRepOld, srcRepNew);
             }
 
             if (dstRep != address(0)) {
                 uint32 dstRepNum = numCheckpoints[dstRep];
-                uint96 dstRepOld =
-                    dstRepNum != 0
-                        ? checkpoints[dstRep][dstRepNum - 1].votes
-                        : 0;
-                uint96 dstRepNew =
-                    add96(
-                        dstRepOld,
-                        amount,
-                        "Token::_moveVotes: vote amount overflows"
-                    );
+                uint96 dstRepOld = dstRepNum != 0 ? checkpoints[dstRep][dstRepNum - 1].votes : 0;
+                uint96 dstRepNew = add96(dstRepOld, amount, 'Token::_moveVotes: vote amount overflows');
                 _writeCheckpoint(dstRep, dstRepNum, dstRepOld, dstRepNew);
             }
         }
@@ -570,42 +417,24 @@ contract TokenLogic is Initializable {
         uint96 oldVotes,
         uint96 newVotes
     ) internal {
-        uint32 blockNumber =
-            safe32(
-                block.number,
-                "Token::_writeCheckpoint: block number exceeds 32 bits"
-            );
+        uint32 blockNumber = safe32(block.number, 'Token::_writeCheckpoint: block number exceeds 32 bits');
 
-        if (
-            nCheckpoints != 0 &&
-            checkpoints[delegatee][nCheckpoints - 1].fromBlock == blockNumber
-        ) {
+        if (nCheckpoints != 0 && checkpoints[delegatee][nCheckpoints - 1].fromBlock == blockNumber) {
             checkpoints[delegatee][nCheckpoints - 1].votes = newVotes;
         } else {
-            checkpoints[delegatee][nCheckpoints] = Checkpoint(
-                blockNumber,
-                newVotes
-            );
+            checkpoints[delegatee][nCheckpoints] = Checkpoint(blockNumber, newVotes);
             numCheckpoints[delegatee] = nCheckpoints + 1;
         }
 
         emit DelegateVotesChanged(delegatee, oldVotes, newVotes);
     }
 
-    function safe32(uint256 n, string memory errorMessage)
-        internal
-        pure
-        returns (uint32)
-    {
+    function safe32(uint256 n, string memory errorMessage) internal pure returns (uint32) {
         require(n < 2**32, errorMessage);
         return uint32(n);
     }
 
-    function safe96(uint256 n, string memory errorMessage)
-        internal
-        pure
-        returns (uint96)
-    {
+    function safe96(uint256 n, string memory errorMessage) internal pure returns (uint96) {
         require(n < 2**96, errorMessage);
         return uint96(n);
     }

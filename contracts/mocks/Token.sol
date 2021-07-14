@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.0;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import '@openzeppelin/contracts/access/Ownable.sol';
 
 contract Token is ERC20, Ownable {
     constructor(
@@ -14,7 +14,7 @@ contract Token is ERC20, Ownable {
     }
 
     function mint(address _to, uint256 _amount) external onlyOwner {
-        require(_amount != 0, "Token::burn: invalid amount");
+        require(_amount != 0, 'Token::burn: invalid amount');
         _mint(_to, _amount);
     }
 }
