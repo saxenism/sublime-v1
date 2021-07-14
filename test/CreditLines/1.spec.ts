@@ -15,6 +15,7 @@ import {
   createPoolParams,
   ChainLinkAggregators,
   OperationalAmounts,
+  extensionParams,
 } from "../../utils/constants";
 import DeployHelper from "../../utils/deploys";
 
@@ -192,7 +193,7 @@ describe("Credit Lines", async () => {
     });
 
     it("Initialize required contracts", async () => {
-      await extenstion.connect(admin).initialize(poolFactory.address);
+      await extenstion.connect(admin).initialize(poolFactory.address, extensionParams.votingPassRatio);
 
       let {
         _collectionPeriod,

@@ -15,6 +15,7 @@ import {
   createPoolParams,
   ChainLinkAggregators,
   OperationalAmounts,
+  extensionParams,
 } from "../../utils/constants";
 import DeployHelper from "../../utils/deploys";
 
@@ -199,7 +200,7 @@ describe("Credit Lines", async () => {
       poolFactory = await deployHelper.pool.deployPoolFactory();
       extenstion = await deployHelper.pool.deployExtenstion();
 
-      await extenstion.connect(admin).initialize(poolFactory.address);
+      await extenstion.connect(admin).initialize(poolFactory.address, extensionParams.votingPassRatio);
       await savingsAccount.connect(admin).updateCreditLine(creditLine.address);
 
       let {

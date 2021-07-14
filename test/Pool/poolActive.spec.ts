@@ -13,7 +13,8 @@ import {
   testPoolFactoryParams,
   createPoolParams,
   ChainLinkAggregators,
-  repaymentParams
+  repaymentParams,
+  extensionParams,
 } from "../../utils/constants";
 import DeployHelper from "../../utils/deploys";
 
@@ -183,7 +184,7 @@ describe.only("Pool Active stage", async () => {
 
         poolFactory = await deployHelper.pool.deployPoolFactory();
         extenstion = await deployHelper.pool.deployExtenstion();
-        await extenstion.connect(admin).initialize(poolFactory.address);
+        await extenstion.connect(admin).initialize(poolFactory.address, extensionParams.votingPassRatio);
         let {
             _collectionPeriod,
             _marginCallDuration,
@@ -229,7 +230,6 @@ describe.only("Pool Active stage", async () => {
         await repaymentImpl.connect(admin).initialize(
             admin.address, 
             poolFactory.address, 
-            repaymentParams.votingPassRatio, 
             repaymentParams.gracePenalityRate, 
             repaymentParams.gracePeriodFraction, 
             savingsAccount.address
@@ -352,7 +352,7 @@ describe.only("Pool Active stage", async () => {
                 await pool.connect(borrower).withdrawBorrowedAmount();
                 const { loanStatus } = await pool.poolVars();
                 assert(loanStatus == 1, "Loan is not active");
-                await borrowToken.connect(admin).transfer(random.address, BigNumber.from(10).pow(22));
+                await borrowToken.connect(admin).transfer(random.address, BigNumber.from(10).pow(21));
             });
 
             it("Lender tokens should be transferable", async () => {
@@ -464,8 +464,8 @@ describe.only("Pool Active stage", async () => {
                     ).to.be.revertedWith("Pool::liquidatePool - No reason to liquidate the pool");
                 });
             });
-            return;
-            context("Borrower requests extension", async () => {
+
+            context.only("Borrower requests extension", async () => {
                 it("Request extension", async () => {
                     await expect(
                         extenstion.connect(random).requestExtension(pool.address)
@@ -478,10 +478,22 @@ describe.only("Pool Active stage", async () => {
                 
                 it("Extension passed", async () => {
                     await extenstion.connect(borrower).requestExtension(pool.address);
-                    await extenstion.connect(lender).voteOnExtension(pool.address);
                     await extenstion.connect(lender1).voteOnExtension(pool.address);
-                    assert(await repaymentImpl.isLoanExtensionActive(), "Extension not active");
+                    await extenstion.connect(lender).voteOnExtension(pool.address);
+                    const { isLoanExtensionActive } = await repaymentImpl.repaymentVars(pool.address);
+                    assert(isLoanExtensionActive, "Extension not active");
                 });
+
+                it("Can't vote after extension passed", async () => {
+                    await extenstion.connect(borrower).requestExtension(pool.address);
+                    await extenstion.connect(lender).voteOnExtension(pool.address);
+                    const { isLoanExtensionActive } = await repaymentImpl.repaymentVars(pool.address);
+                    assert(isLoanExtensionActive, "Extension not active");
+                    await expect(
+                        extenstion.connect(lender1).voteOnExtension(pool.address)
+                    ).to.be.revertedWith("Pool::voteOnExtension - Voting is over");
+                });
+                return;
 
                 context("Extension passed", async () => {
                     it("Shouldn't be liquidated for current period", async () => {
@@ -620,7 +632,7 @@ describe.only("Pool Active stage", async () => {
                     });
                 });
             });
-
+            return;
             context("Borrower defaulted repayment", async () => {
                 it("Liquidate pool", async () => {
                     const endOfPeriod:BigNumber = (await repaymentImpl.getNextInstalmentDeadline(pool.address));

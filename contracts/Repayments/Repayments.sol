@@ -38,7 +38,6 @@ contract Repayments is RepaymentStorage, IRepayment {
     function initialize(
         address _owner,
         address _poolFactory,
-        uint256 _votingPassRatio,
         uint256 _gracePenaltyRate,
         uint256 _gracePeriodFraction,
         address _savingsAccount
@@ -47,7 +46,6 @@ contract Repayments is RepaymentStorage, IRepayment {
         OwnableUpgradeable.__Ownable_init();
         OwnableUpgradeable.transferOwnership(_owner);
 
-        votingPassRatio = _votingPassRatio;
         PoolFactory = _poolFactory;
         savingsAccount = _savingsAccount;
         gracePenaltyRate = _gracePenaltyRate;
