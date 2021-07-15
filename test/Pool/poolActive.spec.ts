@@ -423,7 +423,7 @@ describe("Pool Active stage", async () => {
                     ).to.be.revertedWith("Pool::voteOnExtension - Voting is over");
                 });
 
-                context.only("Extension passed", async () => {
+                context("Extension passed", async () => {
                     it("Shouldn't be liquidated for current period", async () => {
                         await extenstion.connect(borrower).requestExtension(pool.address);
                         await extenstion.connect(lender).voteOnExtension(pool.address);
@@ -510,29 +510,31 @@ describe("Pool Active stage", async () => {
                 context('Extension failed', async () => {
                     it("Shouldn't be liquidated for current period if interest is repaid", async () => {
                         await extenstion.connect(borrower).requestExtension(pool.address);
-                        await extenstion.connect(lender).voteOnExtension(pool.address);
+                        await extenstion.connect(lender1).voteOnExtension(pool.address);
 
                         const { extensionVoteEndTime } = await extenstion.poolInfo(pool.address);
+
+                        let interestForCurrentPeriod = (await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address)).div(scaler);
+                        await borrowToken.connect(random).approve(repaymentImpl.address, interestForCurrentPeriod.add(1));
+                        await repaymentImpl.connect(random).repayAmount(pool.address, interestForCurrentPeriod.add(1));
                         await blockTravel(network, parseInt(extensionVoteEndTime.add(1).toString()));
 
-                        let interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address);
-                        await borrowToken.connect(random).approve(repaymentImpl.address, interestForCurrentPeriod);
-                        await repaymentImpl.connect(random).repayAmount(pool.address, interestForCurrentPeriod);
-
-                        await expect(await pool.connect(random).liquidatePool(false, false, false)).to.be.revertedWith(
+                        await expect(pool.connect(random).liquidatePool(false, false, false)).to.be.revertedWith(
                             'Pool::liquidatePool - No reason to liquidate the pool'
                         );
                     });
 
                     it('liquidate if repay is less than interest for current period', async () => {
                         await extenstion.connect(borrower).requestExtension(pool.address);
-                        await extenstion.connect(lender).voteOnExtension(pool.address);
+                        await extenstion.connect(lender1).voteOnExtension(pool.address);
 
-                        const interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address);
-                        await repaymentImpl.repayAmount(pool.address, interestForCurrentPeriod.sub(1));
+                        const interestForCurrentPeriod = (await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address)).div(scaler);
+                        await borrowToken.connect(random).approve(repaymentImpl.address, interestForCurrentPeriod);
+                        await repaymentImpl.connect(random).repayAmount(pool.address, interestForCurrentPeriod.sub(1));
 
-                        const endOfPeriod:BigNumber = await repaymentImpl.getNextInstalmentDeadline(pool.address);
-                        await blockTravel(network, parseInt(endOfPeriod.add(1).toString()));
+                        const endOfPeriod:BigNumber = (await repaymentImpl.getNextInstalmentDeadline(pool.address)).div(scaler);
+                        const gracePeriod:BigNumber = repaymentParams.gracePeriodFraction.mul(createPoolParams._repaymentInterval).div(scaler);
+                        await blockTravel(network, parseInt(endOfPeriod.add(gracePeriod).add(1).toString()));
 
                         const collateralShares = await savingsAccount.userLockedBalance(
                             pool.address,

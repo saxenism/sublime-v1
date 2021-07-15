@@ -192,7 +192,7 @@ contract Repayments is RepaymentStorage, IRepayment {
             _nextInstalmentDeadline.add(
                 _gracePeriodFraction.mul(_repaymentInterval).div(10**30)
             );
-        console.log(_currentTime, _nextInstalmentDeadline, _gracePeriodDeadline);
+        console.log(_currentTime, _nextInstalmentDeadline, _gracePeriodDeadline, _currentTime > _gracePeriodDeadline);
         if (_currentTime > _gracePeriodDeadline) return true;
         else return false;
     }
