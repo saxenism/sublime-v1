@@ -642,8 +642,8 @@ describe("Credit Lines", async () => {
             });
         });
     });
-});
-
-function print(data: any) {
-    console.log(JSON.stringify(data, null, 4));
-}
+  });
+}) 
+// function print(data: any) {
+//     console.log(JSON.stringify(data, null, 4));
+// }

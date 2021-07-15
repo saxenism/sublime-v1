@@ -697,9 +697,10 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
                 _poolFactory,
                 IPoolFactory(_poolFactory).liquidatorRewardFraction()
             );
+        console.log("_poolBorrowTokens", _poolBorrowTokens);
 
         _deposit(_fromSavingsAccount, false, _borrowAsset, _poolBorrowTokens, address(0), msg.sender, address(this));
-
+        console.log("Collateral tokens deposited");
         _withdraw(_toSavingsAccount, _recieveLiquidityShare, _collateralAsset, _poolSavingsStrategy, _collateralTokens);
 
         delete poolVars.extraLiquidityShares;

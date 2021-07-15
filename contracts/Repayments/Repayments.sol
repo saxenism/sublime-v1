@@ -192,7 +192,7 @@ contract Repayments is RepaymentStorage, IRepayment {
             _nextInstalmentDeadline.add(
                 _gracePeriodFraction.mul(_repaymentInterval).div(10**30)
             );
-
+        console.log(_currentTime, _nextInstalmentDeadline, _gracePeriodDeadline);
         if (_currentTime > _gracePeriodDeadline) return true;
         else return false;
     }
@@ -227,6 +227,7 @@ contract Repayments is RepaymentStorage, IRepayment {
 
     function getInterestLeft(address _poolID) public view returns (uint256) {
         uint256 _interestPerSecond = getInterestPerSecond((_poolID));
+        console.log("loanDurationCovered", repaymentVars[_poolID].loanDurationCovered, repaymentConstants[_poolID].loanDuration);
         uint256 _loanDurationLeft =
             repaymentConstants[_poolID].loanDuration.sub(
                 repaymentVars[_poolID].loanDurationCovered
@@ -266,10 +267,11 @@ contract Repayments is RepaymentStorage, IRepayment {
 
         uint256 _amountRequired = 0;
         uint256 _interestPerSecond = getInterestPerSecond(_poolID);
-
+        console.log(repaymentVars[_poolID].isLoanExtensionActive);
         // First pay off the overdue
         if (repaymentVars[_poolID].isLoanExtensionActive == true) {
             uint256 _interestOverdue = getInterestOverdue(_poolID);
+            console.log("Interest overdue", _interestOverdue);
 
             if (_amount >= _interestOverdue) {
                 _amount = _amount.sub(_interestOverdue);
@@ -277,7 +279,7 @@ contract Repayments is RepaymentStorage, IRepayment {
                 repaymentVars[_poolID].isLoanExtensionActive = false; // deactivate loan extension flag
                 repaymentVars[_poolID].loanDurationCovered = (getInstalmentsCompleted(_poolID).add(10**30)).mul(
                     repaymentConstants[_poolID].repaymentInterval
-                );
+                ).div(10**30);
             } else {
                 _amountRequired = _amountRequired.add(_amount);
                 repaymentVars[_poolID].loanDurationCovered = repaymentVars[

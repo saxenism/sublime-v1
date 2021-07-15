@@ -394,7 +394,7 @@ describe("Pool Active stage", async () => {
                 });
             });
 
-            context.only("Borrower requests extension", async () => {
+            context("Borrower requests extension", async () => {
                 it("Request extension", async () => {
                     await expect(
                         extenstion.connect(random).requestExtension(pool.address)
@@ -422,15 +422,15 @@ describe("Pool Active stage", async () => {
                         extenstion.connect(lender1).voteOnExtension(pool.address)
                     ).to.be.revertedWith("Pool::voteOnExtension - Voting is over");
                 });
-                return;
 
-                context("Extension passed", async () => {
+                context.only("Extension passed", async () => {
                     it("Shouldn't be liquidated for current period", async () => {
                         await extenstion.connect(borrower).requestExtension(pool.address);
                         await extenstion.connect(lender).voteOnExtension(pool.address);
-                        await extenstion.connect(lender1).voteOnExtension(pool.address);
 
-                        await expect(await pool.connect(random).liquidatePool(false, false, false)).to.be.revertedWith(
+                        await expect(
+                            pool.connect(random).liquidatePool(false, false, false)
+                        ).to.be.revertedWith(
                             'Pool::liquidatePool - No reason to liquidate the pool'
                         );
                     });
@@ -438,13 +438,15 @@ describe("Pool Active stage", async () => {
                     it('liquidate if repay less than interest for extended period', async () => {
                         await extenstion.connect(borrower).requestExtension(pool.address);
                         await extenstion.connect(lender).voteOnExtension(pool.address);
-                        await extenstion.connect(lender1).voteOnExtension(pool.address);
 
-                        const interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address);
-                        await repaymentImpl.repayAmount(pool.address, interestForCurrentPeriod.sub(1));
+                        const interestForCurrentPeriod = (await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address)).div(scaler);
+                        await borrowToken.connect(admin).transfer(random.address, interestForCurrentPeriod);
+                        await borrowToken.connect(random).approve(repaymentImpl.address, interestForCurrentPeriod);
+                        await repaymentImpl.connect(random).repayAmount(pool.address, interestForCurrentPeriod);
 
-                        const endOfExtension:BigNumber = await repaymentImpl.getNextInstalmentDeadline(pool.address);
-                        await blockTravel(network, parseInt(endOfExtension.add(1).toString()));
+                        const endOfExtension:BigNumber = (await repaymentImpl.getNextInstalmentDeadline(pool.address)).div(scaler);
+                        const gracePeriod:BigNumber = repaymentParams.gracePeriodFraction.mul(createPoolParams._repaymentInterval).div(scaler);
+                        await blockTravel(network, parseInt(endOfExtension.add(gracePeriod).add(1).toString()));
 
                         const collateralShares = await savingsAccount.userLockedBalance(
                             pool.address,
@@ -462,22 +464,23 @@ describe("Pool Active stage", async () => {
                         );
                         await borrowToken.connect(admin).transfer(random.address, borrowTokensForCollateral);
                         await borrowToken.connect(random).approve(pool.address, borrowTokensForCollateral);
-                        await pool.liquidatePool(false, false, false);
+                        await pool.connect(random).liquidatePool(false, false, false);
                     });
 
                     it("Can't liquidate if repay is more than interest for extended period", async () => {
                         await extenstion.connect(borrower).requestExtension(pool.address);
                         await extenstion.connect(lender).voteOnExtension(pool.address);
-                        await extenstion.connect(lender1).voteOnExtension(pool.address);
 
-                        const interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address);
-                        const endOfExtension: BigNumber = await repaymentImpl.getNextInstalmentDeadline(pool.address);
+                        const interestForCurrentPeriod = (await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address)).div(scaler);
                         await borrowToken.connect(random).approve(repaymentImpl.address, interestForCurrentPeriod);
+                        const endOfExtension: BigNumber = (await repaymentImpl.getNextInstalmentDeadline(pool.address)).div(scaler);
                         await repaymentImpl.connect(random).repayAmount(pool.address, interestForCurrentPeriod);
 
-                        await blockTravel(network, parseInt(endOfExtension.add(1).toString()));
-
-                        await expect(await pool.connect(random).liquidatePool(false, false, false)).to.be.revertedWith(
+                        const gracePeriod:BigNumber = repaymentParams.gracePeriodFraction.mul(createPoolParams._repaymentInterval).div(scaler);
+                        await blockTravel(network, parseInt(endOfExtension.add(gracePeriod).add(1).toString()));
+                        console.log("block travel done");
+                        console.log((await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address)).div(scaler).toString());
+                        await expect(pool.connect(random).liquidatePool(false, false, false)).to.be.revertedWith(
                             'Pool::liquidatePool - No reason to liquidate the pool'
                         );
                     });
@@ -485,15 +488,16 @@ describe("Pool Active stage", async () => {
                     it('Repay interest for period after extension', async () => {
                         await extenstion.connect(borrower).requestExtension(pool.address);
                         await extenstion.connect(lender).voteOnExtension(pool.address);
-                        await extenstion.connect(lender1).voteOnExtension(pool.address);
 
-                        let interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address);
-                        const endOfExtension: BigNumber = await repaymentImpl.getNextInstalmentDeadline(pool.address);
-                        await repaymentImpl.repayAmount(pool.address, interestForCurrentPeriod);
+                        let interestForCurrentPeriod = (await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address)).div(scaler);
+                        const endOfExtension: BigNumber = (await repaymentImpl.getNextInstalmentDeadline(pool.address)).div(scaler);
+                        await borrowToken.connect(random).approve(repaymentImpl.address, interestForCurrentPeriod);
+                        await repaymentImpl.connect(random).repayAmount(pool.address, interestForCurrentPeriod);
 
-                        await blockTravel(network, parseInt(endOfExtension.add(1).toString()));
+                        const gracePeriod:BigNumber = repaymentParams.gracePeriodFraction.mul(createPoolParams._repaymentInterval).div(scaler);
+                        await blockTravel(network, parseInt(endOfExtension.add(gracePeriod).add(1).toString()));
 
-                        interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address);
+                        interestForCurrentPeriod = (await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address)).div(scaler);
                         assert(
                             interestForCurrentPeriod.toString() != '0',
                             `Interest not charged correctly. Actual: ${interestForCurrentPeriod.toString()} Expected: 0`
