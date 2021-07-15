@@ -12,8 +12,6 @@ import '../interfaces/ISavingsAccount.sol';
 import '../SavingsAccount/SavingsAccountUtil.sol';
 import '../interfaces/IStrategyRegistry.sol';
 
-import 'hardhat/console.sol';
-
 /**
  * @title Credit Line contract with Methods related to credit Line
  * @notice Implements the functions related to Credit Line

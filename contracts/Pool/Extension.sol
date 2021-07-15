@@ -8,8 +8,6 @@ import '../interfaces/IPoolFactory.sol';
 import '../interfaces/IExtension.sol';
 import '../interfaces/IRepayment.sol';
 
-import "hardhat/console.sol";
-
 contract Extension is Initializable, IExtension {
     using SafeMath for uint256;
 
@@ -79,14 +77,12 @@ contract Extension is Initializable, IExtension {
         uint256 _gracePeriod = (_repaymentInterval * _gracePeriodFraction); // multiplying exponents
         uint256 _nextDueTime = _repayment.getNextInstalmentDeadline(_pool);
         _extensionVoteEndTime = (_nextDueTime).add(_gracePeriod).div(10**30);
-        console.log("_extensionVoteEndTime", _extensionVoteEndTime, _nextDueTime, _gracePeriod);
         poolInfo[_pool].extensionVoteEndTime = _extensionVoteEndTime; // this makes extension request single use
         emit ExtensionRequested(_extensionVoteEndTime);
     }
 
     function voteOnExtension(address _pool) external {
         uint256 _extensionVoteEndTime = poolInfo[_pool].extensionVoteEndTime;
-        console.log("current time", block.timestamp, _extensionVoteEndTime);
         require(
             block.timestamp < _extensionVoteEndTime,
             "Pool::voteOnExtension - Voting is over"
@@ -113,7 +109,6 @@ contract Extension is Initializable, IExtension {
         poolInfo[_pool].lastVoteTime[msg.sender] = _lastVoteTime;
         emit LenderVoted(msg.sender, _extensionSupport, _lastVoteTime);
         poolInfo[_pool].totalExtensionSupport = _extensionSupport;
-        console.log("Extension grant ?", _extensionSupport, _totalSupply, _votingPassRatio);
 
         if (((_extensionSupport)) >= (_totalSupply.mul(_votingPassRatio)).div(10**30)) {
             grantExtension(_pool);

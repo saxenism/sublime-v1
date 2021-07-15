@@ -204,7 +204,7 @@ describe("Pool Active stage", async () => {
         await poolFactory.connect(admin).setImplementations(poolImpl.address, repaymentImpl.address, poolTokenImpl.address);
     });
 
-    describe.only('Pool that borrows ERC20 with ERC20 as collateral', async () => {
+    describe('Pool that borrows ERC20 with ERC20 as collateral', async () => {
         let pool: Pool;
         let poolToken: PoolToken;
         let collateralToken: ERC20;
