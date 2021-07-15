@@ -566,8 +566,8 @@ describe("Pool Active stage", async () => {
 
                     it('after an extension passed', async () => {
                         await extenstion.connect(borrower).requestExtension(pool.address);
-                        await extenstion.connect(lender).voteOnExtension(pool.address);
                         await extenstion.connect(lender1).voteOnExtension(pool.address);
+                        await extenstion.connect(lender).voteOnExtension(pool.address);
 
                         await expect(extenstion.connect(borrower).requestExtension(pool.address)).to.be.revertedWith(
                             'Extension::requestExtension: Extension already availed'
@@ -576,11 +576,11 @@ describe("Pool Active stage", async () => {
 
                     it('after an extension passed and extended period is complete', async () => {
                         await extenstion.connect(borrower).requestExtension(pool.address);
-                        await extenstion.connect(lender).voteOnExtension(pool.address);
                         await extenstion.connect(lender1).voteOnExtension(pool.address);
+                        await extenstion.connect(lender).voteOnExtension(pool.address);
 
-                        const interestForCurrentPeriod = await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address);
-                        const endOfExtension: BigNumber = await repaymentImpl.getNextInstalmentDeadline(pool.address);
+                        const interestForCurrentPeriod = (await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address)).div(scaler);
+                        const endOfExtension: BigNumber = (await repaymentImpl.getNextInstalmentDeadline(pool.address)).div(scaler);
                         await borrowToken.connect(random).approve(repaymentImpl.address, interestForCurrentPeriod);
                         await repaymentImpl.connect(random).repayAmount(pool.address, interestForCurrentPeriod);
 
@@ -592,7 +592,7 @@ describe("Pool Active stage", async () => {
                     });
                 });
             });
-            return;
+
             context("Borrower defaulted repayment", async () => {
                 it("Liquidate pool", async () => {
                     const endOfPeriod:BigNumber = (await repaymentImpl.getNextInstalmentDeadline(pool.address));
