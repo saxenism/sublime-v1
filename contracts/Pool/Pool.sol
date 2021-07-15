@@ -595,9 +595,11 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         require(poolVars.loanStatus == LoanStatus.ACTIVE, '4');
 
         IPoolFactory _poolFactory = IPoolFactory(PoolFactory);
-        require(getMarginCallEndTime(msg.sender) != 0, 'RMC1');
+        require(getMarginCallEndTime(msg.sender) == 0, 'RMC1');
+        console.log("collateral ratio check", poolConstants.idealCollateralRatio, getCurrentCollateralRatio(msg.sender), _poolFactory.collateralVolatilityThreshold());
+        uint256 _idealCollateralRatio = poolConstants.idealCollateralRatio;
         require(
-            poolConstants.idealCollateralRatio >
+            _idealCollateralRatio >
                 getCurrentCollateralRatio(msg.sender).add(_poolFactory.collateralVolatilityThreshold()),
             '26'
         );
@@ -627,7 +629,12 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         (uint256 _loanDurationCovered, uint256 _interestPerSecond) =
             IRepayment(_poolFactory.repaymentImpl()).getInterestCalculationVars(address(this));
         uint256 _currentBlockTime = block.timestamp.mul(10**30);
-        uint256 _interestAccrued = _interestPerSecond.mul(_currentBlockTime.sub(_loanDurationCovered)).div(10**30);
+        uint256 _loanDurationTillNow = _currentBlockTime.sub(poolConstants.loanStartTime.mul(10**30));
+        if(_loanDurationTillNow <= _loanDurationCovered) {
+            return 0;
+        }
+        console.log("Interest till now", _interestPerSecond, _loanDurationTillNow, _loanDurationCovered);
+        uint256 _interestAccrued = _interestPerSecond.mul(_loanDurationTillNow.sub(_loanDurationCovered)).div(10**60);
 
         return _interestAccrued;
     }
@@ -643,6 +650,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
                 : IYield(_strategy).getTokensForShares(_liquidityShares, _collateralAsset);
         uint256 _equivalentCollateral =
             getEquivalentTokens(_collateralAsset, poolConstants.borrowAsset, _currentCollateralTokens);
+        console.log("eq borrow", _equivalentCollateral, _balance, _interest);
         _ratio = _equivalentCollateral.mul(10**30).div(_balance.add(_interest));
     }
 
@@ -889,6 +897,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     function getMarginCallEndTime(address _lender) public view override returns (uint256) {
         uint256 _marginCallDuration = IPoolFactory(PoolFactory).marginCallDuration();
         uint256 _marginCallEndTime = lenders[_lender].marginCallEndTime;
+        console.log("_marginCallEndTime", _marginCallEndTime);
         if (block.timestamp > _marginCallEndTime.add(_marginCallDuration.mul(2))) {
             _marginCallEndTime = 0;
         }
@@ -951,6 +960,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     ) public view returns (uint256) {
         (uint256 _price, uint256 _decimals) =
             IPriceOracle(IPoolFactory(PoolFactory).priceOracle()).getLatestPrice(_source, _target);
+        console.log("price", _price, _decimals);
         return _amount.mul(_price).div(10**_decimals);
     }
 

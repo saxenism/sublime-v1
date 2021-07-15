@@ -204,7 +204,7 @@ describe("Pool Active stage", async () => {
         await poolFactory.connect(admin).setImplementations(poolImpl.address, repaymentImpl.address, poolTokenImpl.address);
     });
 
-    describe('Pool that borrows ERC20 with ERC20 as collateral', async () => {
+    describe.only('Pool that borrows ERC20 with ERC20 as collateral', async () => {
         let pool: Pool;
         let poolToken: PoolToken;
         let collateralToken: ERC20;
@@ -594,9 +594,11 @@ describe("Pool Active stage", async () => {
             });
 
             context("Borrower defaulted repayment", async () => {
+                // TODO: Check balances are correct when liquidation happens
                 it("Liquidate pool", async () => {
-                    const endOfPeriod:BigNumber = (await repaymentImpl.getNextInstalmentDeadline(pool.address));
-                    await blockTravel(network, parseInt(endOfPeriod.add(1).toString()));
+                    const endOfPeriod:BigNumber = (await repaymentImpl.getNextInstalmentDeadline(pool.address)).div(scaler);
+                    const gracePeriod:BigNumber = repaymentParams.gracePeriodFraction.mul(createPoolParams._repaymentInterval).div(scaler);
+                    await blockTravel(network, parseInt(endOfPeriod.add(gracePeriod).add(1).toString()));
 
                     const collateralShares = await savingsAccount.userLockedBalance(
                         pool.address,
@@ -618,8 +620,9 @@ describe("Pool Active stage", async () => {
                 });
                 
                 it("Lenders should be able to withdraw repayments till now", async () => {
-                    const endOfPeriod:BigNumber = (await repaymentImpl.getNextInstalmentDeadline(pool.address));
-                    await blockTravel(network, parseInt(endOfPeriod.add(1).toString()));
+                    const endOfPeriod:BigNumber = (await repaymentImpl.getNextInstalmentDeadline(pool.address)).div(scaler);
+                    const gracePeriod:BigNumber = repaymentParams.gracePeriodFraction.mul(createPoolParams._repaymentInterval).div(scaler);
+                    await blockTravel(network, parseInt(endOfPeriod.add(gracePeriod).add(1).toString()));
 
                     const collateralShares = await savingsAccount.userLockedBalance(
                         pool.address,
@@ -643,8 +646,9 @@ describe("Pool Active stage", async () => {
                 });
     
                 it("Lenders should be able to withdraw liquidated collateral", async () => {
-                    const endOfPeriod:BigNumber = (await repaymentImpl.getNextInstalmentDeadline(pool.address));
-                    await blockTravel(network, parseInt(endOfPeriod.add(1).toString()));
+                    const endOfPeriod:BigNumber = (await repaymentImpl.getNextInstalmentDeadline(pool.address)).div(scaler);
+                    const gracePeriod:BigNumber = repaymentParams.gracePeriodFraction.mul(createPoolParams._repaymentInterval).div(scaler);
+                    await blockTravel(network, parseInt(endOfPeriod.add(gracePeriod).add(1).toString()));
 
                     const collateralShares = await savingsAccount.userLockedBalance(
                         pool.address,
@@ -668,8 +672,9 @@ describe("Pool Active stage", async () => {
                 });
 
                 it("Borrower can't withdraw collateral", async () => {
-                    const endOfPeriod:BigNumber = (await repaymentImpl.getNextInstalmentDeadline(pool.address));
-                    await blockTravel(network, parseInt(endOfPeriod.add(1).toString()));
+                    const endOfPeriod:BigNumber = (await repaymentImpl.getNextInstalmentDeadline(pool.address)).div(scaler);
+                    const gracePeriod:BigNumber = repaymentParams.gracePeriodFraction.mul(createPoolParams._repaymentInterval).div(scaler);
+                    await blockTravel(network, parseInt(endOfPeriod.add(gracePeriod).add(1).toString()));
 
                     await expect(pool.cancelPool()).to.be.revertedWith('CP1');
 
@@ -679,7 +684,11 @@ describe("Pool Active stage", async () => {
 
             context('Margin call when collateral ratio falls below ideal ratio', async () => {
                 beforeEach(async () => {
-                    await priceOracle.connect(admin).setfeedAddress(Contracts.LINK, ChainLinkAggregators['DAI/USD']);
+                    await priceOracle.connect(admin).setfeedAddress(Contracts.LINK, ChainLinkAggregators['ETH/USD']);
+                });
+
+                afterEach(async () => {
+                    await priceOracle.connect(admin).setfeedAddress(Contracts.LINK, ChainLinkAggregators['LINK/USD']);
                 });
 
                 it("Margin called lender, can't send pool tokens", async () => {
@@ -701,24 +710,29 @@ describe("Pool Active stage", async () => {
                 });
 
                 it('Only lender can initiate margin call', async () => {
-                    await pool.connect(random).requestMarginCall();
+                    await expect(
+                        pool.connect(random).requestMarginCall()
+                    ).to.be.revertedWith('2');
                 });
 
                 it("Margin call can't be liquidated, if borrower adds collateral for margin call", async () => {
                     await pool.connect(lender).requestMarginCall();
-
-                    const amount: BigNumber = createPoolParams._poolSize.sub(createPoolParams._collateralAmount);
+                    const price = await priceOracle.getLatestPrice(Contracts.LINK, Contracts.DAI);
+                    const totalDeficit: BigNumber = createPoolParams._minborrowAmount.mul(price[0]).div(BigNumber.from(10).pow(price[1])).sub(createPoolParams._collateralAmount);
+                    const amount: BigNumber = totalDeficit.mul((await poolToken.balanceOf(lender.address))).div(await poolToken.totalSupply()).add(1);
                     await collateralToken.connect(admin).transfer(borrower.address, amount);
 
                     await collateralToken.connect(borrower).approve(pool.address, amount);
 
                     await pool.connect(borrower).addCollateralInMarginCall(lender.address, amount, false);
 
-                    await expect(pool.liquidateLender(lender.address, false, false, false)).to.be.revertedWith('29');
+                    await expect(pool.liquidateLender(lender.address, false, false, false)).to.be.revertedWith('No margin call has been called.');
                 });
 
                 it("Margin call can't be liquidated, if collateral ratio goes above ideal ratio", async () => {
                     await pool.connect(lender).requestMarginCall();
+
+                    await timeTravel(network, parseInt(testPoolFactoryParams._marginCallDuration.toString()));
 
                     await priceOracle.connect(admin).setfeedAddress(Contracts.LINK, ChainLinkAggregators['LINK/USD']);
 
@@ -727,15 +741,23 @@ describe("Pool Active stage", async () => {
 
                 it("If collateral ratio below ideal after margin call time, Anyone can liquidate lender's part of collateral", async () => {
                     await pool.connect(lender).requestMarginCall();
+                    const price = await priceOracle.getLatestPrice(Contracts.LINK, Contracts.DAI);
+                    const totalDeficit: BigNumber = createPoolParams._minborrowAmount.mul(price[0]).mul(createPoolParams._collateralRatio.sub(testPoolFactoryParams._collateralVolatilityThreshold)).div(scaler).div(BigNumber.from(10).pow(price[1])).sub(createPoolParams._collateralAmount);
+                    let amount: BigNumber = totalDeficit.mul((await poolToken.balanceOf(lender.address))).div(await poolToken.totalSupply());
+                    amount = amount.sub(amount.div(1000));
 
-                    const amount: BigNumber = createPoolParams._poolSize.sub(createPoolParams._collateralAmount).sub(10);
                     await collateralToken.connect(admin).transfer(borrower.address, amount);
-
                     await collateralToken.connect(borrower).approve(pool.address, amount);
 
                     await pool.connect(borrower).addCollateralInMarginCall(lender.address, amount, false);
 
-                    await pool.liquidateLender(lender.address, false, false, false);
+                    await timeTravel(network, parseInt(testPoolFactoryParams._marginCallDuration.toString()));
+
+                    const liquidationTokens = await poolToken.balanceOf(lender.address);
+                    await borrowToken.connect(admin).transfer(random.address, liquidationTokens);
+                    await borrowToken.connect(random).approve(pool.address, liquidationTokens);
+
+                    await pool.connect(random).liquidateLender(lender.address, false, false, false);
                 });
 
                 context('Collateral added in margin call is specific to lender', async () => {
