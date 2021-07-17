@@ -86,6 +86,30 @@ import { Contracts } from '../existingContracts/compound.json';
 //     return 'Done';
 // }
 
+// async function init(deployNetwork: string) {
+//     if (allConfig.network != deployNetwork) {
+//         console.error('Deploy network different from config network');
+//         process.exit();
+//     }
+
+//     let config;
+//     if (network.name.includes('kovan')) {
+//         config = allConfig.kovan;
+//     } else if (network.name.includes('mainnet')) {
+//         config = allConfig.mainnet;
+//     } else {
+//         console.error('Config for network not found');
+//         process.exit();
+//     }
+//     let [proxyAdmin, admin, deployer, verifier] = await ethers.getSigners();
+
+//     const deployHelper: DeployHelper = new DeployHelper(deployer);
+//     console.log(admin.address);
+//     let verification: Verification = await deployHelper.helper.getVerification(contracts.verification.proxy);
+//     await verification.connect(admin).registerUser('0xba4d24bb13e64a9404bfacf937cce6bb40a511ac', '0x1721b6a7f6c53368352bf227cbceb3b2b8b501c04f245247ef86a12ada4f4c63');
+//     return 'Done';
+// }
+
 async function init(deployNetwork: string) {
     if (allConfig.network != deployNetwork) {
         console.error('Deploy network different from config network');
@@ -103,9 +127,13 @@ async function init(deployNetwork: string) {
     }
     let [proxyAdmin, admin, deployer, verifier] = await ethers.getSigners();
 
+    const deployHelper: DeployHelper = new DeployHelper(deployer);
     console.log(admin.address);
+    let poolFactory: PoolFactory = await deployHelper.pool.getPoolFactory(contracts.poolFactory.proxy);
+    await poolFactory.connect(admin).updateSupportedBorrowTokens('0x463514ea551b88f176dc9e71e529dd02eb2d0cf8', true);
+    await poolFactory.connect(admin).updateSupportedBorrowTokens('0xab2af84a9db35f92dfb5b0607bd91226f5e97469', true);
 
-    return 'Done';
+    return "Done";
 }
 
 init('kovan').then(console.log);

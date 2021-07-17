@@ -4,7 +4,8 @@
   "description": "Defi Protocol to facilitate the under-collateralized loan",
   "main": "dist/",
   "scripts": {
-    "build": "npm run typechain",
+    "build": "npx run typechain",
+    "compile": "npx hardhat compile",
     "test": "npx hardhat test",
     "typechain": "npx hardhat typechain",
     "coverage": "yarn build && npx hardhat coverage --temp artifacts",
