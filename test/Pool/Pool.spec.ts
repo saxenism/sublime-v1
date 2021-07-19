@@ -14,6 +14,7 @@ import {
     createPoolParams,
     ChainLinkAggregators,
     OperationalAmounts,
+    extensionParams,
 } from '../../utils/constants';
 import DeployHelper from '../../utils/deploys';
 
@@ -143,7 +144,7 @@ describe('Pool', async () => {
             const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
             poolFactory = await deployHelper.pool.deployPoolFactory();
             extenstion = await deployHelper.pool.deployExtenstion();
-            await extenstion.connect(admin).initialize(poolFactory.address);
+            await extenstion.connect(admin).initialize(poolFactory.address, extensionParams.votingPassRatio);
             let {
                 _collectionPeriod,
                 _marginCallDuration,

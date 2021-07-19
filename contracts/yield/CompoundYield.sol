@@ -9,8 +9,6 @@ import '../interfaces/IYield.sol';
 import '../interfaces/Invest/ICEther.sol';
 import '../interfaces/Invest/ICToken.sol';
 
-import 'hardhat/console.sol';
-
 /**
  * @title Yield contract
  * @notice Implements the functions to lock/unlock tokens into available exchanges

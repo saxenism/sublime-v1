@@ -45,6 +45,6 @@ contract RepaymentStorage is OwnableUpgradeable {
         address savingsAccount;
     }
 
-    mapping(address => RepaymentVars) repaymentVars;
-    mapping(address => RepaymentConstants) repaymentConstants;
+    mapping(address => RepaymentVars) public repaymentVars;
+    mapping(address => RepaymentConstants) public repaymentConstants;
 }

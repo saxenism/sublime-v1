@@ -21,6 +21,18 @@ contract Extension is Initializable, IExtension {
 
     mapping(address => PoolInfo) public poolInfo;
     IPoolFactory poolFactory;
+    uint256 votingPassRatio;
+
+    modifier onlyOwner() {
+        require(msg.sender == poolFactory.owner(), "Not owner");
+        _;
+    }
+
+    /*
+    * @notice emitted when the Voting Pass Ratio parameter for Open Borrow Pools is updated
+    * @param votingPassRatio the new value of the voting pass ratio for Open Borrow Pools
+    */
+    event VotingPassRatioUpdated(uint256 votingPassRatio);
 
     event ExtensionRequested(uint256 extensionVoteEndTime);
     event ExtensionPassed(uint256 loanInterval);
@@ -31,8 +43,10 @@ contract Extension is Initializable, IExtension {
         _;
     }
 
-    function initialize(address _poolFactory) external initializer {
+    function initialize(address _poolFactory, uint256 _votingPassRatio) external initializer {
         poolFactory = IPoolFactory(_poolFactory);
+        votingPassRatio = _votingPassRatio;
+        emit VotingPassRatioUpdated(_votingPassRatio);
     }
 
     function initializePoolExtension(uint256 _repaymentInterval) external override {
@@ -69,12 +83,15 @@ contract Extension is Initializable, IExtension {
 
     function voteOnExtension(address _pool) external {
         uint256 _extensionVoteEndTime = poolInfo[_pool].extensionVoteEndTime;
-        require(block.timestamp < _extensionVoteEndTime, 'Pool::voteOnExtension - Voting is over');
+        require(
+            block.timestamp < _extensionVoteEndTime,
+            "Pool::voteOnExtension - Voting is over"
+        );
 
         (uint256 _balance, uint256 _totalSupply) = IPool(_pool).getBalanceDetails(msg.sender);
         require(_balance != 0, 'Pool::voteOnExtension - Not a valid lender for pool');
 
-        uint256 _votingPassRatio = IPoolFactory(poolFactory).votingPassRatio();
+        uint256 _votingPassRatio = votingPassRatio;
 
         uint256 _lastVoteTime = poolInfo[_pool].lastVoteTime[msg.sender]; //Lender last vote time need to store it as it checks that a lender only votes once
         uint256 _gracePeriodFraction = IRepayment(poolFactory.repaymentImpl()).getGracePeriodFraction();
@@ -113,5 +130,13 @@ contract Extension is Initializable, IExtension {
 
     function closePoolExtension() external override {
         delete poolInfo[msg.sender];
+    }
+
+    function updateVotingPassRatio(uint256 _votingPassRatio)
+        external
+        onlyOwner
+    {
+        votingPassRatio = _votingPassRatio;
+        emit VotingPassRatioUpdated(_votingPassRatio);
     }
 }

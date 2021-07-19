@@ -11,8 +11,6 @@ import '../interfaces/Invest/AaveLendingPool.sol';
 import '../interfaces/Invest/IScaledBalanceToken.sol';
 import '../interfaces/Invest/IProtocolDataProvider.sol';
 
-import 'hardhat/console.sol';
-
 /**
  * @title Yield contract
  * @notice Implements the functions to lock/unlock tokens into Aave protocol
