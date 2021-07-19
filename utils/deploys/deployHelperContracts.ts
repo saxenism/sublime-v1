@@ -1,4 +1,4 @@
-import { Signer } from 'ethers';
+import { BytesLike, Signer } from 'ethers';
 
 import { Verification } from '../../typechain/Verification';
 import { PriceOracle } from '../../typechain/PriceOracle';

@@ -1,6 +1,7 @@
 import '@nomiclabs/hardhat-ethers';
 import '@nomiclabs/hardhat-waffle';
 import '@nomiclabs/hardhat-ganache';
+import '@nomiclabs/hardhat-etherscan';
 import '@openzeppelin/hardhat-upgrades';
 
 import 'hardhat-typechain';
@@ -10,7 +11,9 @@ import 'hardhat-deploy';
 import { task } from 'hardhat/config';
 import { HardhatUserConfig } from 'hardhat/types';
 
-import { privateKeys } from './utils/wallet';
+import { privateKeys, kovanPrivateKeys } from './utils/wallet';
+import kovanDeploymentKeys from './keystore/keystore.json';
+
 import {
     etherscanKey,
     INFURA_TOKEN,
@@ -46,13 +49,11 @@ const config: HardhatUserConfig = {
         hardhat: {
             // hardfork: "istanbul",
             forking: {
-                url: 'https://eth-mainnet.alchemyapi.io/v2/wsHSVJhcoPmPHEDrXAOWE-jW2wXCO8jE',
+                url: 'https://eth-mainnet.alchemyapi.io/v2/snGskhAXMQaRLnJaxbcfOL7U5_bSZl_Y',
                 blockNumber: 12400000,
             },
             accounts: getHardhatPrivateKeys(),
             live: true,
-            blockGasLimit: 10000000,
-            gas: 10000000,
             saveDeployments: false,
             tags: ['hardhat'],
         },
@@ -60,6 +61,7 @@ const config: HardhatUserConfig = {
             url: 'http://127.0.0.1:8545',
             timeout: 100000,
             live: false,
+            accounts: Object.values(kovanDeploymentKeys),
             saveDeployments: false,
             tags: ['localhost'],
         },
@@ -67,10 +69,12 @@ const config: HardhatUserConfig = {
             chainId: 42,
             url: 'https://kovan.infura.io/v3/' + INFURA_TOKEN,
             // @ts-ignore
-            accounts: { mnemonic: KOVAN_DEPLOY_MNEMONIC },
+            accounts: Object.values(kovanDeploymentKeys),
             live: true,
+            gasPrice: 3000000000,
             saveDeployments: true,
             tags: ['kovan'],
+            loggingEnabled: true,
         },
         kovan_privKey: {
             chainId: 42,
@@ -81,10 +85,21 @@ const config: HardhatUserConfig = {
             saveDeployments: true,
             tags: ['kovan_privKey'],
         },
-        kovan_fork: {
+        kovan_custom_accounts: {
             chainId: 42,
-            url: 'http://127.0.0.1:8545',
+            url: 'https://kovan.infura.io/v3/' + INFURA_TOKEN,
+            // @ts-ignore
+            accounts: kovanPrivateKeys,
             live: true,
+            saveDeployments: true,
+            tags: ['kovan_custom_accounts'],
+        },
+        kovan_fork: {
+            url: 'http://127.0.0.1:8545',
+            // @ts-ignore
+            accounts: Object.values(kovanDeploymentKeys),
+            live: true,
+            gasPrice: 1000000000,
             saveDeployments: true,
             tags: ['kovan_fork'],
         },

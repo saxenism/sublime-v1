@@ -37,7 +37,13 @@ const temp = [
 let privateKeys = temp.map((key) => `0x${key}`);
 privateKeys = [...privateKeys, ...extraKeys];
 
-export { privateKeys };
+let kovanPrivateKeys = [
+    '6029243356ca0bbc9a9af7daa15ea9c3cb2e113157d3fe7b70047bdf2d69bdb3',
+    '9178dc78ec190be46f91b8f01da07e3384e38850189bfd5768b47da7be1951d9',
+    '6f59567a7059244b595bcce9646cd6c7bef949500f42aa1da6d898a9b4f31f10',
+];
+
+export { privateKeys, kovanPrivateKeys };
 
 export function generatedWallets(provider: Provider) {
     return privateKeys.map((key: string) => {
