@@ -14,6 +14,7 @@ import {
     createPoolParams,
     ChainLinkAggregators,
     OperationalAmounts,
+    extensionParams,
 } from '../utils/constants';
 import DeployHelper from '../utils/deploys';
 
@@ -40,7 +41,9 @@ import { Repayments } from '../typechain/Repayments';
 import { ContractTransaction } from '@ethersproject/contracts';
 import { getContractAddress } from '@ethersproject/address';
 
-describe.skip('Template 2', async () => {
+import {SublimeProxy} from "../typechain/SublimeProxy";
+
+describe.only('Template 2', async () => {
     let savingsAccount: SavingsAccount;
     let strategyRegistry: StrategyRegistry;
 
@@ -76,7 +79,12 @@ describe.skip('Template 2', async () => {
         [proxyAdmin, admin, mockCreditLines, borrower, lender] = await ethers.getSigners();
         let deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
         savingsAccount = await deployHelper.core.deploySavingsAccount();
+        let savingsAccountProxy: SublimeProxy = await deployHelper.helper.deploySublimeProxy(savingsAccount.address, admin.address);
+        savingsAccount = await deployHelper.core.getSavingsAccount(savingsAccountProxy.address);
+
         strategyRegistry = await deployHelper.core.deployStrategyRegistry();
+        let strategyRegistryProxy: SublimeProxy = await deployHelper.helper.deploySublimeProxy(strategyRegistry.address, admin.address);
+        strategyRegistry = await deployHelper.core.getStrategyRegistry(strategyRegistryProxy.address);
 
         //initialize
         savingsAccount.initialize(admin.address, strategyRegistry.address, mockCreditLines.address);
@@ -143,7 +151,7 @@ describe.skip('Template 2', async () => {
 
         poolFactory = await deployHelper.pool.deployPoolFactory();
         extenstion = await deployHelper.pool.deployExtenstion();
-        await extenstion.connect(admin).initialize(poolFactory.address);
+        await extenstion.connect(admin).initialize(poolFactory.address, extensionParams.votingPassRatio);
         let {
             _collectionPeriod,
             _marginCallDuration,
@@ -245,7 +253,10 @@ describe.skip('Template 2', async () => {
         expect(await newlyCreatedToken.name()).eq('Open Borrow Pool Tokens');
         expect(await newlyCreatedToken.symbol()).eq('OBPT');
         expect(await newlyCreatedToken.decimals()).eq(18);
+
+        pool = await deployHelper.pool.getPool(generatedPoolAddress);
+        await pool.connect(borrower).depositCollateral(_collateralAmount, false);
     });
 
-    it('Dummy Case', async () => {});
+    it('Print Add Addresses', async () => {});
 });

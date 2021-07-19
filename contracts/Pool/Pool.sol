@@ -15,8 +15,6 @@ import '../interfaces/IPool.sol';
 import '../interfaces/IExtension.sol';
 import '../interfaces/IPoolToken.sol';
 
-import 'hardhat/console.sol';
-
 contract Pool is Initializable, IPool, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
@@ -595,9 +593,10 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         require(poolVars.loanStatus == LoanStatus.ACTIVE, '4');
 
         IPoolFactory _poolFactory = IPoolFactory(PoolFactory);
-        require(getMarginCallEndTime(msg.sender) != 0, 'RMC1');
+        require(getMarginCallEndTime(msg.sender) == 0, 'RMC1');
+        uint256 _idealCollateralRatio = poolConstants.idealCollateralRatio;
         require(
-            poolConstants.idealCollateralRatio >
+            _idealCollateralRatio >
                 getCurrentCollateralRatio(msg.sender).add(_poolFactory.collateralVolatilityThreshold()),
             '26'
         );
@@ -627,7 +626,11 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         (uint256 _loanDurationCovered, uint256 _interestPerSecond) =
             IRepayment(_poolFactory.repaymentImpl()).getInterestCalculationVars(address(this));
         uint256 _currentBlockTime = block.timestamp.mul(10**30);
-        uint256 _interestAccrued = _interestPerSecond.mul(_currentBlockTime.sub(_loanDurationCovered)).div(10**30);
+        uint256 _loanDurationTillNow = _currentBlockTime.sub(poolConstants.loanStartTime.mul(10**30));
+        if(_loanDurationTillNow <= _loanDurationCovered) {
+            return 0;
+        }
+        uint256 _interestAccrued = _interestPerSecond.mul(_loanDurationTillNow.sub(_loanDurationCovered)).div(10**60);
 
         return _interestAccrued;
     }
@@ -699,7 +702,6 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             );
 
         _deposit(_fromSavingsAccount, false, _borrowAsset, _poolBorrowTokens, address(0), msg.sender, address(this));
-
         _withdraw(_toSavingsAccount, _recieveLiquidityShare, _collateralAsset, _poolSavingsStrategy, _collateralTokens);
 
         delete poolVars.extraLiquidityShares;
@@ -888,6 +890,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     function getMarginCallEndTime(address _lender) public view override returns (uint256) {
         uint256 _marginCallDuration = IPoolFactory(PoolFactory).marginCallDuration();
         uint256 _marginCallEndTime = lenders[_lender].marginCallEndTime;
+
         if (block.timestamp > _marginCallEndTime.add(_marginCallDuration.mul(2))) {
             _marginCallEndTime = 0;
         }

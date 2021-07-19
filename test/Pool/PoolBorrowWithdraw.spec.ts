@@ -14,6 +14,7 @@ import {
     createPoolParams,
     ChainLinkAggregators,
     repaymentParams,
+    extensionParams,
 } from '../../utils/constants';
 import DeployHelper from '../../utils/deploys';
 
@@ -143,7 +144,7 @@ describe('Pool Borrow Withdrawal stage', async () => {
 
         poolFactory = await deployHelper.pool.deployPoolFactory();
         extenstion = await deployHelper.pool.deployExtenstion();
-        await extenstion.connect(admin).initialize(poolFactory.address);
+        await extenstion.connect(admin).initialize(poolFactory.address, extensionParams.votingPassRatio);
         let {
             _collectionPeriod,
             _marginCallDuration,
@@ -187,7 +188,6 @@ describe('Pool Borrow Withdrawal stage', async () => {
             .initialize(
                 admin.address,
                 poolFactory.address,
-                repaymentParams.votingPassRatio,
                 repaymentParams.gracePenalityRate,
                 repaymentParams.gracePeriodFraction,
                 savingsAccount.address
