@@ -7,7 +7,7 @@
     "build": "npm run typechain",
     "test": "npx hardhat test",
     "typechain": "npx hardhat typechain",
-    "coverage":"yarn build && npx hardhat coverage --temp artifacts",
+    "coverage": "yarn build && npx hardhat coverage --temp artifacts",
     "prettier": "prettier --write '{test,utils,scripts,types}/**/*.{ts,js,json}' && prettier --write '*.{ts,js}'",
     "flatten": "npx waffle flatten",
     "lint-sol": "npx prettier --write 'contracts/**/*.sol'",
