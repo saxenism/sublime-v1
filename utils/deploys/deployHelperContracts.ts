@@ -2,11 +2,11 @@ import { Signer } from 'ethers';
 
 import { Verification } from '../../typechain/Verification';
 import { PriceOracle } from '../../typechain/PriceOracle';
-import { SublimeProxy } from "../../typechain/SublimeProxy";
+import { SublimeProxy } from '../../typechain/SublimeProxy';
 
 import { Verification__factory } from '../../typechain/factories/Verification__factory';
 import { PriceOracle__factory } from '../../typechain/factories/PriceOracle__factory';
-import { SublimeProxy__factory} from "../../typechain/factories/SublimeProxy__factory"
+import { SublimeProxy__factory } from '../../typechain/factories/SublimeProxy__factory';
 
 import { Address } from 'hardhat-deploy/dist/types';
 
@@ -34,7 +34,7 @@ export default class DeployHelperContracts {
     }
 
     public async deploySublimeProxy(logic: Address, admin: Address): Promise<SublimeProxy> {
-        return await new SublimeProxy__factory(this._deployerSigner).deploy(logic, admin, "0x");
+        return await new SublimeProxy__factory(this._deployerSigner).deploy(logic, admin, Buffer.from(''));
     }
     public async getSublimeProxy(proxy: Address): Promise<SublimeProxy> {
         return await new SublimeProxy__factory(this._deployerSigner).attach(proxy);

@@ -41,11 +41,14 @@ import { Repayments } from '../typechain/Repayments';
 import { ContractTransaction } from '@ethersproject/contracts';
 import { getContractAddress } from '@ethersproject/address';
 
-import {SublimeProxy} from "../typechain/SublimeProxy";
+import { SublimeProxy } from '../typechain/SublimeProxy';
 
 describe.only('Template 2', async () => {
     let savingsAccount: SavingsAccount;
+    let savingsAccountLogic: SavingsAccount;
+
     let strategyRegistry: StrategyRegistry;
+    let strategyRegistryLogic: StrategyRegistry;
 
     let mockCreditLines: SignerWithAddress;
     let proxyAdmin: SignerWithAddress;
@@ -54,41 +57,59 @@ describe.only('Template 2', async () => {
     let lender: SignerWithAddress;
 
     let aaveYield: AaveYield;
+    let aaveYieldLogic: AaveYield;
+
     let yearnYield: YearnYield;
+    let yearnYieldLogic: YearnYield;
+
     let compoundYield: CompoundYield;
+    let compoundYieldLogic: CompoundYield;
 
     let BatTokenContract: ERC20;
     let LinkTokenContract: ERC20;
     let DaiTokenContract: ERC20;
 
+    let verificationLogic: Verification;
     let verification: Verification;
+
+    let priceOracleLogic: PriceOracle;
     let priceOracle: PriceOracle;
 
     let Binance7: any;
     let WhaleAccount: any;
 
+    let extenstionLogic: Extension;
     let extenstion: Extension;
-    let poolImpl: Pool;
-    let poolTokenImpl: PoolToken;
+
+    let poolLogic: Pool;
+    let poolTokenLogic: PoolToken;
+    let repaymentLogic: Repayments;
+
+    let poolFactoryLogic: PoolFactory;
     let poolFactory: PoolFactory;
-    let repaymentImpl: Repayments;
 
     let pool: Pool;
 
     before(async () => {
         [proxyAdmin, admin, mockCreditLines, borrower, lender] = await ethers.getSigners();
         let deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
-        savingsAccount = await deployHelper.core.deploySavingsAccount();
-        let savingsAccountProxy: SublimeProxy = await deployHelper.helper.deploySublimeProxy(savingsAccount.address, admin.address);
+        savingsAccountLogic = await deployHelper.core.deploySavingsAccount();
+        let savingsAccountProxy: SublimeProxy = await deployHelper.helper.deploySublimeProxy(
+            savingsAccountLogic.address,
+            proxyAdmin.address
+        );
         savingsAccount = await deployHelper.core.getSavingsAccount(savingsAccountProxy.address);
 
-        strategyRegistry = await deployHelper.core.deployStrategyRegistry();
-        let strategyRegistryProxy: SublimeProxy = await deployHelper.helper.deploySublimeProxy(strategyRegistry.address, admin.address);
+        strategyRegistryLogic = await deployHelper.core.deployStrategyRegistry();
+        let strategyRegistryProxy: SublimeProxy = await deployHelper.helper.deploySublimeProxy(
+            strategyRegistryLogic.address,
+            proxyAdmin.address
+        );
         strategyRegistry = await deployHelper.core.getStrategyRegistry(strategyRegistryProxy.address);
 
         //initialize
-        savingsAccount.initialize(admin.address, strategyRegistry.address, mockCreditLines.address);
-        strategyRegistry.initialize(admin.address, 10);
+        savingsAccount.connect(admin).initialize(admin.address, strategyRegistry.address, mockCreditLines.address);
+        strategyRegistry.connect(admin).initialize(admin.address, 10);
 
         await network.provider.request({
             method: 'hardhat_impersonateAccount',
@@ -117,7 +138,10 @@ describe.only('Template 2', async () => {
         DaiTokenContract = await deployHelper.mock.getMockERC20(Contracts.DAI);
         await DaiTokenContract.connect(WhaleAccount).transfer(admin.address, BigNumber.from('10').pow(23)); // 10,000 DAI
 
-        aaveYield = await deployHelper.core.deployAaveYield();
+        aaveYieldLogic = await deployHelper.core.deployAaveYield();
+        let aaveYieldProxy = await deployHelper.helper.deploySublimeProxy(aaveYieldLogic.address, proxyAdmin.address);
+        aaveYield = await deployHelper.core.getAaveYield(aaveYieldProxy.address);
+
         await aaveYield
             .connect(admin)
             .initialize(
@@ -130,28 +154,44 @@ describe.only('Template 2', async () => {
 
         await strategyRegistry.connect(admin).addStrategy(aaveYield.address);
 
-        yearnYield = await deployHelper.core.deployYearnYield();
-        await yearnYield.initialize(admin.address, savingsAccount.address);
+        yearnYieldLogic = await deployHelper.core.deployYearnYield();
+        let yearnYieldProxy = await deployHelper.helper.deploySublimeProxy(yearnYieldLogic.address, proxyAdmin.address);
+        yearnYield = await deployHelper.core.getYearnYield(yearnYieldProxy.address);
+
+        await yearnYield.connect(admin).initialize(admin.address, savingsAccount.address);
         await strategyRegistry.connect(admin).addStrategy(yearnYield.address);
         await yearnYield.connect(admin).updateProtocolAddresses(DaiTokenContract.address, DAI_Yearn_Protocol_Address);
 
-        compoundYield = await deployHelper.core.deployCompoundYield();
-        await compoundYield.initialize(admin.address, savingsAccount.address);
+        compoundYieldLogic = await deployHelper.core.deployCompoundYield();
+        let compoundYieldProxy = await deployHelper.helper.deploySublimeProxy(compoundYieldLogic.address, proxyAdmin.address);
+        compoundYield = await deployHelper.core.getCompoundYield(compoundYieldProxy.address);
+
+        await compoundYield.connect(admin).initialize(admin.address, savingsAccount.address);
         await strategyRegistry.connect(admin).addStrategy(compoundYield.address);
         await compoundYield.connect(admin).updateProtocolAddresses(Contracts.DAI, Contracts.cDAI);
 
-        verification = await deployHelper.helper.deployVerification();
+        verificationLogic = await deployHelper.helper.deployVerification();
+        let verificationProxy = await deployHelper.helper.deploySublimeProxy(verificationLogic.address, proxyAdmin.address);
+        verification = await deployHelper.helper.getVerification(verificationProxy.address);
         await verification.connect(admin).initialize(admin.address);
         await verification.connect(admin).registerUser(borrower.address, sha256(Buffer.from('Borrower')));
 
-        priceOracle = await deployHelper.helper.deployPriceOracle();
+        priceOracleLogic = await deployHelper.helper.deployPriceOracle();
+        let priceOracleProxy = await deployHelper.helper.deploySublimeProxy(priceOracleLogic.address, proxyAdmin.address);
+        priceOracle = await deployHelper.helper.getPriceOracle(priceOracleProxy.address);
         await priceOracle.connect(admin).initialize(admin.address);
         await priceOracle.connect(admin).setfeedAddress(Contracts.LINK, ChainLinkAggregators['LINK/USD']);
         await priceOracle.connect(admin).setfeedAddress(Contracts.DAI, ChainLinkAggregators['DAI/USD']);
 
-        poolFactory = await deployHelper.pool.deployPoolFactory();
-        extenstion = await deployHelper.pool.deployExtenstion();
+        poolFactoryLogic = await deployHelper.pool.deployPoolFactory();
+        let poolFactoryProxy = await deployHelper.helper.deploySublimeProxy(poolFactoryLogic.address, proxyAdmin.address);
+        poolFactory = await deployHelper.pool.getPoolFactory(poolFactoryProxy.address);
+
+        extenstionLogic = await deployHelper.pool.deployExtenstion();
+        let extenstionProxy = await deployHelper.helper.deploySublimeProxy(extenstionLogic.address, proxyAdmin.address);
+        extenstion = await deployHelper.pool.getExtension(extenstionProxy.address);
         await extenstion.connect(admin).initialize(poolFactory.address, extensionParams.votingPassRatio);
+
         let {
             _collectionPeriod,
             _marginCallDuration,
@@ -182,15 +222,15 @@ describe.only('Template 2', async () => {
                 extenstion.address,
                 _poolCancelPenalityFraction
             );
-        poolImpl = await deployHelper.pool.deployPool();
-        poolTokenImpl = await deployHelper.pool.deployPoolToken();
-        repaymentImpl = await deployHelper.pool.deployRepayments();
+        poolLogic = await deployHelper.pool.deployPool();
+        poolTokenLogic = await deployHelper.pool.deployPoolToken();
+        repaymentLogic = await deployHelper.pool.deployRepayments();
 
         await poolFactory.connect(admin).updateSupportedBorrowTokens(Contracts.DAI, true);
 
         await poolFactory.connect(admin).updateSupportedCollateralTokens(Contracts.LINK, true);
 
-        await poolFactory.connect(admin).setImplementations(poolImpl.address, repaymentImpl.address, poolTokenImpl.address);
+        await poolFactory.connect(admin).setImplementations(poolLogic.address, repaymentLogic.address, poolTokenLogic.address);
 
         deployHelper = new DeployHelper(borrower);
         let collateralToken: ERC20 = await deployHelper.mock.getMockERC20(Contracts.LINK);
@@ -202,7 +242,7 @@ describe.only('Template 2', async () => {
             aaveYield.address,
             poolFactory.address,
             sha256(Buffer.from('borrower')),
-            poolImpl.address,
+            poolLogic.address,
             false
         );
 
@@ -258,5 +298,35 @@ describe.only('Template 2', async () => {
         await pool.connect(borrower).depositCollateral(_collateralAmount, false);
     });
 
-    it('Print Add Addresses', async () => {});
+    it('Print Add Addresses', async () => {
+        console.log({
+            savingsAccount: savingsAccount.address,
+            savingsAccountLogic: savingsAccountLogic.address,
+            strategyRegistry: strategyRegistry.address,
+            strategyRegistryLogic: strategyRegistryLogic.address,
+            mockCreditLines: mockCreditLines.address,
+            proxyAdmin: proxyAdmin.address,
+            admin: admin.address,
+            borrower: borrower.address,
+            lender: lender.address,
+            aaveYield: aaveYield.address,
+            aaveYieldLogic: aaveYieldLogic.address,
+            yearnYield: yearnYield.address,
+            yearnYieldLogic: yearnYieldLogic.address,
+            compoundYield: compoundYield.address,
+            compoundYieldLogic: compoundYieldLogic.address,
+            verificationLogic: verificationLogic.address,
+            verification: verification.address,
+            priceOracleLogic: priceOracleLogic.address,
+            priceOracle: priceOracle.address,
+            extenstionLogic: extenstionLogic.address,
+            extenstion: extenstion.address,
+            poolLogic: poolLogic.address,
+            poolTokenLogic: poolTokenLogic.address,
+            repaymentLogic: repaymentLogic.address,
+            poolFactoryLogic: poolFactoryLogic.address,
+            poolFactory: poolFactory.address,
+            pool: pool.address,
+        });
+    });
 });
