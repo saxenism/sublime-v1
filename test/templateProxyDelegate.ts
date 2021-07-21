@@ -329,16 +329,18 @@ describe('Template 2', async () => {
 
             console.log('Pool Factory Updating Borrow Tokens');
             await poolFactory.connect(admin).updateSupportedBorrowTokens(testToken1.address, true); //test token 1
-            await poolFactory.connect(admin).updateSupportedBorrowTokens(testToken1.address, true); // test token 2
-            await poolFactory.connect(admin).updateSupportedBorrowTokens(zeroAddress, true);
+            await poolFactory.connect(admin).updateSupportedBorrowTokens(testToken2.address, true); // test token 2
+            await poolFactory.connect(admin).updateSupportedBorrowTokens(zeroAddress, true); // for ether
 
             console.log('Pool Factory Updating Collateral Tokens');
             await poolFactory.connect(admin).updateSupportedCollateralTokens(testToken1.address, true); // test token 1
-            await poolFactory.connect(admin).updateSupportedCollateralTokens(testToken1.address, true); // test token 2
-            await poolFactory.connect(admin).updateSupportedCollateralTokens(zeroAddress, true);
+            await poolFactory.connect(admin).updateSupportedCollateralTokens(testToken2.address, true); // test token 2
+            await poolFactory.connect(admin).updateSupportedCollateralTokens(zeroAddress, true); // for ether
 
             deployHelper = new DeployHelper(borrower);
-            let collateralToken: ERC20 = await deployHelper.mock.getMockERC20(testToken1.address); // test token 1
+            let collateralToken: ERC20 = await deployHelper.mock.getMockERC20(testToken2.address); // test token 1
+
+            let salt = sha256(Buffer.from(`borrower-${new Date().valueOf()}`));
 
             let generatedPoolAddress: Address = await getPoolAddress(
                 borrower.address,
@@ -346,7 +348,7 @@ describe('Template 2', async () => {
                 testToken1.address, // test token 1
                 zeroAddress,
                 poolFactory.address,
-                sha256(Buffer.from('borrower')),
+                salt,
                 poolLogic.address,
                 false
             );
@@ -373,7 +375,25 @@ describe('Template 2', async () => {
             console.log('Borrower approving to pool');
             await collateralToken.connect(borrower).approve(generatedPoolAddress, _collateralAmount.mul(2));
 
-            // console.log('Create Pool');
+            console.log('Token and generated pool address');
+            console.log({ collateralToken: collateralToken.address, generatedPoolAddress });
+            
+            console.log('Need to create Pool with params');
+            console.log({
+                _poolSize: _poolSize.toString(),
+                _minborrowAmount: _minborrowAmount.toString(),
+                topken1Address: testToken1.address, // test token 1
+                topken2Address: testToken2.address, // test token 2
+                _collateralRatio: _collateralRatio.toString(),
+                _borrowRate: _borrowRate.toString(),
+                _repaymentInterval: _repaymentInterval.toString(),
+                _noOfRepaymentIntervals: _noOfRepaymentIntervals.toString(),
+                zeroAddress,
+                _collateralAmount: _collateralAmount.toString(),
+                _savingsAccount: false,
+                salt,
+            });
+
             // await expect(
             //     poolFactory.connect(borrower).createPool(
             //         _poolSize,
@@ -387,7 +407,7 @@ describe('Template 2', async () => {
             //         zeroAddress,
             //         _collateralAmount,
             //         false,
-            //         sha256(Buffer.from('borrower'))
+            //         salt
             //     )
             // )
             //     .to.emit(poolFactory, 'PoolCreated')
