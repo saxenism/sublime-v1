@@ -9,7 +9,6 @@ coverage.json
 
 keystore/*
 keystore.json
-keys.ts
 
 cache/*
 cache
