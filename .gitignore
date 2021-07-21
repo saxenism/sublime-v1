@@ -27,3 +27,4 @@ flatten
 
 test.spec.ts
 utils/keys.ts
+node_modules

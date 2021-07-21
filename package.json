@@ -4,7 +4,7 @@
   "description": "Defi Protocol to facilitate the under-collateralized loan",
   "main": "dist/",
   "scripts": {
-    "build": "npx run typechain",
+    "build": "npx hardhat typechain",
     "compile": "npx hardhat compile",
     "test": "npx hardhat test --network hardhat",
     "typechain": "npx hardhat typechain",

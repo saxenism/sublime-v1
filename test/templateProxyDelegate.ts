@@ -42,7 +42,7 @@ import { ContractTransaction } from '@ethersproject/contracts';
 import { getContractAddress } from '@ethersproject/address';
 
 import { SublimeProxy } from '../typechain/SublimeProxy';
-import { Token } from '@typechain/Token';
+import { Token } from '../typechain/Token';
 
 describe('Template 2', async () => {
     let savingsAccount: SavingsAccount;
@@ -377,7 +377,7 @@ describe('Template 2', async () => {
 
             console.log('Token and generated pool address');
             console.log({ collateralToken: collateralToken.address, generatedPoolAddress });
-            
+
             console.log('Need to create Pool with params');
             console.log({
                 _poolSize: _poolSize.toString(),

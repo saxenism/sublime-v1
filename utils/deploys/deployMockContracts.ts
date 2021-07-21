@@ -14,7 +14,7 @@ import { IYield__factory } from '../../typechain/factories/IYield__factory';
 import { Token__factory } from '../../typechain/factories/Token__factory';
 
 import { Address } from 'hardhat-deploy/dist/types';
-import { IYield } from '@typechain/IYield';
+import { IYield } from '../../typechain/IYield';
 
 export default class DeployMockContracts {
     private _deployerSigner: Signer;
