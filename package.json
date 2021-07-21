@@ -4,14 +4,20 @@
   "description": "Defi Protocol to facilitate the under-collateralized loan",
   "main": "dist/",
   "scripts": {
-    "build": "npm run typechain",
-    "test": "npx hardhat test",
+    "build": "npx hardhat typechain",
+    "compile": "npx hardhat compile",
+    "test": "npx hardhat test --network hardhat",
     "typechain": "npx hardhat typechain",
     "coverage": "yarn build && npx hardhat coverage --temp artifacts",
-    "prettier": "prettier --write '{test,utils,scripts,types}/**/*.{ts,js,json}' && prettier --write hardhat.config.ts",
+    "prettier": "prettier --write '{test,utils,scripts,types}/**/*.{ts,js,json}' && prettier --write '*.{ts,js}'",
     "flatten": "npx waffle flatten",
     "lint-sol": "npx prettier --write 'contracts/**/*.sol'",
-    "lint-ts": "tslint -c tslint.json -p tsconfig.json '{utils,test}/**/*.{ts}' --fix"
+    "lint-ts": "tslint -c tslint.json -p tsconfig.json '{utils,test}/**/*.{ts}' --fix",
+    "deploy": "npx hardhat run scripts/deploy.ts --network",
+    "chain": "npx hardhat node --no-deploy",
+    "listAccount": "npx hardhat accounts --network",
+    "verify": "npx hardhat run scripts/verify.ts --network",
+    "deployEnv:kovan": "npx hardhat test test/templateProxyDelegate.ts --network kovan"
   },
   "repository": {
     "type": "git",
@@ -45,6 +51,7 @@
     "better-docs": "2.3.2",
     "chai": "^4.3.4",
     "chai-as-promised": "^7.1.1",
+    "dotenv": "^10.0.0",
     "ethereum-waffle": "^3.3.0",
     "ethereumjs-wallet": "^1.0.1",
     "ethers": "^5.1.4",
@@ -65,5 +72,8 @@
     "typedoc-plugin-markdown": "3.6.0",
     "typescript": "3.9.9",
     "web3": "^1.3.5"
+  },
+  "dependencies": {
+    "@nomiclabs/hardhat-etherscan": "^2.1.3"
   }
 }

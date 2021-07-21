@@ -32,7 +32,7 @@ import { PoolFactory } from '../../typechain/PoolFactory';
 import { ERC20 } from '../../typechain/ERC20';
 import { PriceOracle } from '../../typechain/PriceOracle';
 import { Extension } from '../../typechain/Extension';
-import { IYield } from '@typechain/IYield';
+import { IYield } from '../../typechain/IYield';
 
 import { Contracts } from '../../existingContracts/compound.json';
 import { sha256 } from '@ethersproject/sha2';

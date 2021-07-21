@@ -4,8 +4,6 @@ coverage/*
 node_modules/*
 .DS_Store
 
-package-lock.json
-
 coverage/
 coverage.json
 
@@ -27,3 +25,5 @@ typechain/
 flatten
 
 test.spec.ts
+node_modules
+.env

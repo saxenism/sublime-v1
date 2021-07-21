@@ -24,17 +24,17 @@ const collateralRatio = BigNumber.from(60).mul(BigNumber.from(10).pow(28));
 const poolSize = BigNumber.from('6000000000000000');
 
 export const createPoolParams = {
-  _poolSize: poolSize,
-  _borrowAmountRequested: depositValueToTest,
-  _minborrowAmount: BigNumber.from("1000000000000000"),
-  _idealCollateralRatio: collateralRatio,
-  _collateralRatio: collateralRatio,
-  _borrowRate: BigNumber.from(5).mul(BigNumber.from(10).pow(28)),
-  _repaymentInterval: BigNumber.from(1000),
-  _noOfRepaymentIntervals: BigNumber.from(25),
-  _collateralAmount: BigNumber.from("300000000000000000"),
-  _loanWithdrawalDuration: BigNumber.from(15000000),
-  _collectionPeriod: BigNumber.from(5000000),
+    _poolSize: poolSize,
+    _borrowAmountRequested: depositValueToTest,
+    _minborrowAmount: BigNumber.from('1000000000000000'),
+    _idealCollateralRatio: collateralRatio,
+    _collateralRatio: collateralRatio,
+    _borrowRate: BigNumber.from(5).mul(BigNumber.from(10).pow(28)),
+    _repaymentInterval: BigNumber.from(1000),
+    _noOfRepaymentIntervals: BigNumber.from(25),
+    _collateralAmount: BigNumber.from('300000000000000000'),
+    _loanWithdrawalDuration: BigNumber.from(15000000),
+    _collectionPeriod: BigNumber.from(5000000),
 };
 
 // address _borrowTokenType,
@@ -56,12 +56,12 @@ export const testPoolFactoryParams = {
 };
 
 export const repaymentParams = {
-  "gracePenalityRate": BigNumber.from(10).mul(BigNumber.from(10).pow(28)),
-  "gracePeriodFraction": BigNumber.from(10).mul(BigNumber.from(10).pow(28)),
+    gracePenalityRate: BigNumber.from(10).mul(BigNumber.from(10).pow(28)),
+    gracePeriodFraction: BigNumber.from(10).mul(BigNumber.from(10).pow(28)),
 };
 
 export const extensionParams = {
-  "votingPassRatio": BigNumber.from(10).pow(28).mul(50),
+    votingPassRatio: BigNumber.from(10).pow(28).mul(50),
 };
 
 // Pool Factory inputs tro be manually added

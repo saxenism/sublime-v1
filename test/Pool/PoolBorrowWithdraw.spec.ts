@@ -39,7 +39,7 @@ import { PoolToken } from '../../typechain/PoolToken';
 import { Repayments } from '../../typechain/Repayments';
 import { ContractTransaction } from '@ethersproject/contracts';
 import { getContractAddress } from '@ethersproject/address';
-import { IYield } from '@typechain/IYield';
+import { IYield } from '../../typechain/IYield';
 
 describe('Pool Borrow Withdrawal stage', async () => {
     let savingsAccount: SavingsAccount;
