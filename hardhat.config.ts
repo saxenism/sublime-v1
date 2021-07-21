@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 import '@nomiclabs/hardhat-ethers';
 import '@nomiclabs/hardhat-waffle';
 import '@nomiclabs/hardhat-ganache';
@@ -12,7 +14,6 @@ import { task } from 'hardhat/config';
 import { HardhatUserConfig } from 'hardhat/types';
 
 import { privateKeys, kovanPrivateKeys } from './utils/wallet';
-import kovanDeploymentKeys from './keystore/keystore.json';
 
 import {
     etherscanKey,
@@ -61,7 +62,7 @@ const config: HardhatUserConfig = {
             url: 'http://127.0.0.1:8545',
             timeout: 100000,
             live: false,
-            accounts: Object.values(kovanDeploymentKeys),
+            accounts: process.env.PRIVATE_KEYS ? process.env.PRIVATE_KEYS.split(","): [],
             saveDeployments: false,
             tags: ['localhost'],
         },
@@ -69,7 +70,7 @@ const config: HardhatUserConfig = {
             chainId: 42,
             url: 'https://kovan.infura.io/v3/' + INFURA_TOKEN,
             // @ts-ignore
-            accounts: Object.values(kovanDeploymentKeys),
+            accounts: process.env.PRIVATE_KEYS ? process.env.PRIVATE_KEYS.split(","): [],
             live: true,
             gasPrice: 3000000000,
             saveDeployments: true,
@@ -97,7 +98,7 @@ const config: HardhatUserConfig = {
         kovan_fork: {
             url: 'http://127.0.0.1:8545',
             // @ts-ignore
-            accounts: Object.values(kovanDeploymentKeys),
+            accounts: process.env.PRIVATE_KEYS ? process.env.PRIVATE_KEYS.split(","): [],
             live: true,
             gasPrice: 1000000000,
             saveDeployments: true,

@@ -17,7 +17,7 @@
     "chain": "npx hardhat node --no-deploy",
     "listAccount": "npx hardhat accounts --network",
     "verify": "npx hardhat run scripts/verify.ts --network",
-    "deployEnv:kovan":"npx hardhat test test/templateProxyDelegate.ts --network kovan"
+    "deployEnv:kovan": "npx hardhat test test/templateProxyDelegate.ts --network kovan"
   },
   "repository": {
     "type": "git",
@@ -51,6 +51,7 @@
     "better-docs": "2.3.2",
     "chai": "^4.3.4",
     "chai-as-promised": "^7.1.1",
+    "dotenv": "^10.0.0",
     "ethereum-waffle": "^3.3.0",
     "ethereumjs-wallet": "^1.0.1",
     "ethers": "^5.1.4",
