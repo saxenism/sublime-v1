@@ -32,9 +32,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     IPoolToken public poolToken;
 
     struct LendingDetails {
-        uint256 principalWithdrawn;
         uint256 interestWithdrawn;
-        uint256 lastVoteTime;
         uint256 marginCallEndTime;
         uint256 extraLiquidityShares;
     }
@@ -88,7 +86,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
      * @param amount amount denominated in collateral asset
      * @param sharesReceived shares received after transferring collaterla to pool savings strategy
      */
-    event CollateralAdded(address borrower, uint256 amount, uint256 sharesReceived);
+    event CollateralAdded(address indexed borrower, uint256 amount, uint256 sharesReceived);
 
     // borrower and sharesReceived might not be necessary
     /*
@@ -98,21 +96,21 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
      * @param amount amount denominated in collateral asset
      * @param sharesReceived shares received after transferring collaterla to pool savings strategy
      */
-    event MarginCallCollateralAdded(address borrower, address lender, uint256 amount, uint256 sharesReceived);
+    event MarginCallCollateralAdded(address indexed borrower, address indexed lender, uint256 amount, uint256 sharesReceived);
 
     /*
      * @notice emitted when borrower withdraws excess collateral
      * @param borrower address of borrower
      * @param amount amount of collateral withdrawn
      */
-    event CollateralWithdrawn(address borrower, uint256 amount);
+    event CollateralWithdrawn(address indexed borrower, uint256 amount);
 
     /*
      * @notice emitted when lender supplies liquidity to a pool
      * @param amountSupplied amount that was supplied
      * @param lenderAddress address of the lender. allows for delegation of lending
      */
-    event LiquiditySupplied(uint256 amountSupplied, address lenderAddress);
+    event LiquiditySupplied(uint256 amountSupplied, address indexed lenderAddress);
 
     /*
      * @notice emitted when borrower withdraws loan
@@ -125,13 +123,13 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
      * @param amount amount that lender withdraws from borrow pool
      * @param lenderAddress address to which amount is withdrawn
      */
-    event LiquidityWithdrawn(uint256 amount, address lenderAddress);
+    event LiquidityWithdrawn(uint256 amount, address indexed lenderAddress);
 
     /*
      * @notice emitted when lender exercises a margin/collateral call
      * @param lenderAddress address of the lender who exercises margin calls
      */
-    event MarginCalled(address lenderAddress);
+    event MarginCalled(address indexed lenderAddress);
 
     /*
      * @notice emitted when collateral backing lender is liquidated because of a margin call
@@ -139,13 +137,13 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
      * @param lender lender who initially exercised the margin call
      * @param _tokenReceived amount received by liquidator denominated in collateral asset
      */
-    event LenderLiquidated(address liquidator, address lender, uint256 _tokenReceived);
+    event LenderLiquidated(address indexed liquidator, address indexed lender, uint256 _tokenReceived);
 
     /*
      * @notice emitted when a pool is liquidated for missing repayment
      * @param liquidator address of the liquidator
      */
-    event PoolLiquidated(address liquidator);
+    event PoolLiquidated(address indexed liquidator);
 
     modifier OnlyBorrower(address _user) {
         require(_user == poolConstants.borrower, '1');
@@ -311,11 +309,11 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         uint256 _amount,
         bool _transferFromSavingsAccount
     ) external payable override {
+        require(_amount != 0, '11');
+
         require(poolVars.loanStatus == LoanStatus.ACTIVE, '9');
 
         require(getMarginCallEndTime(_lender) >= block.timestamp, '10');
-
-        require(_amount != 0, '11');
 
         uint256 _sharesReceived =
             _deposit(
@@ -342,7 +340,8 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     function withdrawBorrowedAmount() external override OnlyBorrower(msg.sender) nonReentrant {
         LoanStatus _poolStatus = poolVars.loanStatus;
         uint256 _tokensLent = poolToken.totalSupply();
-        require(_poolStatus == LoanStatus.COLLECTION && poolConstants.loanStartTime < block.timestamp, '12');
+        uint256 _loanStartTime = poolConstants.loanStartTime;
+        require(_poolStatus == LoanStatus.COLLECTION && _loanStartTime < block.timestamp, '12');
         require(_tokensLent >= poolConstants.minborrowAmount, '');
 
         poolVars.loanStatus = LoanStatus.ACTIVE;
@@ -354,13 +353,12 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             '13'
         );
 
-        uint256 _noOfRepaymentIntervals = poolConstants.noOfRepaymentIntervals;
         uint256 _repaymentInterval = poolConstants.repaymentInterval;
         IRepayment(_poolFactory.repaymentImpl()).initializeRepayment(
-            _noOfRepaymentIntervals,
+            poolConstants.noOfRepaymentIntervals,
             _repaymentInterval,
             poolConstants.borrowRate,
-            poolConstants.loanStartTime,
+            _loanStartTime,
             poolConstants.borrowAsset
         );
         IExtension(_poolFactory.extension()).initializePoolExtension(_repaymentInterval);
@@ -570,7 +568,6 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         // lenders[msg.sender].amountWithdrawn = lenders[msg.sender]
         //     .amountWithdrawn
         //     .add(_due);
-        delete lenders[msg.sender].principalWithdrawn;
 
         //transfer repayment
         _withdrawRepayment(msg.sender);
