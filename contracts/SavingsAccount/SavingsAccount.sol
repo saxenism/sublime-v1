@@ -46,6 +46,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable, R
         address _creditLine
     ) public initializer {
         require(_strategyRegistry != address(0), 'SavingsAccount::initialize zero address');
+        require(_creditLine != address(0), 'SavingsAccount::initialize zero address');
         __Ownable_init();
         super.transferOwnership(_owner);
 
@@ -54,6 +55,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable, R
     }
 
     function updateCreditLine(address _creditLine) external onlyOwner {
+        require(_creditLine != address(0), 'SavingsAccount::initialize zero address');
         CreditLine = _creditLine;
     }
 

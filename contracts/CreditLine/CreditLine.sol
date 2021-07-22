@@ -72,6 +72,8 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         address _strategyRegistry
     ) public initializer {
         __Ownable_init();
+        require(_poolFactory != address(0), 'CL::I zero address');
+        require(_strategyRegistry != address(0), 'CL::I zero address');
         PoolFactory = _poolFactory;
         strategyRegistry = _strategyRegistry;
         defaultStrategy = _defaultStrategy;
