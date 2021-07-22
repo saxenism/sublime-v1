@@ -359,7 +359,7 @@ contract Repayments is Initializable, RepaymentStorage, IRepayment, ReentrancyGu
             (bool success, ) = payable(address(_poolID)).call{ value: _amountRequired }("");
             require(success, "Transfer failed");
         } else {
-            IERC20(_asset).transferFrom(msg.sender, _poolID, _amountRequired);
+            IERC20(_asset).safeTransferFrom(msg.sender, _poolID, _amountRequired);
         }
 
         if (_asset == address(0)) {
@@ -395,7 +395,7 @@ contract Repayments is Initializable, RepaymentStorage, IRepayment, ReentrancyGu
             (bool success, ) = _poolID.call{ value: _amount}("");
             require(success, "Transfer failed");
         } else {
-            IERC20(_asset).transferFrom(msg.sender, _poolID, _amount);
+            IERC20(_asset).safeTransferFrom(msg.sender, _poolID, _amount);
         }
 
         IPool(_poolID).closeLoan();

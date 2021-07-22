@@ -122,9 +122,9 @@ library SavingsAccountUtil {
             return _amount;
         }
         if (_from == address(this)) {
-            IERC20(_asset).transfer(_to, _amount);
+            IERC20(_asset).safeTransfer(_to, _amount);
         } else {
-            IERC20(_asset).transferFrom(_from, _to, _amount);
+            IERC20(_asset).safeTransferFrom(_from, _to, _amount);
         }
         return _amount;
     }
