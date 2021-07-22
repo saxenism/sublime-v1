@@ -7,6 +7,20 @@ import '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 library SavingsAccountUtil {
     using SafeERC20 for IERC20;
 
+    uint256 private constant _NOT_ENTERED = 1;
+    uint256 private constant _ENTERED = 2;
+
+    uint256 private _status = _NOT_ENTERED;
+
+    modifier nonReentrant() {
+        require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
+        _status = _ENTERED;
+
+        _;
+
+        _status = _NOT_ENTERED;
+    }
+
     function depositFromSavingsAccount(
         ISavingsAccount _savingsAccount,
         address _from,
@@ -106,14 +120,14 @@ library SavingsAccountUtil {
         uint256 _amount,
         address _from,
         address _to
-    ) internal returns (uint256) {
+    ) internal nonReentrant returns (uint256) {
         if (_asset == address(0)) {
             require(msg.value >= _amount, '');
             if (_to != address(this)) {
-                payable(_to).transfer(_amount);
+                payable(_to).call.value(_amount)("");
             }
             if (msg.value >= _amount) {
-                payable(address(msg.sender)).transfer(msg.value - _amount);
+                payable(address(msg.sender)).call.value(msg.value - _amount)("");
             } else {
                 revert('Insufficient Ether');
             }

@@ -57,7 +57,7 @@ contract YearnYield is IYield, Initializable, OwnableUpgradeable, ReentrancyGuar
 
         if (_asset == address(0)) {
             received = _withdrawETH(investedTo, amount);
-            _wallet.transfer(received);
+            _wallet.call.value(received)("");
         } else {
             received = _withdrawERC(_asset, investedTo, amount);
             IERC20(_asset).safeTransfer(_wallet, received);
@@ -103,7 +103,7 @@ contract YearnYield is IYield, Initializable, OwnableUpgradeable, ReentrancyGuar
 
         if (asset == address(0)) {
             received = _withdrawETH(investedTo, amount);
-            savingsAccount.transfer(received);
+            savingsAccount.call.value(received)("");
         } else {
             received = _withdrawERC(asset, investedTo, amount);
             IERC20(asset).safeTransfer(savingsAccount, received);

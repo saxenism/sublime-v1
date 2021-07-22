@@ -341,14 +341,14 @@ contract Repayments is RepaymentStorage, IRepayment, ReentrancyGuard {
 
         if (_asset == address(0)) {
             require(_amountRequired <= msg.value, 'Repayments::repayAmount amount does not match message value.');
-            payable(address(_poolID)).transfer(_amountRequired);
+            payable(address(_poolID)).call.value(_amountRequired)("");
         } else {
             IERC20(_asset).transferFrom(msg.sender, _poolID, _amountRequired);
         }
 
         if (_asset == address(0)) {
             if (msg.value > _amountRequired) {
-                payable(address(msg.sender)).transfer(msg.value.sub(_amountRequired));
+                payable(address(msg.sender)).call.value(msg.value.sub(_amountRequired))("");
             }
         }
     }
@@ -375,7 +375,7 @@ contract Repayments is RepaymentStorage, IRepayment, ReentrancyGuard {
 
         if (_asset == address(0)) {
             require(_amount == msg.value, 'Repayments::repayAmount amount does not match message value.');
-            _poolID.transfer(_amount);
+            _poolID.call.value(_amount)("");
         } else {
             IERC20(_asset).transferFrom(msg.sender, _poolID, _amount);
         }

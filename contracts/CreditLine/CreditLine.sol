@@ -480,7 +480,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         //transferFromSavingAccount(_borrowAsset,borrowAmount,_lender,address(this));
         _withdrawBorrowAmount(_borrowAsset, borrowAmount, _lender);
         if (_borrowAsset == address(0)) {
-            msg.sender.transfer(borrowAmount);
+            msg.sender.call.value(borrowAmount)("");
         } else {
             IERC20(_borrowAsset).safeTransfer(msg.sender, borrowAmount);
         }

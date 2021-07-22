@@ -254,7 +254,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable, R
         uint256 amount
     ) internal nonReentrant {
         if (token == address(0)) {
-            withdrawTo.transfer(amount);
+            withdrawTo.call.value(amount)("");
         } else {
             IERC20(token).safeTransfer(withdrawTo, amount);
         }

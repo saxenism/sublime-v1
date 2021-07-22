@@ -103,7 +103,7 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable, ReentrancyGuard
 
         if (_asset == address(0)) {
             received = _withdrawETH(amount);
-            _wallet.transfer(received);
+            _wallet.call.value(received)("");
         } else {
             received = _withdrawERC(_asset, amount);
             IERC20(_asset).safeTransfer(_wallet, received);
@@ -147,7 +147,7 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable, ReentrancyGuard
 
         if (asset == address(0)) {
             received = _withdrawETH(amount);
-            savingsAccount.transfer(received);
+            savingsAccount.call.value(received)("");
         } else {
             received = _withdrawERC(asset, amount);
             IERC20(asset).safeTransfer(savingsAccount, received);
