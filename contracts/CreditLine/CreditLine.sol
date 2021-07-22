@@ -66,17 +66,39 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
     event PartialCreditLineRepaid(bytes32 creditLineHash, uint256 repayAmount);
     event CreditLineClosed(bytes32 creditLineHash);
 
+    event DefaultStrategyUpdated(address defaultStrategy);
+    event PoolFactoryUpdated(address poolFactory);
+    event StrategyRegistryUpdated(address strategyRegistry);
+
     function initialize(
         address _defaultStrategy,
         address _poolFactory,
-        address _strategyRegistry
+        address _strategyRegistry,
+        address _owner
     ) public initializer {
-        __Ownable_init();
-        require(_poolFactory != address(0), 'CL::I zero address');
-        require(_strategyRegistry != address(0), 'CL::I zero address');
-        PoolFactory = _poolFactory;
-        strategyRegistry = _strategyRegistry;
+        OwnableUpgradeable.__Ownable_init();
+        OwnableUpgradeable.transferOwnership(_owner);
+        
+        updateDefaultStrategy(_defaultStrategy);
+        updatePoolFactory(_poolFactory);
+        updateStrategyRegistry(_strategyRegistry);
+    }
+
+    function updateDefaultStrategy(address _defaultStrategy) public onlyOwner {
         defaultStrategy = _defaultStrategy;
+        emit DefaultStrategyUpdated(_defaultStrategy);
+    }
+
+    function updatePoolFactory(address _poolFactory) public onlyOwner {
+        require(_poolFactory != address(0), 'CL::I zero address');
+        poolFactory = _poolFactory;
+        emit PoolFactoryUpdated(_poolFactory);
+    }
+
+    function updateStrategyRegistry(address _strategyRegistry) public onlyOwner {
+        require(_strategyRegistry != address(0), 'CL::I zero address');
+        strategyRegistry = _strategyRegistry;
+        emit StrategyRegistryUpdated(_strategyRegistry);
     }
 
     /**

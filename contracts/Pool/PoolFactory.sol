@@ -293,13 +293,9 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         address _repaymentImpl,
         address _poolTokenImpl
     ) external onlyOwner {
-        poolImpl = _poolImpl;
-        repaymentImpl = _repaymentImpl;
-        poolTokenImpl = _poolTokenImpl;
-
-        emit PoolLogicUpdated(_poolImpl);
-        emit RepaymentImplUpdated(_repaymentImpl);
-        emit PoolTokenImplUpdated(_poolTokenImpl);
+        updatePoolLogic(_poolImpl);
+        updateRepaymentImpl(_repaymentImpl);
+        updatePoolTokenImpl(_poolTokenImpl);
     }
 
     // check _collateralAmount

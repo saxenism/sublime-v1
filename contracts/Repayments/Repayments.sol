@@ -19,6 +19,11 @@ contract Repayments is RepaymentStorage, IRepayment, ReentrancyGuard {
     event MissedRepaymentRepaid(address poolID); // Previous period's interest is repaid fully
     event PartialExtensionRepaymentMade(address poolID); // Previous period's interest is repaid partially
 
+    event PoolFactoryUpdated(address poolFactory);
+    event SavingsAccountUpdated(address savingnsAccount);
+    event GracePenalityRateUpdated(uint256 gracePenaltyRate);
+    event GracePeriodFractionUpdated(uint256 gracePeriodFraction);
+
     modifier isPoolInitialized(address _poolID) {
         require(repaymentConstants[_poolID].numberOfTotalRepayments != 0, 'Pool is not Initiliazed');
         _;
@@ -32,21 +37,43 @@ contract Repayments is RepaymentStorage, IRepayment, ReentrancyGuard {
         _;
     }
 
+    modifier onlyOwner() {
+        require(msg.sender == poolFactory.owner(), "Not owner");
+        _;
+    }
+
     function initialize(
-        address _owner,
         address _poolFactory,
         uint256 _gracePenaltyRate,
         uint256 _gracePeriodFraction,
         address _savingsAccount
     ) public initializer {
-        // _votingExtensionlength - should enforce conditions with repaymentInterval
-        OwnableUpgradeable.__Ownable_init();
-        OwnableUpgradeable.transferOwnership(_owner);
+        updatePoolFactory(_poolFactory);
+        updateGracePenalityRate(_gracePenaltyRate);
+        updateGracePeriodFraction(_gracePeriodFraction);
+        updateSavingsAccount(_savingsAccount);
+    }
 
-        PoolFactory = _poolFactory;
-        savingsAccount = _savingsAccount;
-        gracePenaltyRate = _gracePenaltyRate;
+    function updatePoolFactory(address _poolFactory) public onlyOwner {
+        require(_poolFactory != address(0), "0 address not allowed");
+        poolFactory = _poolFactory;
+        emit PoolFactoryUpdated(_poolFactory);
+    }
+
+    function updateGracePeriodFraction(uint256 _gracePeriodFraction) public onlyOwner {
         gracePeriodFraction = _gracePeriodFraction;
+        emit GracePeriodFractionUpdated(_gracePeriodFraction);
+    }
+
+    function updateGracePenalityRate(uint256 _gracePenaltyRate) public onlyOwner {
+        gracePenaltyRate = _gracePenaltyRate;
+        emit GracePenalityRateUpdated(_gracePenaltyRate);
+    }
+
+    function updateSavingsAccount(address _savingsAccount) public onlyOwner {
+        require(_savingsAccount != address(0), "0 address not allowed");
+        savingsAccount = _savingsAccount;
+        emit SavingsAccountUpdated(_savingsAccount);
     }
 
     function initializeRepayment(
@@ -110,12 +137,6 @@ contract Repayments is RepaymentStorage, IRepayment, ReentrancyGuard {
         return _interestDueTillInstalmentDeadline;
     }
 
-    /*
-    function updateLoanExtensionPeriod(address _poolID, uint256 _period) 
-        external 
-    {
-        repaymentVars[_poolID].loanExtensionPeriod = _period;
-    }*/
     // return timestamp before which next instalment ends
     function getNextInstalmentDeadline(address _poolID) public view override returns (uint256) {
         uint256 _instalmentsCompleted = getInstalmentsCompleted(_poolID);

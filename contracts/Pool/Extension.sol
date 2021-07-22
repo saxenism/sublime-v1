@@ -33,6 +33,7 @@ contract Extension is Initializable, IExtension {
     * @param votingPassRatio the new value of the voting pass ratio for Open Borrow Pools
     */
     event VotingPassRatioUpdated(uint256 votingPassRatio);
+    event PoolFactoryUpdated(uint256 poolFactory);
 
     event ExtensionRequested(uint256 extensionVoteEndTime);
     event ExtensionPassed(uint256 loanInterval);
@@ -44,7 +45,7 @@ contract Extension is Initializable, IExtension {
     }
 
     function initialize(address _poolFactory, uint256 _votingPassRatio) external initializer {
-        poolFactory = IPoolFactory(_poolFactory);
+        updatePoolFactory(_poolFactory);
         updateVotingPassRatio(_votingPassRatio);
     }
 
@@ -132,10 +133,19 @@ contract Extension is Initializable, IExtension {
     }
 
     function updateVotingPassRatio(uint256 _votingPassRatio)
-        external
+        public
         onlyOwner
     {
         votingPassRatio = _votingPassRatio;
         emit VotingPassRatioUpdated(_votingPassRatio);
+    }
+
+    function updatePoolFactory(address _poolFactory) 
+        public
+        onlyOwner
+    {
+        require(_poolFactory != address(0), "Zero address not allowed")
+        poolFactory = _poolFactory;
+        emit PoolFactoryUpdated(_poolFactory);
     }
 }
