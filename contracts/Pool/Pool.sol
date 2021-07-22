@@ -420,7 +420,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         address _from,
         address _to,
         uint256 _amount
-    ) public override {
+    ) public override nonReentrant {
         require(msg.sender == address(poolToken));
         require(getMarginCallEndTime(_from) == 0, '18');
         require(getMarginCallEndTime(_to) == 0, '19');
@@ -870,11 +870,11 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
 
     // Withdraw Repayment, Also all the extra state variables are added here only for the review
 
-    function withdrawRepayment() external isLender(msg.sender) {
+    function withdrawRepayment() external isLender(msg.sender) nonReentrant {
         _withdrawRepayment(msg.sender);
     }
 
-    function _withdrawRepayment(address _lender) internal nonReentrant {
+    function _withdrawRepayment(address _lender) internal {
         uint256 _amountToWithdraw = calculateRepaymentWithdrawable(_lender);
 
         if (_amountToWithdraw == 0) {
