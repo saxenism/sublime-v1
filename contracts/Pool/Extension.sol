@@ -45,8 +45,7 @@ contract Extension is Initializable, IExtension {
 
     function initialize(address _poolFactory, uint256 _votingPassRatio) external initializer {
         poolFactory = IPoolFactory(_poolFactory);
-        votingPassRatio = _votingPassRatio;
-        emit VotingPassRatioUpdated(_votingPassRatio);
+        updateVotingPassRatio(_votingPassRatio);
     }
 
     function initializePoolExtension(uint256 _repaymentInterval) external override {

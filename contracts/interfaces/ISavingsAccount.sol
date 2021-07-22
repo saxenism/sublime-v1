@@ -9,6 +9,8 @@ interface ISavingsAccount {
     event WithdrawnAll(address user, uint256 tokenReceived, address asset);
     event Approved(address token, address from, address to, uint256 amount);
     event Transfer(address token, address strategy, address from, address to, uint256 amount);
+    event CreditLineUpdated(address _updatedCreditLine);
+    event StrategyRegistryUpdated(address _updatedStrategyRegistry);
 
     event CreditLineAllowanceRefreshed(address token, address from, uint256 amount);
 

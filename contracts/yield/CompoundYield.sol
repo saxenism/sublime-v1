@@ -26,6 +26,8 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable, ReentrancyG
      */
     mapping(address => address) public override liquidityToken;
 
+    event ProtocolAddressesUpdated(address asset, address protocolToken);
+
     modifier onlySavingsAccount {
         require(_msgSender() == savingsAccount, 'Invest: Only savings account can invoke');
         _;
@@ -35,19 +37,18 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable, ReentrancyG
         __Ownable_init();
         super.transferOwnership(_owner);
 
-        require(_savingsAccount != address(0), 'Invest: zero address');
-        savingsAccount = _savingsAccount;
+        updateStrategyRegistry(_savingsAccount);
     }
 
-    function updateSavingsAccount(address payable _savingsAccount) external onlyOwner {
+    function updateSavingsAccount(address payable _savingsAccount) public onlyOwner {
         require(_savingsAccount != address(0), 'Invest: zero address');
         savingsAccount = _savingsAccount;
+        emit SavingsAccountUpdated(_savingsAccount);
     }
 
     function updateProtocolAddresses(address _asset, address _to) external onlyOwner {
-        require(_to != address(0), 'Invest: zero address');
-        require(liquidityToken[_asset] == address(0), 'Invest: Cannot update existing address');
         liquidityToken[_asset] = _to;
+        emit ProtocolAddressesUpdated(_asset, _to);
     }
 
     function emergencyWithdraw(address _asset, address payable _wallet) external onlyOwner returns (uint256 received) {

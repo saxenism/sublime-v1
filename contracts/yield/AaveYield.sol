@@ -29,6 +29,13 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable, ReentrancyGuard
     address payable public savingsAccount;
     uint16 public referralCode;
 
+    event AaveAddressesUpdated(
+        address indexed wethGateway,
+        address indexed protocolDataProvider,
+        address indexed lendingPoolAddressesProvider
+    );
+    event ReferralCodeUpdated(uint16 referralCode);
+
     modifier onlySavingsAccount {
         require(_msgSender() == savingsAccount, 'Invest: Only savings account can invoke');
         _;
@@ -49,15 +56,8 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable, ReentrancyGuard
         __Ownable_init();
         super.transferOwnership(_owner);
 
-        require(_savingsAccount != address(0), 'Invest: SavingsAccount:: zero address');
-        require(_wethGateway != address(0), 'Invest: WETHGateway:: zero address');
-        require(_protocolDataProvider != address(0), 'Invest: protocolDataProvider:: zero address');
-        require(_lendingPoolAddressesProvider != address(0), 'Invest: lendingPoolAddressesProvider:: zero address');
-
-        savingsAccount = _savingsAccount;
-        wethGateway = _wethGateway;
-        protocolDataProvider = _protocolDataProvider;
-        lendingPoolAddressesProvider = _lendingPoolAddressesProvider;
+        updateSavingsAccount(_savingsAccount);
+        updateAaveAddresses(_wethGateway, _protocolDataProvider, _lendingPoolAddressesProvider);
     }
 
     /**
@@ -76,6 +76,7 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable, ReentrancyGuard
     function updateSavingsAccount(address payable _savingsAccount) external onlyOwner {
         require(_savingsAccount != address(0), 'Invest: zero address');
         savingsAccount = _savingsAccount;
+        emit SavingsAccountUpdated(_savingsAccount);
     }
 
     function updateAaveAddresses(
@@ -89,10 +90,12 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable, ReentrancyGuard
         wethGateway = _wethGateway;
         protocolDataProvider = _protocolDataProvider;
         lendingPoolAddressesProvider = _lendingPoolAddressesProvider;
+        emit AaveAddressesUpdated(_wethGateway, _protocolDataProvider, _lendingPoolAddressesProvider);
     }
 
     function updateReferralCode(uint16 _referralCode) external onlyOwner {
         referralCode = _referralCode;
+        emit ReferralCodeUpdated(_referralCode);
     }
 
     function emergencyWithdraw(address _asset, address payable _wallet) external onlyOwner returns (uint256 received) {

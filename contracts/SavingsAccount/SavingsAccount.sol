@@ -45,24 +45,23 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable, R
         address _strategyRegistry,
         address _creditLine
     ) public initializer {
-        require(_strategyRegistry != address(0), 'SavingsAccount::initialize zero address');
-        require(_creditLine != address(0), 'SavingsAccount::initialize zero address');
         __Ownable_init();
         super.transferOwnership(_owner);
 
-        strategyRegistry = _strategyRegistry;
-        CreditLine = _creditLine;
+        updateCreditLine(_creditLine);
+        updateStrategyRegistry(_strategyRegistry);
     }
 
-    function updateCreditLine(address _creditLine) external onlyOwner {
+    function updateCreditLine(address _creditLine) public onlyOwner {
         require(_creditLine != address(0), 'SavingsAccount::initialize zero address');
         CreditLine = _creditLine;
+        emit CreditLineUpdated(_creditLine);
     }
 
-    function updateStrategyRegistry(address _strategyRegistry) external onlyOwner {
+    function updateStrategyRegistry(address _strategyRegistry) public onlyOwner {
         require(_strategyRegistry != address(0), 'SavingsAccount::updateStrategyRegistry zero address');
-
         strategyRegistry = _strategyRegistry;
+        emit StrategyRegistryUpdated(_strategyRegistry);
     }
 
     function depositTo(
