@@ -73,10 +73,8 @@ contract Extension is Initializable, IExtension {
 
         poolInfo[_pool].totalExtensionSupport = 0; // As we can multiple voting every time new voting start we have to make previous votes 0
         IRepayment _repayment = IRepayment(poolFactory.repaymentImpl());
-        uint256 _gracePeriodFraction = _repayment.getGracePeriodFraction();
-        uint256 _gracePeriod = (_repaymentInterval * _gracePeriodFraction); // multiplying exponents
         uint256 _nextDueTime = _repayment.getNextInstalmentDeadline(_pool);
-        _extensionVoteEndTime = (_nextDueTime).add(_gracePeriod).div(10**30);
+        _extensionVoteEndTime = (_nextDueTime).div(10**30);
         poolInfo[_pool].extensionVoteEndTime = _extensionVoteEndTime; // this makes extension request single use
         emit ExtensionRequested(_extensionVoteEndTime);
     }
@@ -94,11 +92,9 @@ contract Extension is Initializable, IExtension {
         uint256 _votingPassRatio = votingPassRatio;
 
         uint256 _lastVoteTime = poolInfo[_pool].lastVoteTime[msg.sender]; //Lender last vote time need to store it as it checks that a lender only votes once
-        uint256 _gracePeriodFraction = IRepayment(poolFactory.repaymentImpl()).getGracePeriodFraction();
         uint256 _repaymentInterval = poolInfo[_pool].repaymentInterval;
-        uint256 _gracePeriod = (_repaymentInterval * _gracePeriodFraction).div(10**30);
         require(
-            _lastVoteTime < _extensionVoteEndTime.sub(_gracePeriod).sub(_repaymentInterval),
+            _lastVoteTime < _extensionVoteEndTime.sub(_repaymentInterval),
             'Pool::voteOnExtension - you have already voted'
         );
 
