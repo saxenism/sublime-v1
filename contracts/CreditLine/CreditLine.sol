@@ -345,7 +345,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         uint256 _collateralAmount,
         bytes32 _creditLineHash,
         bool _fromSavingAccount
-    ) internal {
+    ) internal nonReentrant {
         if (_fromSavingAccount) {
             transferFromSavingAccount(_collateralAsset, _collateralAmount, msg.sender, address(this));
         } else {
@@ -664,7 +664,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         revert('insufficient collateral');
     }
 
-    function liquidation(bytes32 creditLineHash) external payable {
+    function liquidation(bytes32 creditLineHash) external payable nonReentrant {
         require(
             creditLineInfo[creditLineHash].currentStatus == creditLineStatus.ACTIVE,
             'CreditLine: Credit line should be active.'

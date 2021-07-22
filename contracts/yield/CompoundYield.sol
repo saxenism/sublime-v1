@@ -2,6 +2,7 @@
 pragma solidity 0.7.0;
 
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
+import '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 import '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import '@openzeppelin/contracts/math/SafeMath.sol';
 
@@ -14,7 +15,7 @@ import '../interfaces/Invest/ICToken.sol';
  * @notice Implements the functions to lock/unlock tokens into available exchanges
  * @author Sublime
  **/
-contract CompoundYield is IYield, Initializable, OwnableUpgradeable {
+contract CompoundYield is IYield, Initializable, OwnableUpgradeable, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -74,7 +75,7 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable {
         address user,
         address asset,
         uint256 amount
-    ) public payable override onlySavingsAccount returns (uint256 sharesReceived) {
+    ) public payable override onlySavingsAccount nonReentrant returns (uint256 sharesReceived) {
         require(amount != 0, 'Invest: amount');
 
         address investedTo = liquidityToken[asset];
@@ -94,7 +95,7 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable {
      * @param amount the amount of asset
      * @return received amount of tokens received
      **/
-    function unlockTokens(address asset, uint256 amount) public override onlySavingsAccount returns (uint256 received) {
+    function unlockTokens(address asset, uint256 amount) public override onlySavingsAccount nonReentrant returns (uint256 received) {
         require(amount != 0, 'Invest: amount');
         address investedTo = liquidityToken[asset];
 
@@ -109,7 +110,7 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable {
         emit UnlockedTokens(asset, received);
     }
 
-    function unlockShares(address asset, uint256 amount) public override onlySavingsAccount returns (uint256) {
+    function unlockShares(address asset, uint256 amount) public override onlySavingsAccount nonReentrant returns (uint256) {
         if (amount == 0) {
             return 0;
         }

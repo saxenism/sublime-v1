@@ -3,12 +3,13 @@ pragma solidity 0.7.0;
 
 import '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import '@openzeppelin/contracts/math/SafeMath.sol';
+import '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 import './RepaymentStorage.sol';
 import '../interfaces/IPool.sol';
 import '../interfaces/IRepayment.sol';
 import '../interfaces/ISavingsAccount.sol';
 
-contract Repayments is RepaymentStorage, IRepayment {
+contract Repayments is RepaymentStorage, IRepayment, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -249,7 +250,7 @@ contract Repayments is RepaymentStorage, IRepayment {
         return _interestOverdue;
     }
 
-    function repayAmount(address _poolID, uint256 _amount) public payable isPoolInitialized(_poolID) {
+    function repayAmount(address _poolID, uint256 _amount) public payable nonReentrant isPoolInitialized(_poolID) {
         IPool _pool = IPool(_poolID);
         _amount = _amount * 10**30;
 
@@ -331,7 +332,7 @@ contract Repayments is RepaymentStorage, IRepayment {
         }
     }
 
-    function repayPrincipal(address payable _poolID, uint256 _amount) public payable isPoolInitialized(_poolID) {
+    function repayPrincipal(address payable _poolID, uint256 _amount) public payable nonReentrant isPoolInitialized(_poolID) {
         IPool _pool = IPool(_poolID);
         uint256 _loanStatus = _pool.getLoanStatus();
         require(_loanStatus == 1, 'Repayments:repayPrincipal Pool should be active');

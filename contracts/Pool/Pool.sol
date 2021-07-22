@@ -281,7 +281,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         address _poolSavingsStrategy,
         address _depositFrom,
         address _depositTo
-    ) internal returns (uint256 _sharesReceived) {
+    ) internal nonReentrant returns (uint256 _sharesReceived) {
         if (_fromSavingsAccount) {
             _sharesReceived = SavingsAccountUtil.depositFromSavingsAccount(
                 ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()),
@@ -475,7 +475,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     }
 
     // Note: _receiveLiquidityShares doesn't matter when _toSavingsAccount is true
-    function liquidateCancelPenality(bool _toSavingsAccount, bool _receiveLiquidityShare) external {
+    function liquidateCancelPenality(bool _toSavingsAccount, bool _receiveLiquidityShare) external nonReentrant {
         require(poolVars.loanStatus == LoanStatus.CANCELLED, '');
         require(poolVars.penalityLiquidityAmount == 0, '');
         address _poolFactory = PoolFactory;
@@ -511,7 +511,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         emit OpenBorrowPoolTerminated();
     }
 
-    function closeLoan() external payable override OnlyRepaymentImpl {
+    function closeLoan() external payable override nonReentract OnlyRepaymentImpl {
         require(poolVars.loanStatus == LoanStatus.ACTIVE, '22');
 
         uint256 _principalToPayback = poolToken.totalSupply();
@@ -876,7 +876,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         _withdrawRepayment(msg.sender);
     }
 
-    function _withdrawRepayment(address _lender) internal {
+    function _withdrawRepayment(address _lender) internal nonReentrant {
         uint256 _amountToWithdraw = calculateRepaymentWithdrawable(_lender);
 
         if (_amountToWithdraw == 0) {
