@@ -2,6 +2,7 @@
 pragma solidity 0.7.0;
 
 import '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/Initializable.sol';
 import '@openzeppelin/contracts/math/SafeMath.sol';
 import '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 import './RepaymentStorage.sol';
@@ -9,11 +10,9 @@ import '../interfaces/IPool.sol';
 import '../interfaces/IRepayment.sol';
 import '../interfaces/ISavingsAccount.sol';
 
-contract Repayments is RepaymentStorage, IRepayment, ReentrancyGuard {
+contract Repayments is Initializable, RepaymentStorage, IRepayment, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
-
-    address PoolFactory;
 
     event InterestRepaid(address poolID, uint256 repayAmount); // Made during current period interest repayment
     event MissedRepaymentRepaid(address poolID); // Previous period's interest is repaid fully
@@ -31,7 +30,7 @@ contract Repayments is RepaymentStorage, IRepayment, ReentrancyGuard {
 
     modifier onlyValidPool {
         require(
-            IPoolFactory(PoolFactory).openBorrowPoolRegistry(msg.sender),
+            poolFactory.openBorrowPoolRegistry(msg.sender),
             'Repayments::onlyValidPool - Invalid Pool'
         );
         _;
@@ -56,7 +55,7 @@ contract Repayments is RepaymentStorage, IRepayment, ReentrancyGuard {
 
     function updatePoolFactory(address _poolFactory) public onlyOwner {
         require(_poolFactory != address(0), "0 address not allowed");
-        poolFactory = _poolFactory;
+        poolFactory = IPoolFactory(_poolFactory);
         emit PoolFactoryUpdated(_poolFactory);
     }
 
@@ -341,14 +340,16 @@ contract Repayments is RepaymentStorage, IRepayment, ReentrancyGuard {
 
         if (_asset == address(0)) {
             require(_amountRequired <= msg.value, 'Repayments::repayAmount amount does not match message value.');
-            payable(address(_poolID)).call.value(_amountRequired)("");
+            (bool success, ) = payable(address(_poolID)).call{ value: _amountRequired }("");
+            require(success, "Transfer failed");
         } else {
             IERC20(_asset).transferFrom(msg.sender, _poolID, _amountRequired);
         }
 
         if (_asset == address(0)) {
             if (msg.value > _amountRequired) {
-                payable(address(msg.sender)).call.value(msg.value.sub(_amountRequired))("");
+                (bool success, ) = payable(address(msg.sender)).call{ value: msg.value.sub(_amountRequired) }("");
+                require(success, "Transfer failed");
             }
         }
     }
@@ -375,7 +376,8 @@ contract Repayments is RepaymentStorage, IRepayment, ReentrancyGuard {
 
         if (_asset == address(0)) {
             require(_amount == msg.value, 'Repayments::repayAmount amount does not match message value.');
-            _poolID.call.value(_amount)("");
+            (bool success, ) = _poolID.call{ value: _amount}("");
+            require(success, "Transfer failed");
         } else {
             IERC20(_asset).transferFrom(msg.sender, _poolID, _amount);
         }
@@ -393,7 +395,7 @@ contract Repayments is RepaymentStorage, IRepayment, ReentrancyGuard {
     }
 
     function instalmentDeadlineExtended(address _poolID, uint256 _period) external override {
-        require(msg.sender == IPoolFactory(PoolFactory).extension(), 'Repayments::repaymentExtended - Invalid caller');
+        require(msg.sender == poolFactory.extension(), 'Repayments::repaymentExtended - Invalid caller');
 
         repaymentVars[_poolID].isLoanExtensionActive = true;
         repaymentVars[_poolID].loanExtensionPeriod = _period;

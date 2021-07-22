@@ -36,11 +36,10 @@ contract YearnYield is IYield, Initializable, OwnableUpgradeable, ReentrancyGuar
         __Ownable_init();
         super.transferOwnership(_owner);
 
-        require(_savingsAccount != address(0), 'Invest: zero address');
-        savingsAccount = _savingsAccount;
+        updateSavingsAccount(_savingsAccount);
     }
 
-    function updateSavingsAccount(address payable _savingsAccount) external onlyOwner {
+    function updateSavingsAccount(address payable _savingsAccount) public onlyOwner {
         require(_savingsAccount != address(0), 'Invest: zero address');
         savingsAccount = _savingsAccount;
         emit SavingsAccountUpdated(_savingsAccount);
@@ -57,7 +56,8 @@ contract YearnYield is IYield, Initializable, OwnableUpgradeable, ReentrancyGuar
 
         if (_asset == address(0)) {
             received = _withdrawETH(investedTo, amount);
-            _wallet.call.value(received)("");
+            (bool success, ) = _wallet.call{ value: received }("");
+            require(success, "Transfer failed");
         } else {
             received = _withdrawERC(_asset, investedTo, amount);
             IERC20(_asset).safeTransfer(_wallet, received);
@@ -103,7 +103,8 @@ contract YearnYield is IYield, Initializable, OwnableUpgradeable, ReentrancyGuar
 
         if (asset == address(0)) {
             received = _withdrawETH(investedTo, amount);
-            savingsAccount.call.value(received)("");
+            (bool success, ) = savingsAccount.call{ value: received }("");
+            require(success, "Transfer failed");
         } else {
             received = _withdrawERC(asset, investedTo, amount);
             IERC20(asset).safeTransfer(savingsAccount, received);

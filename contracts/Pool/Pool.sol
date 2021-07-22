@@ -511,7 +511,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         emit OpenBorrowPoolTerminated();
     }
 
-    function closeLoan() external payable override nonReentract OnlyRepaymentImpl {
+    function closeLoan() external payable override nonReentrant OnlyRepaymentImpl {
         require(poolVars.loanStatus == LoanStatus.ACTIVE, '22');
 
         uint256 _principalToPayback = poolToken.totalSupply();
@@ -619,7 +619,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
 
     // function amountPerPeriod() public view returns (uint256) {}
 
-    function interestTillNow(uint256 _balance) public view returns (uint256) {
+    function interestTillNow() public view returns (uint256) {
         IPoolFactory _poolFactory = IPoolFactory(PoolFactory);
         (uint256 _loanDurationCovered, uint256 _interestPerSecond) =
             IRepayment(_poolFactory.repaymentImpl()).getInterestCalculationVars(address(this));
@@ -634,7 +634,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     }
 
     function calculateCollateralRatio(uint256 _balance, uint256 _liquidityShares) public returns (uint256 _ratio) {
-        uint256 _interest = interestTillNow(_balance);
+        uint256 _interest = interestTillNow();
         address _collateralAsset = poolConstants.collateralAsset;
 
         address _strategy = poolConstants.poolSavingsStrategy;

@@ -37,7 +37,7 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable, ReentrancyG
         __Ownable_init();
         super.transferOwnership(_owner);
 
-        updateStrategyRegistry(_savingsAccount);
+        updateSavingsAccount(_savingsAccount);
     }
 
     function updateSavingsAccount(address payable _savingsAccount) public onlyOwner {
@@ -57,7 +57,8 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable, ReentrancyG
 
         if (_asset == address(0)) {
             received = _withdrawETH(investedTo, amount);
-            _wallet.call.value(received)("");
+            (bool success, ) = _wallet.call{ value: received }("");
+            require(success, "Transfer failed");
         } else {
             received = _withdrawERC(_asset, investedTo, amount);
             IERC20(_asset).safeTransfer(_wallet, received);
@@ -102,7 +103,8 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable, ReentrancyG
 
         if (asset == address(0)) {
             received = _withdrawETH(investedTo, amount);
-            savingsAccount.call.value(received)("");
+            (bool success, ) = savingsAccount.call{ value: received }("");
+            require(success, "Transfer failed");
         } else {
             received = _withdrawERC(asset, investedTo, amount);
             IERC20(asset).safeTransfer(savingsAccount, received);

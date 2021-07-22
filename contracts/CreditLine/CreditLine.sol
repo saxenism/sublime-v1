@@ -91,7 +91,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
 
     function updatePoolFactory(address _poolFactory) public onlyOwner {
         require(_poolFactory != address(0), 'CL::I zero address');
-        poolFactory = _poolFactory;
+        PoolFactory = _poolFactory;
         emit PoolFactoryUpdated(_poolFactory);
     }
 
@@ -480,7 +480,8 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         //transferFromSavingAccount(_borrowAsset,borrowAmount,_lender,address(this));
         _withdrawBorrowAmount(_borrowAsset, borrowAmount, _lender);
         if (_borrowAsset == address(0)) {
-            msg.sender.call.value(borrowAmount)("");
+            (bool success, ) = msg.sender.call{value: borrowAmount}("");
+            require(success, "Transfer fail");
         } else {
             IERC20(_borrowAsset).safeTransfer(msg.sender, borrowAmount);
         }

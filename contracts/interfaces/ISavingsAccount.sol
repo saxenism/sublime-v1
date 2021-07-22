@@ -59,6 +59,18 @@ interface ISavingsAccount {
         uint256 amount
     ) external;
 
+    function increaseAllowance(
+        address token,
+        address to,
+        uint256 amount
+    ) external;
+
+    function decreaseAllowance(
+        address token,
+        address to,
+        uint256 amount
+    ) external;
+
     function transfer(
         address token,
         address to,

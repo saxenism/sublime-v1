@@ -73,7 +73,7 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable, ReentrancyGuard
         }
     }
 
-    function updateSavingsAccount(address payable _savingsAccount) external onlyOwner {
+    function updateSavingsAccount(address payable _savingsAccount) public onlyOwner {
         require(_savingsAccount != address(0), 'Invest: zero address');
         savingsAccount = _savingsAccount;
         emit SavingsAccountUpdated(_savingsAccount);
@@ -83,7 +83,7 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable, ReentrancyGuard
         address _wethGateway,
         address _protocolDataProvider,
         address _lendingPoolAddressesProvider
-    ) external onlyOwner {
+    ) public onlyOwner {
         require(_wethGateway != address(0), 'Invest: WETHGateway:: zero address');
         require(_protocolDataProvider != address(0), 'Invest: protocolDataProvider:: zero address');
         require(_lendingPoolAddressesProvider != address(0), 'Invest: lendingPoolAddressesProvider:: zero address');
@@ -103,7 +103,8 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable, ReentrancyGuard
 
         if (_asset == address(0)) {
             received = _withdrawETH(amount);
-            _wallet.call.value(received)("");
+            (bool success, ) = _wallet.call{ value: received }("");
+            require(success, "Transfer failed");
         } else {
             received = _withdrawERC(_asset, amount);
             IERC20(_asset).safeTransfer(_wallet, received);
@@ -147,7 +148,8 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable, ReentrancyGuard
 
         if (asset == address(0)) {
             received = _withdrawETH(amount);
-            savingsAccount.call.value(received)("");
+            (bool success, ) = savingsAccount.call{ value: received }("");
+            require(success, "Transfer failed");
         } else {
             received = _withdrawERC(asset, amount);
             IERC20(asset).safeTransfer(savingsAccount, received);

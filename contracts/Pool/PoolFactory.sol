@@ -140,6 +140,12 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     event ExtensionImplUpdated(address updatedExtension);
 
     /*
+     * @notice emitted when the SavingsAccount.sol is updated
+     * @param savingsAccount address of the new implementation of the SavingsAccount
+     */
+    event SavingsAccountUpdated(address savingsAccount);
+
+    /*
      * @notice emitted when the collection period parameter for Open Borrow Pools is updated
      * @param updatedCollectionPeriod the new value of the collection period for Open Borrow Pools
      */
@@ -245,8 +251,6 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
      */
 
     function initialize(
-        address _userRegistry,
-        address _strategyRegistry,
         address _admin,
         uint256 _collectionPeriod,
         uint256 _matchCollateralRatioInterval,
@@ -256,18 +260,12 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         bytes4 _poolInitFuncSelector,
         bytes4 _poolTokenInitFuncSelector,
         uint256 _liquidatorRewardFraction,
-        address _priceOracle,
-        address _savingsAccount,
-        address _extension,
         uint256 _poolCancelPenalityFraction
     ) external initializer {
         {
             OwnableUpgradeable.__Ownable_init();
             OwnableUpgradeable.transferOwnership(_admin);
         }
-        updateUserRegistry(_userRegistry);
-        updateStrategyRegistry(_strategyRegistry);
-
         updateCollectionPeriod(_collectionPeriod);
         updateMatchCollateralRatioInterval(_matchCollateralRatioInterval);
         updateMarginCallDuration(_marginCallDuration);
@@ -276,9 +274,6 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         updatepoolInitFuncSelector(_poolInitFuncSelector);
         updatePoolTokenInitFuncSelector(_poolTokenInitFuncSelector);
         updateLiquidatorRewardFraction(_liquidatorRewardFraction);
-        updatePriceoracle(_priceOracle);
-        updateSavingsAccount(_savingsAccount);
-        updatedExtension(_extension);
         updatePoolCancelPenalityFraction(_poolCancelPenalityFraction);
     }
 
@@ -291,11 +286,21 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     function setImplementations(
         address _poolImpl,
         address _repaymentImpl,
-        address _poolTokenImpl
+        address _poolTokenImpl,
+        address _userRegistry,
+        address _strategyRegistry,
+        address _priceOracle,
+        address _savingsAccount,
+        address _extension
     ) external onlyOwner {
         updatePoolLogic(_poolImpl);
         updateRepaymentImpl(_repaymentImpl);
         updatePoolTokenImpl(_poolTokenImpl);
+        updateSavingsAccount(_savingsAccount);
+        updatedExtension(_extension);
+        updateUserRegistry(_userRegistry);
+        updateStrategyRegistry(_strategyRegistry);
+        updatePriceoracle(_priceOracle);
     }
 
     // check _collateralAmount
@@ -504,6 +509,11 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     function updatedExtension(address _extension) public onlyOwner {
         extension = _extension;
         emit ExtensionImplUpdated(_extension);
+    }
+
+    function updateSavingsAccount(address _savingsAccount) public onlyOwner {
+        savingsAccount = _savingsAccount;
+        emit SavingsAccountUpdated(_savingsAccount);
     }
 
     function updateCollectionPeriod(uint256 _collectionPeriod) public onlyOwner {
