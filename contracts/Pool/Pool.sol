@@ -258,7 +258,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         address _depositor,
         uint256 _amount,
         bool _transferFromSavingsAccount
-    ) internal {
+    ) internal nonReentrant {
         uint256 _sharesReceived =
             _deposit(
                 _transferFromSavingsAccount,
@@ -281,7 +281,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         address _poolSavingsStrategy,
         address _depositFrom,
         address _depositTo
-    ) internal nonReentrant returns (uint256 _sharesReceived) {
+    ) internal returns (uint256 _sharesReceived) {
         if (_fromSavingsAccount) {
             _sharesReceived = SavingsAccountUtil.depositFromSavingsAccount(
                 ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()),
@@ -310,7 +310,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         address _lender,
         uint256 _amount,
         bool _transferFromSavingsAccount
-    ) external payable override {
+    ) external payable nonReentrant override {
         require(poolVars.loanStatus == LoanStatus.ACTIVE, '9');
 
         require(getMarginCallEndTime(_lender) >= block.timestamp, '10');

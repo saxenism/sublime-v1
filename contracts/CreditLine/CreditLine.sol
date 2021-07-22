@@ -79,23 +79,35 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         OwnableUpgradeable.__Ownable_init();
         OwnableUpgradeable.transferOwnership(_owner);
         
-        updateDefaultStrategy(_defaultStrategy);
-        updatePoolFactory(_poolFactory);
-        updateStrategyRegistry(_strategyRegistry);
+        _updateDefaultStrategy(_defaultStrategy);
+        _updatePoolFactory(_poolFactory);
+        _updateStrategyRegistry(_strategyRegistry);
     }
 
     function updateDefaultStrategy(address _defaultStrategy) public onlyOwner {
+        _updateDefaultStrategy(_defaultStrategy);
+    }
+
+    function _updateDefaultStrategy(address _defaultStrategy) internal {
         defaultStrategy = _defaultStrategy;
         emit DefaultStrategyUpdated(_defaultStrategy);
     }
 
     function updatePoolFactory(address _poolFactory) public onlyOwner {
+        _updatePoolFactory(_poolFactory);
+    }
+
+    function _updatePoolFactory(address _poolFactory) internal {
         require(_poolFactory != address(0), 'CL::I zero address');
         PoolFactory = _poolFactory;
         emit PoolFactoryUpdated(_poolFactory);
     }
 
     function updateStrategyRegistry(address _strategyRegistry) public onlyOwner {
+        _updateStrategyRegistry(_strategyRegistry);
+    }
+
+    function _updateStrategyRegistry(address _strategyRegistry) internal {
         require(_strategyRegistry != address(0), 'CL::I zero address');
         strategyRegistry = _strategyRegistry;
         emit StrategyRegistryUpdated(_strategyRegistry);

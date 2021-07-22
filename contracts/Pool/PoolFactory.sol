@@ -266,15 +266,15 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
             OwnableUpgradeable.__Ownable_init();
             OwnableUpgradeable.transferOwnership(_admin);
         }
-        updateCollectionPeriod(_collectionPeriod);
-        updateMatchCollateralRatioInterval(_matchCollateralRatioInterval);
-        updateMarginCallDuration(_marginCallDuration);
-        updateCollateralVolatilityThreshold(_collateralVolatilityThreshold);
-        updateGracePeriodPenaltyFraction(_gracePeriodPenaltyFraction);
-        updatepoolInitFuncSelector(_poolInitFuncSelector);
-        updatePoolTokenInitFuncSelector(_poolTokenInitFuncSelector);
-        updateLiquidatorRewardFraction(_liquidatorRewardFraction);
-        updatePoolCancelPenalityFraction(_poolCancelPenalityFraction);
+        _updateCollectionPeriod(_collectionPeriod);
+        _updateMatchCollateralRatioInterval(_matchCollateralRatioInterval);
+        _updateMarginCallDuration(_marginCallDuration);
+        _updateCollateralVolatilityThreshold(_collateralVolatilityThreshold);
+        _updateGracePeriodPenaltyFraction(_gracePeriodPenaltyFraction);
+        _updatepoolInitFuncSelector(_poolInitFuncSelector);
+        _updatePoolTokenInitFuncSelector(_poolTokenInitFuncSelector);
+        _updateLiquidatorRewardFraction(_liquidatorRewardFraction);
+        _updatePoolCancelPenalityFraction(_poolCancelPenalityFraction);
     }
 
     /*
@@ -293,14 +293,14 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         address _savingsAccount,
         address _extension
     ) external onlyOwner {
-        updatePoolLogic(_poolImpl);
-        updateRepaymentImpl(_repaymentImpl);
-        updatePoolTokenImpl(_poolTokenImpl);
-        updateSavingsAccount(_savingsAccount);
-        updatedExtension(_extension);
-        updateUserRegistry(_userRegistry);
-        updateStrategyRegistry(_strategyRegistry);
-        updatePriceoracle(_priceOracle);
+        _updatePoolLogic(_poolImpl);
+        _updateRepaymentImpl(_repaymentImpl);
+        _updatePoolTokenImpl(_poolTokenImpl);
+        _updateSavingsAccount(_savingsAccount);
+        _updatedExtension(_extension);
+        _updateUserRegistry(_userRegistry);
+        _updateStrategyRegistry(_strategyRegistry);
+        _updatePriceoracle(_priceOracle);
     }
 
     // check _collateralAmount
@@ -457,96 +457,172 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     }
 
     function updateSupportedBorrowTokens(address _borrowToken, bool _isSupported) external onlyOwner {
+        _updateSupportedBorrowTokens(_borrowToken, _isSupported);
+    }
+
+    function _updateSupportedBorrowTokens(address _borrowToken, bool _isSupported) internal {
         isBorrowToken[_borrowToken] = _isSupported;
         emit BorrowTokenUpdated(_borrowToken, _isSupported);
     }
 
     function updateSupportedCollateralTokens(address _collateralToken, bool _isSupported) external onlyOwner {
+        _updateSupportedCollateralTokens(_collateralToken, _isSupported);
+    }
+
+    function _updateSupportedCollateralTokens(address _collateralToken, bool _isSupported) internal {
         isCollateralToken[_collateralToken] = _isSupported;
         emit CollateralTokenUpdated(_collateralToken, _isSupported);
     }
 
     function updatepoolInitFuncSelector(bytes4 _functionId) public onlyOwner {
+        _updatepoolInitFuncSelector(_functionId);
+    }
+
+    function _updatepoolInitFuncSelector(bytes4 _functionId) internal {
         poolInitFuncSelector = _functionId;
         emit PoolInitSelectorUpdated(_functionId);
     }
 
     function updatePoolTokenInitFuncSelector(bytes4 _functionId) public onlyOwner {
+        _updatePoolTokenInitFuncSelector(_functionId);
+    }
+
+    function _updatePoolTokenInitFuncSelector(bytes4 _functionId) internal {
         poolTokenInitFuncSelector = _functionId;
         emit PoolTokenInitFuncSelector(_functionId);
     }
 
     function updatePoolLogic(address _poolLogic) public onlyOwner {
+        _updatePoolLogic(_poolLogic);
+    }
+
+    function _updatePoolLogic(address _poolLogic) internal {
         poolImpl = _poolLogic;
         emit PoolLogicUpdated(_poolLogic);
     }
 
     function updateUserRegistry(address _userRegistry) public onlyOwner {
+        _updateUserRegistry(_userRegistry);
+    }
+
+    function _updateUserRegistry(address _userRegistry) internal {
         userRegistry = _userRegistry;
         emit UserRegistryUpdated(_userRegistry);
     }
 
     function updateStrategyRegistry(address _strategyRegistry) public onlyOwner {
+        _updateStrategyRegistry(_strategyRegistry);
+    }
+
+    function _updateStrategyRegistry(address _strategyRegistry) internal {
         strategyRegistry = _strategyRegistry;
         emit StrategyRegistryUpdated(_strategyRegistry);
     }
 
     function updateRepaymentImpl(address _repaymentImpl) public onlyOwner {
+        _updateRepaymentImpl(_repaymentImpl);
+    }
+
+    function _updateRepaymentImpl(address _repaymentImpl) internal {
         repaymentImpl = _repaymentImpl;
         emit RepaymentImplUpdated(_repaymentImpl);
     }
 
     function updatePoolTokenImpl(address _poolTokenImpl) public onlyOwner {
+        _updatePoolTokenImpl(_poolTokenImpl);
+    }
+
+    function _updatePoolTokenImpl(address _poolTokenImpl) internal {
         poolTokenImpl = _poolTokenImpl;
         emit PoolTokenImplUpdated(_poolTokenImpl);
     }
 
     function updatePriceoracle(address _priceOracle) public onlyOwner {
+        _updatePriceoracle(_priceOracle);
+    }
+
+    function _updatePriceoracle(address _priceOracle) internal {
         priceOracle = _priceOracle;
         emit PriceOracleUpdated(_priceOracle);
     }
 
     function updatedExtension(address _extension) public onlyOwner {
+        _updatedExtension(_extension);
+    }
+
+    function _updatedExtension(address _extension) internal {
         extension = _extension;
         emit ExtensionImplUpdated(_extension);
     }
 
     function updateSavingsAccount(address _savingsAccount) public onlyOwner {
+        _updateSavingsAccount(_savingsAccount);
+    }
+
+    function _updateSavingsAccount(address _savingsAccount) internal {
         savingsAccount = _savingsAccount;
         emit SavingsAccountUpdated(_savingsAccount);
     }
 
     function updateCollectionPeriod(uint256 _collectionPeriod) public onlyOwner {
+        _updateCollectionPeriod(_collectionPeriod);
+    }
+
+    function _updateCollectionPeriod(uint256 _collectionPeriod) internal {
         collectionPeriod = _collectionPeriod;
         emit CollectionPeriodUpdated(_collectionPeriod);
     }
 
     function updateMatchCollateralRatioInterval(uint256 _matchCollateralRatioInterval) public onlyOwner {
+        _updateMatchCollateralRatioInterval(_matchCollateralRatioInterval);
+    }
+
+    function _updateMatchCollateralRatioInterval(uint256 _matchCollateralRatioInterval) internal {
         matchCollateralRatioInterval = _matchCollateralRatioInterval;
         emit MatchCollateralRatioIntervalUpdated(_matchCollateralRatioInterval);
     }
 
     function updateMarginCallDuration(uint256 _marginCallDuration) public onlyOwner {
+        _updateMarginCallDuration(_marginCallDuration);
+    }
+
+    function _updateMarginCallDuration(uint256 _marginCallDuration) internal {
         marginCallDuration = _marginCallDuration;
         emit MarginCallDurationUpdated(_marginCallDuration);
     }
 
     function updateCollateralVolatilityThreshold(uint256 _collateralVolatilityThreshold) public onlyOwner {
+        _updateCollateralVolatilityThreshold(_collateralVolatilityThreshold);
+    }
+
+    function _updateCollateralVolatilityThreshold(uint256 _collateralVolatilityThreshold) internal {
         collateralVolatilityThreshold = _collateralVolatilityThreshold;
         emit CollateralVolatilityThresholdUpdated(_collateralVolatilityThreshold);
     }
 
     function updateGracePeriodPenaltyFraction(uint256 _gracePeriodPenaltyFraction) public onlyOwner {
+        _updateGracePeriodPenaltyFraction(_gracePeriodPenaltyFraction);
+    }
+
+    function _updateGracePeriodPenaltyFraction(uint256 _gracePeriodPenaltyFraction) internal {
         gracePeriodPenaltyFraction = _gracePeriodPenaltyFraction;
         emit GracePeriodPenaltyFractionUpdated(_gracePeriodPenaltyFraction);
     }
 
     function updateLiquidatorRewardFraction(uint256 _liquidatorRewardFraction) public onlyOwner {
+        _updateLiquidatorRewardFraction(_liquidatorRewardFraction);
+    }
+
+    function _updateLiquidatorRewardFraction(uint256 _liquidatorRewardFraction) internal {
         liquidatorRewardFraction = _liquidatorRewardFraction;
         emit LiquidatorRewardFractionUpdated(_liquidatorRewardFraction);
     }
 
     function updatePoolCancelPenalityFraction(uint256 _poolCancelPenalityFraction) public onlyOwner {
+        _updatePoolCancelPenalityFraction(_poolCancelPenalityFraction);
+    }
+
+    function _updatePoolCancelPenalityFraction(uint256 _poolCancelPenalityFraction) internal {
         poolCancelPenalityFraction = _poolCancelPenalityFraction;
         emit PoolCancelPenalityFractionUpdated(_poolCancelPenalityFraction);
     }

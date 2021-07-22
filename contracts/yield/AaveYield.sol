@@ -56,8 +56,8 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable, ReentrancyGuard
         __Ownable_init();
         super.transferOwnership(_owner);
 
-        updateSavingsAccount(_savingsAccount);
-        updateAaveAddresses(_wethGateway, _protocolDataProvider, _lendingPoolAddressesProvider);
+        _updateSavingsAccount(_savingsAccount);
+        _updateAaveAddresses(_wethGateway, _protocolDataProvider, _lendingPoolAddressesProvider);
     }
 
     /**
@@ -74,6 +74,10 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable, ReentrancyGuard
     }
 
     function updateSavingsAccount(address payable _savingsAccount) public onlyOwner {
+        _updateSavingsAccount(_savingsAccount);
+    }
+
+    function _updateSavingsAccount(address payable _savingsAccount) internal {
         require(_savingsAccount != address(0), 'Invest: zero address');
         savingsAccount = _savingsAccount;
         emit SavingsAccountUpdated(_savingsAccount);
@@ -84,6 +88,18 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable, ReentrancyGuard
         address _protocolDataProvider,
         address _lendingPoolAddressesProvider
     ) public onlyOwner {
+        _updateAaveAddresses(
+            _wethGateway,
+            _protocolDataProvider,
+            _lendingPoolAddressesProvider
+        );
+    }
+
+    function _updateAaveAddresses(
+        address _wethGateway,
+        address _protocolDataProvider,
+        address _lendingPoolAddressesProvider
+    ) internal {
         require(_wethGateway != address(0), 'Invest: WETHGateway:: zero address');
         require(_protocolDataProvider != address(0), 'Invest: protocolDataProvider:: zero address');
         require(_lendingPoolAddressesProvider != address(0), 'Invest: lendingPoolAddressesProvider:: zero address');

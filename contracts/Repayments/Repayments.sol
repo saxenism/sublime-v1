@@ -47,29 +47,45 @@ contract Repayments is Initializable, RepaymentStorage, IRepayment, ReentrancyGu
         uint256 _gracePeriodFraction,
         address _savingsAccount
     ) public initializer {
-        updatePoolFactory(_poolFactory);
-        updateGracePenalityRate(_gracePenaltyRate);
-        updateGracePeriodFraction(_gracePeriodFraction);
-        updateSavingsAccount(_savingsAccount);
+        _updatePoolFactory(_poolFactory);
+        _updateGracePenalityRate(_gracePenaltyRate);
+        _updateGracePeriodFraction(_gracePeriodFraction);
+        _updateSavingsAccount(_savingsAccount);
     }
 
     function updatePoolFactory(address _poolFactory) public onlyOwner {
+        _updatePoolFactory(_poolFactory);
+    }
+
+    function _updatePoolFactory(address _poolFactory) internal {
         require(_poolFactory != address(0), "0 address not allowed");
         poolFactory = IPoolFactory(_poolFactory);
         emit PoolFactoryUpdated(_poolFactory);
     }
 
     function updateGracePeriodFraction(uint256 _gracePeriodFraction) public onlyOwner {
+        _updateGracePeriodFraction(_gracePeriodFraction);
+    }
+
+    function _updateGracePeriodFraction(uint256 _gracePeriodFraction) internal {
         gracePeriodFraction = _gracePeriodFraction;
         emit GracePeriodFractionUpdated(_gracePeriodFraction);
     }
 
     function updateGracePenalityRate(uint256 _gracePenaltyRate) public onlyOwner {
+        _updateGracePenalityRate(_gracePenaltyRate);
+    }
+
+    function _updateGracePenalityRate(uint256 _gracePenaltyRate) internal {
         gracePenaltyRate = _gracePenaltyRate;
         emit GracePenalityRateUpdated(_gracePenaltyRate);
     }
 
     function updateSavingsAccount(address _savingsAccount) public onlyOwner {
+        _updateSavingsAccount(_savingsAccount);
+    }
+
+    function _updateSavingsAccount(address _savingsAccount) internal {
         require(_savingsAccount != address(0), "0 address not allowed");
         savingsAccount = _savingsAccount;
         emit SavingsAccountUpdated(_savingsAccount);

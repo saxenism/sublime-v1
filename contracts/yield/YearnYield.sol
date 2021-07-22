@@ -36,10 +36,14 @@ contract YearnYield is IYield, Initializable, OwnableUpgradeable, ReentrancyGuar
         __Ownable_init();
         super.transferOwnership(_owner);
 
-        updateSavingsAccount(_savingsAccount);
+        _updateSavingsAccount(_savingsAccount);
     }
 
     function updateSavingsAccount(address payable _savingsAccount) public onlyOwner {
+        _updateSavingsAccount(_savingsAccount);
+    }
+
+    function _updateSavingsAccount(address payable _savingsAccount) internal {
         require(_savingsAccount != address(0), 'Invest: zero address');
         savingsAccount = _savingsAccount;
         emit SavingsAccountUpdated(_savingsAccount);

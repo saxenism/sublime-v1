@@ -45,8 +45,8 @@ contract Extension is Initializable, IExtension {
     }
 
     function initialize(address _poolFactory, uint256 _votingPassRatio) external initializer {
-        updatePoolFactory(_poolFactory);
-        updateVotingPassRatio(_votingPassRatio);
+        _updatePoolFactory(_poolFactory);
+        _updateVotingPassRatio(_votingPassRatio);
     }
 
     function initializePoolExtension(uint256 _repaymentInterval) external override {
@@ -136,6 +136,12 @@ contract Extension is Initializable, IExtension {
         public
         onlyOwner
     {
+        _updateVotingPassRatio(_votingPassRatio);
+    }
+
+    function _updateVotingPassRatio(uint256 _votingPassRatio)
+        internal
+    {
         votingPassRatio = _votingPassRatio;
         emit VotingPassRatioUpdated(_votingPassRatio);
     }
@@ -143,6 +149,12 @@ contract Extension is Initializable, IExtension {
     function updatePoolFactory(address _poolFactory) 
         public
         onlyOwner
+    {
+        _updatePoolFactory(_poolFactory);
+    }
+
+    function _updatePoolFactory(address _poolFactory) 
+        internal
     {
         require(_poolFactory != address(0), "Zero address not allowed");
         poolFactory = IPoolFactory(_poolFactory);
