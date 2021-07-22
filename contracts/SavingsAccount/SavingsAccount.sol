@@ -293,6 +293,28 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable, R
         emit Approved(token, msg.sender, to, amount);
     }
 
+    function increaseAllowance(
+        address token,
+        address to,
+        uint256 amount
+    ) external override {
+        uint256 _updatedAllowance = allowance[msg.sender][token][to].add(amount);
+        allowance[msg.sender][token][to] = _updatedAllowance;
+
+        emit Approved(token, msg.sender, to, _updatedAllowance);
+    }
+
+    function decreaseAllowance(
+        address token,
+        address to,
+        uint256 amount
+    ) external override {
+        uint256 _updatedAllowance = allowance[msg.sender][token][to].sub(amount);
+        allowance[msg.sender][token][to] = _updatedAllowance;
+
+        emit Approved(token, msg.sender, to, _updatedAllowance);
+    }
+
     function approveFromToCreditLine(
         address token,
         address from,
