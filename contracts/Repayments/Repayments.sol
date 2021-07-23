@@ -407,7 +407,7 @@ contract Repayments is Initializable, RepaymentStorage, IRepayment, ReentrancyGu
     }
     */
     function getTotalRepaidAmount(address poolID) external view override returns (uint256) {
-        return repaymentVars[poolID].totalRepaidAmount;
+        return repaymentVars[poolID].loanDurationCovered.mul(getInterestPerSecond(_poolID)).div(10**60);
     }
 
     function instalmentDeadlineExtended(address _poolID, uint256 _period) external override {
