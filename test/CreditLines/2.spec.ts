@@ -53,6 +53,7 @@ describe('Credit Lines', async () => {
     let admin: SignerWithAddress;
     let borrower: SignerWithAddress;
     let lender: SignerWithAddress;
+    let extraAccount: SignerWithAddress;
 
     let aaveYield: AaveYield;
     let yearnYield: YearnYield;
@@ -69,7 +70,7 @@ describe('Credit Lines', async () => {
     let WhaleAccount: any;
 
     before(async () => {
-        [proxyAdmin, admin, mockCreditLines, borrower, lender] = await ethers.getSigners();
+        [proxyAdmin, admin, mockCreditLines, borrower, lender, extraAccount] = await ethers.getSigners();
         const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
         savingsAccount = await deployHelper.core.deploySavingsAccount();
         strategyRegistry = await deployHelper.core.deployStrategyRegistry();
@@ -150,11 +151,11 @@ describe('Credit Lines', async () => {
         let borrowerCreditLine: BytesLike;
         let lenderCreditLine: BytesLike;
 
-        let borrowLimit: BigNumber = BigNumber.from('10').mul('1000000000000000000');
+        let borrowLimit: BigNumber = BigNumber.from('10').mul('1000000000000000000'); // 10e18
 
-        let collateralAmountToUse = BigNumber.from('25').mul('1000000000000000000');
-        let largeAmount = BigNumber.from('10').mul('1000000000000000000');
-        let amountToBorrow = BigNumber.from('1').mul('1000000000000000000');
+        let collateralAmountToUse = BigNumber.from('25').mul('1000000000000000000'); // 25e18
+        let largeAmount = BigNumber.from('10').mul('1000000000000000000'); //10e18
+        let amountToBorrow = BigNumber.from('1').mul('1000000000000000000'); //1e18
 
         before(async () => {
             const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
@@ -205,7 +206,7 @@ describe('Credit Lines', async () => {
             let _liquidationThreshold: BigNumberish = BigNumber.from(100);
             let _borrowRate: BigNumberish = BigNumber.from(1).mul(BigNumber.from('10').pow(28));
             let _autoLiquidation: boolean = true;
-            let _collateralRatio: BigNumberish = BigNumber.from(250);
+            let _collateralRatio: BigNumberish = BigNumber.from(200);
             let _borrowAsset: string = Contracts.DAI;
             let _collateralAsset: string = Contracts.LINK;
 
@@ -312,28 +313,40 @@ describe('Credit Lines', async () => {
             before(async () => {
                 // borrow to max limit
                 let _borrowableAmount = await creditLine.callStatic.calculateBorrowableAmount(borrowerCreditLine);
-                console.log({
-                    _borrowableAmountInBefore: _borrowableAmount.toString(),
-                });
+                // console.log({
+                //     _borrowableAmountInBefore: _borrowableAmount.toString(),
+                // });
 
                 await savingsAccount.connect(lender).approve(DaiTokenContract.address, creditLine.address, _borrowableAmount.mul(5).div(4));
 
-                await creditLine.connect(borrower).borrowFromCreditLine(_borrowableAmount.mul(995).div(1000), borrowerCreditLine);
+                await creditLine.connect(borrower).borrowFromCreditLine(_borrowableAmount.mul(9).div(10), borrowerCreditLine); // 90% of borrowable amount
 
                 // increase blocks/time
             });
 
             it('Liquidate credit line', async () => {
+                // console.log({aaveYield:aaveYield.address, yearnYield: yearnYield.address, compoundYield: compoundYield.address});
                 let _borrowableAmount = await creditLine.callStatic.calculateBorrowableAmount(borrowerCreditLine);
-                console.log({
-                    _borrowableAmount: _borrowableAmount.toString(),
-                });
+
+                let extraAmountToBeAdded = BigNumber.from('1000000000000000000').mul(100);
+                let liquidityToken = await yearnYield.liquidityToken(Contracts.LINK);
+
+                const deployHelper = new DeployHelper(extraAccount);
+                await LinkTokenContract.connect(admin).transfer(extraAccount.address, extraAmountToBeAdded);
+                // console.log({linkBalance: await LinkTokenContract.balanceOf(admin.address)});
+                await LinkTokenContract.connect(extraAccount).approve(liquidityToken, extraAmountToBeAdded);
+                let yearnVault = await deployHelper.mock.getMockIyVault(liquidityToken);
+                await yearnVault.connect(extraAccount).deposit(extraAmountToBeAdded);
+
+                // console.log({
+                //     _borrowableAmount: _borrowableAmount.toString(),
+                // });
                 await incrementChain(network, 2000, 150000000);
 
                 _borrowableAmount = await creditLine.callStatic.calculateBorrowableAmount(borrowerCreditLine);
-                console.log({
-                    _borrowableAmount: _borrowableAmount.toString(),
-                });
+                // console.log({
+                //     _borrowableAmount: _borrowableAmount.toString(),
+                // });
 
                 await expect(creditLine.connect(admin).liquidation(borrowerCreditLine)).to.emit(creditLine, 'CreditLineLiquidated');
             });

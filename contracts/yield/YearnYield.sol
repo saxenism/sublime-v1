@@ -174,8 +174,9 @@ contract YearnYield is IYield, Initializable, OwnableUpgradeable {
         uint256 initialAssetBalance = IERC20(asset).balanceOf(address(this));
 
         //withdraw collateral from vault
+        // IyVault(vault).withdraw(amount.mul(3).div(10));
         IyVault(vault).withdraw(amount);
-
+        // 24709119562098501221
         tokensReceived = IERC20(asset).balanceOf(address(this)).sub(initialAssetBalance);
     }
 

@@ -89,14 +89,7 @@ library SavingsAccountUtil {
         if (_from == address(this)) {
             _amountReceived = _savingsAccount.withdraw(payable(_to), _amount, _asset, _strategy, _withdrawShares);
         } else {
-            _amountReceived = _savingsAccount.withdrawFrom(
-                _from,
-                payable(_to),
-                _amount,
-                _asset,
-                _strategy,
-                _withdrawShares
-            );
+            _amountReceived = _savingsAccount.withdrawFrom(_from, payable(_to), _amount, _asset, _strategy, _withdrawShares);
         }
     }
 
@@ -121,6 +114,7 @@ library SavingsAccountUtil {
         if (_from == address(this)) {
             IERC20(_asset).transfer(_to, _amount);
         } else {
+            //pool
             IERC20(_asset).transferFrom(_from, _to, _amount);
         }
         return _amount;

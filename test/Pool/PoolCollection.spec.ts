@@ -220,7 +220,8 @@ describe('Pool Collection stage', async () => {
                 poolFactory.address,
                 salt,
                 poolImpl.address,
-                false
+                false,
+                {}
             );
 
             const nonce = (await poolFactory.provider.getTransactionCount(poolFactory.address)) + 1;

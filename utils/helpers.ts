@@ -31,29 +31,40 @@ const initializeFragement = _interface.getFunction('initialize');
 
 export async function getPoolAddress(
     borrower: Address,
-    token1: Address,
-    token2: Address,
+    borrowToken: Address,
+    collateralToken: Address,
     strategy: Address,
     poolFactory: Address,
     salt: BytesLike,
     poolLogic: Address,
-    transferFromSavingsAccount: Boolean
+    transferFromSavingsAccount: Boolean,
+    {
+        _poolSize = createPoolParams._poolSize,
+        _minborrowAmount = createPoolParams._minborrowAmount,
+        _collateralRatio = createPoolParams._collateralRatio,
+        _borrowRate = createPoolParams._borrowRate,
+        _repaymentInterval = createPoolParams._repaymentInterval,
+        _noOfRepaymentIntervals = createPoolParams._noOfRepaymentIntervals,
+        _collateralAmount = createPoolParams._collateralAmount,
+        _matchCollateralRatioInterval = testPoolFactoryParams._matchCollateralRatioInterval,
+        _collectionPeriod = testPoolFactoryParams._collectionPeriod,
+    }
 ) {
     const poolData = _interface.encodeFunctionData(initializeFragement, [
-        createPoolParams._poolSize,
-        createPoolParams._minborrowAmount,
+        _poolSize,
+        _minborrowAmount,
         borrower,
-        token1,
-        token2,
-        createPoolParams._collateralRatio,
-        createPoolParams._borrowRate,
-        createPoolParams._repaymentInterval,
-        createPoolParams._noOfRepaymentIntervals,
+        borrowToken,
+        collateralToken,
+        _collateralRatio,
+        _borrowRate,
+        _repaymentInterval,
+        _noOfRepaymentIntervals,
         strategy,
-        createPoolParams._collateralAmount,
+        _collateralAmount,
         transferFromSavingsAccount,
-        testPoolFactoryParams._matchCollateralRatioInterval,
-        testPoolFactoryParams._collectionPeriod,
+        _matchCollateralRatioInterval,
+        _collectionPeriod,
     ]);
 
     const poolAddress = ethers.utils.getCreate2Address(

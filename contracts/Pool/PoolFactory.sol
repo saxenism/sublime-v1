@@ -199,10 +199,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
      * @notice functions affected by this modifier can only be invoked by the borrow of the Pool
      */
     modifier onlyBorrower() {
-        require(
-            IVerification(userRegistry).isUser(msg.sender),
-            'PoolFactory::onlyBorrower - Only a valid Borrower can create Pool'
-        );
+        require(IVerification(userRegistry).isUser(msg.sender), 'PoolFactory::onlyBorrower - Only a valid Borrower can create Pool');
         _;
     }
 
@@ -328,18 +325,9 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         address[] memory tokens = new address[](2);
         tokens[0] = _collateralTokenType;
         tokens[1] = _borrowTokenType;
-        require(
-            IPriceOracle(priceOracle).doesFeedExist(tokens),
-            "PoolFactory::createPool - Price feed doesn't support token pair"
-        );
-        require(
-            IStrategyRegistry(strategyRegistry).registry(_poolSavingsStrategy),
-            'PoolFactory::createPool - Invalid strategy'
-        );
-        require(
-            isWithinLimits(_poolSize, poolSizeLimit.min, poolSizeLimit.max),
-            'PoolFactory::createPool - PoolSize not within limits'
-        );
+        require(IPriceOracle(priceOracle).doesFeedExist(tokens), "PoolFactory::createPool - Price feed doesn't support token pair");
+        require(IStrategyRegistry(strategyRegistry).registry(_poolSavingsStrategy), 'PoolFactory::createPool - Invalid strategy');
+        require(isWithinLimits(_poolSize, poolSizeLimit.min, poolSizeLimit.max), 'PoolFactory::createPool - PoolSize not within limits');
         require(
             isWithinLimits(_collateralRatio, collateralRatioLimit.min, collateralRatioLimit.max),
             'PoolFactory::createPool - Collateral Ratio not within limits'
@@ -376,14 +364,12 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
             );
 
         bytes32 salt = keccak256(abi.encodePacked(_salt, msg.sender));
-        bytes memory bytecode =
-            abi.encodePacked(type(SublimeProxy).creationCode, abi.encode(poolImpl, address(0x01), data));
+        bytes memory bytecode = abi.encodePacked(type(SublimeProxy).creationCode, abi.encode(poolImpl, address(0x01), data));
         uint256 amount = _collateralTokenType == address(0) ? _collateralAmount : 0;
 
         address pool = _deploy(amount, salt, bytecode);
 
-        bytes memory tokenData =
-            abi.encodeWithSelector(poolTokenInitFuncSelector, 'Open Borrow Pool Tokens', 'OBPT', pool);
+        bytes memory tokenData = abi.encodeWithSelector(poolTokenInitFuncSelector, 'Open Borrow Pool Tokens', 'OBPT', pool);
         address poolToken = address(new SublimeProxy(poolTokenImpl, address(0), tokenData));
         IPool(pool).setPoolToken(poolToken);
         openBorrowPoolRegistry[pool] = true;

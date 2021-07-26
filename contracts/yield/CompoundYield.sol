@@ -76,7 +76,6 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable {
         uint256 amount
     ) public payable override onlySavingsAccount returns (uint256 sharesReceived) {
         require(amount != 0, 'Invest: amount');
-
         address investedTo = liquidityToken[asset];
         if (asset == address(0)) {
             require(msg.value == amount, 'Invest: ETH amount');
@@ -131,9 +130,7 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable {
         //balanceOfUnderlying returns underlying balance for total shares
         if (shares == 0) return 0;
         address cToken = liquidityToken[asset];
-        amount = ICToken(cToken).balanceOfUnderlying(address(this)).mul(shares).div(
-            IERC20(cToken).balanceOf(address(this))
-        );
+        amount = ICToken(cToken).balanceOfUnderlying(address(this)).mul(shares).div(IERC20(cToken).balanceOf(address(this)));
     }
 
     function getSharesForTokens(uint256 amount, address asset) external override returns (uint256 shares) {
@@ -175,7 +172,6 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable {
         uint256 amount
     ) internal returns (uint256 tokensReceived) {
         uint256 initialAssetBalance = IERC20(asset).balanceOf(address(this));
-
         require(ICToken(cToken).redeem(amount) == 0, 'Error in unwrapping');
 
         tokensReceived = IERC20(asset).balanceOf(address(this)).sub(initialAssetBalance);

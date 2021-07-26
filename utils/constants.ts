@@ -14,6 +14,7 @@ export const ETH_Yearn_Protocol_Address = '0xe1237aa7f535b0cc33fd973d66cbf830354
 
 export const Binance7 = '0xbe0eb53f46cd790cd13851d5eff43d12404d33e8';
 export const WhaleAccount = '0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503';
+export const WBTCWhale = '0x28C6c06298d514Db089934071355E5743bf21d60'; // Binance 14
 export const DAI_Yearn_Protocol_Address = '0xacd43e627e64355f1861cec6d3a6688b31a6f952'; // TODO: To be upgraded to v2
 
 export const LINK_Yearn_Protocol_Address = '0x881b06da56bb5675c54e4ed311c21e54c5025298'; // @prateek to check if update needed in upgrade v2
@@ -21,18 +22,19 @@ export const LINK_Yearn_Protocol_Address = '0x881b06da56bb5675c54e4ed311c21e54c5
 export const aLink = '0xa06bC25B5805d5F8d82847D191Cb4Af5A3e873E0';
 
 const collateralRatio = BigNumber.from(60).mul(BigNumber.from(10).pow(28));
-const poolSize = BigNumber.from('6000000000000000');
+const poolSize = BigNumber.from('100000000000000000000'); // 100e18 dai
 
 export const createPoolParams = {
     _poolSize: poolSize,
     _borrowAmountRequested: depositValueToTest,
-    _minborrowAmount: BigNumber.from('1000000000000000'),
+    _minborrowAmount: BigNumber.from('10000000000000000000'), // 10e18
     _idealCollateralRatio: collateralRatio,
     _collateralRatio: collateralRatio,
     _borrowRate: BigNumber.from(5).mul(BigNumber.from(10).pow(28)),
     _repaymentInterval: BigNumber.from(1000),
     _noOfRepaymentIntervals: BigNumber.from(25),
-    _collateralAmount: BigNumber.from('300000000000000000'),
+    _collateralAmount: BigNumber.from('3000000000000000000000'), // 3000e18
+    _collateralAmountForWBTC: BigNumber.from('100000000'), // 1 BTC
     _loanWithdrawalDuration: BigNumber.from(15000000),
     _collectionPeriod: BigNumber.from(5000000),
 };
@@ -83,4 +85,5 @@ export const ChainLinkAggregators = {
     'LINK/USD': '0x2c1d072e956AFFC0D435Cb7AC38EF18d24d9127c',
     'DAI/USD': '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9',
     'ETH/USD': '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419',
+    'BTC/USD': '0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c',
 };

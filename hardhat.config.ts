@@ -1,4 +1,4 @@
-require("dotenv").config();
+require('dotenv').config();
 
 import '@nomiclabs/hardhat-ethers';
 import '@nomiclabs/hardhat-waffle';
@@ -9,6 +9,8 @@ import '@openzeppelin/hardhat-upgrades';
 import 'hardhat-typechain';
 import 'solidity-coverage';
 import 'hardhat-deploy';
+import 'hardhat-tracer';
+import 'hardhat-log-remover';
 
 import { task } from 'hardhat/config';
 import { HardhatUserConfig } from 'hardhat/types';
@@ -51,18 +53,19 @@ const config: HardhatUserConfig = {
             // hardfork: "istanbul",
             forking: {
                 url: 'https://eth-mainnet.alchemyapi.io/v2/snGskhAXMQaRLnJaxbcfOL7U5_bSZl_Y',
-                blockNumber: 12400000,
+                blockNumber: 12869777,
             },
             accounts: getHardhatPrivateKeys(),
             live: true,
             saveDeployments: false,
+            loggingEnabled: false,
             tags: ['hardhat'],
         },
         localhost: {
             url: 'http://127.0.0.1:8545',
             timeout: 100000,
             live: false,
-            accounts: process.env.PRIVATE_KEYS ? process.env.PRIVATE_KEYS.split(","): [],
+            accounts: process.env.PRIVATE_KEYS ? process.env.PRIVATE_KEYS.split(',') : [],
             saveDeployments: false,
             tags: ['localhost'],
         },
@@ -70,7 +73,7 @@ const config: HardhatUserConfig = {
             chainId: 42,
             url: 'https://kovan.infura.io/v3/' + INFURA_TOKEN,
             // @ts-ignore
-            accounts: process.env.PRIVATE_KEYS ? process.env.PRIVATE_KEYS.split(","): [],
+            accounts: process.env.PRIVATE_KEYS ? process.env.PRIVATE_KEYS.split(',') : [],
             live: true,
             gasPrice: 3000000000,
             saveDeployments: true,
@@ -98,7 +101,7 @@ const config: HardhatUserConfig = {
         kovan_fork: {
             url: 'http://127.0.0.1:8545',
             // @ts-ignore
-            accounts: process.env.PRIVATE_KEYS ? process.env.PRIVATE_KEYS.split(","): [],
+            accounts: process.env.PRIVATE_KEYS ? process.env.PRIVATE_KEYS.split(',') : [],
             live: true,
             gasPrice: 1000000000,
             saveDeployments: true,

@@ -101,10 +101,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         address asset,
         address strategy
     ) internal returns (uint256 sharesReceived) {
-        require(
-            IStrategyRegistry(strategyRegistry).registry(strategy),
-            'SavingsAccount::deposit strategy do not exist'
-        );
+        require(IStrategyRegistry(strategyRegistry).registry(strategy), 'SavingsAccount::deposit strategy do not exist');
 
         if (asset == address(0)) {
             sharesReceived = IYield(strategy).lockTokens{value: amount}(msg.sender, asset, amount);
@@ -133,8 +130,10 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
             amount = IYield(currentStrategy).getSharesForTokens(amount, asset);
         }
 
-        userLockedBalance[msg.sender][asset][currentStrategy] = userLockedBalance[msg.sender][asset][currentStrategy]
-            .sub(amount, 'SavingsAccount::switchStrategy Insufficient balance');
+        userLockedBalance[msg.sender][asset][currentStrategy] = userLockedBalance[msg.sender][asset][currentStrategy].sub(
+            amount,
+            'SavingsAccount::switchStrategy Insufficient balance'
+        );
 
         uint256 tokensReceived = amount;
         if (currentStrategy != address(0)) {
@@ -150,9 +149,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
             sharesReceived = _depositToYield(tokensReceived, asset, newStrategy);
         }
 
-        userLockedBalance[msg.sender][asset][newStrategy] = userLockedBalance[msg.sender][asset][newStrategy].add(
-            sharesReceived
-        );
+        userLockedBalance[msg.sender][asset][newStrategy] = userLockedBalance[msg.sender][asset][newStrategy].add(sharesReceived);
 
         emit StrategySwitched(msg.sender, asset, currentStrategy, newStrategy);
     }
@@ -267,10 +264,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable {
         for (uint256 index = 0; index < _strategyList.length; index++) {
             if (userLockedBalance[msg.sender][_asset][_strategyList[index]] != 0) {
                 tokenReceived = tokenReceived.add(
-                    IYield(_strategyList[index]).unlockTokens(
-                        _asset,
-                        userLockedBalance[msg.sender][_asset][_strategyList[index]]
-                    )
+                    IYield(_strategyList[index]).unlockTokens(_asset, userLockedBalance[msg.sender][_asset][_strategyList[index]])
                 );
             }
         }

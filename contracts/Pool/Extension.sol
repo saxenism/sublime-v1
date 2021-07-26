@@ -24,14 +24,14 @@ contract Extension is Initializable, IExtension {
     uint256 votingPassRatio;
 
     modifier onlyOwner() {
-        require(msg.sender == poolFactory.owner(), "Not owner");
+        require(msg.sender == poolFactory.owner(), 'Not owner');
         _;
     }
 
     /*
-    * @notice emitted when the Voting Pass Ratio parameter for Open Borrow Pools is updated
-    * @param votingPassRatio the new value of the voting pass ratio for Open Borrow Pools
-    */
+     * @notice emitted when the Voting Pass Ratio parameter for Open Borrow Pools is updated
+     * @param votingPassRatio the new value of the voting pass ratio for Open Borrow Pools
+     */
     event VotingPassRatioUpdated(uint256 votingPassRatio);
 
     event ExtensionRequested(uint256 extensionVoteEndTime);
@@ -51,10 +51,7 @@ contract Extension is Initializable, IExtension {
 
     function initializePoolExtension(uint256 _repaymentInterval) external override {
         IPoolFactory _poolFactory = poolFactory;
-        require(
-            poolInfo[msg.sender].repaymentInterval == 0,
-            'Extension::initializePoolExtension - _repaymentInterval cannot be 0'
-        );
+        require(poolInfo[msg.sender].repaymentInterval == 0, 'Extension::initializePoolExtension - _repaymentInterval cannot be 0');
         require(_poolFactory.openBorrowPoolRegistry(msg.sender), 'Repayments::onlyValidPool - Invalid Pool');
         poolInfo[msg.sender].repaymentInterval = _repaymentInterval;
     }
@@ -66,10 +63,7 @@ contract Extension is Initializable, IExtension {
         require(block.timestamp > _extensionVoteEndTime, 'Extension::requestExtension - Extension requested already'); // _extensionVoteEndTime is 0 when no extension is active
 
         // This check is required so that borrower doesn't ask for more extension if previously an extension is already granted
-        require(
-            poolInfo[_pool].periodWhenExtensionIsPassed == 0,
-            'Extension::requestExtension: Extension already availed'
-        );
+        require(poolInfo[_pool].periodWhenExtensionIsPassed == 0, 'Extension::requestExtension: Extension already availed');
 
         poolInfo[_pool].totalExtensionSupport = 0; // As we can multiple voting every time new voting start we have to make previous votes 0
         IRepayment _repayment = IRepayment(poolFactory.repaymentImpl());
@@ -83,10 +77,7 @@ contract Extension is Initializable, IExtension {
 
     function voteOnExtension(address _pool) external {
         uint256 _extensionVoteEndTime = poolInfo[_pool].extensionVoteEndTime;
-        require(
-            block.timestamp < _extensionVoteEndTime,
-            "Pool::voteOnExtension - Voting is over"
-        );
+        require(block.timestamp < _extensionVoteEndTime, 'Pool::voteOnExtension - Voting is over');
 
         (uint256 _balance, uint256 _totalSupply) = IPool(_pool).getBalanceDetails(msg.sender);
         require(_balance != 0, 'Pool::voteOnExtension - Not a valid lender for pool');
@@ -132,10 +123,7 @@ contract Extension is Initializable, IExtension {
         delete poolInfo[msg.sender];
     }
 
-    function updateVotingPassRatio(uint256 _votingPassRatio)
-        external
-        onlyOwner
-    {
+    function updateVotingPassRatio(uint256 _votingPassRatio) external onlyOwner {
         votingPassRatio = _votingPassRatio;
         emit VotingPassRatioUpdated(_votingPassRatio);
     }

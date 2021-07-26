@@ -94,8 +94,7 @@ contract GovernorAlpha {
     mapping(address => uint256) public latestProposalIds;
 
     /// @notice The EIP-712 typehash for the contract's domain
-    bytes32 public constant DOMAIN_TYPEHASH =
-        keccak256('EIP712Domain(string name,uint256 chainId,address verifyingContract)');
+    bytes32 public constant DOMAIN_TYPEHASH = keccak256('EIP712Domain(string name,uint256 chainId,address verifyingContract)');
 
     /// @notice The EIP-712 typehash for the ballot struct used by the contract
     bytes32 public constant BALLOT_TYPEHASH = keccak256('Ballot(uint256 proposalId,bool support)');
@@ -147,9 +146,7 @@ contract GovernorAlpha {
             'GovernorAlpha::propose: proposer votes below proposal threshold'
         );
         require(
-            targets.length == values.length &&
-                targets.length == signatures.length &&
-                targets.length == calldatas.length,
+            targets.length == values.length && targets.length == signatures.length && targets.length == calldatas.length,
             'GovernorAlpha::propose: proposal function information arity mismatch'
         );
         require(targets.length != 0, 'GovernorAlpha::propose: must provide actions');
@@ -189,25 +186,12 @@ contract GovernorAlpha {
 
         latestProposalIds[newProposal.proposer] = newProposal.id;
 
-        emit ProposalCreated(
-            newProposal.id,
-            msg.sender,
-            targets,
-            values,
-            signatures,
-            calldatas,
-            startBlock,
-            endBlock,
-            description
-        );
+        emit ProposalCreated(newProposal.id, msg.sender, targets, values, signatures, calldatas, startBlock, endBlock, description);
         return newProposal.id;
     }
 
     function queue(uint256 proposalId) public {
-        require(
-            state(proposalId) == ProposalState.Succeeded,
-            'GovernorAlpha::queue: proposal can only be queued if it is succeeded'
-        );
+        require(state(proposalId) == ProposalState.Succeeded, 'GovernorAlpha::queue: proposal can only be queued if it is succeeded');
         Proposal storage proposal = proposals[proposalId];
         uint256 eta = add256(block.timestamp, timelock.delay());
         for (uint256 i = 0; i < proposal.targets.length; i++) {
@@ -232,10 +216,7 @@ contract GovernorAlpha {
     }
 
     function execute(uint256 proposalId) public payable {
-        require(
-            state(proposalId) == ProposalState.Queued,
-            'GovernorAlpha::execute: proposal can only be executed if it is queued'
-        );
+        require(state(proposalId) == ProposalState.Queued, 'GovernorAlpha::execute: proposal can only be executed if it is queued');
         Proposal storage proposal = proposals[proposalId];
         proposal.executed = true;
         for (uint256 i = 0; i < proposal.targets.length; i++) {
@@ -256,8 +237,7 @@ contract GovernorAlpha {
 
         Proposal storage proposal = proposals[proposalId];
         require(
-            msg.sender == guardian ||
-                LIME.getPriorVotes(proposal.proposer, sub256(block.number, 1)) < proposalThreshold(),
+            msg.sender == guardian || LIME.getPriorVotes(proposal.proposer, sub256(block.number, 1)) < proposalThreshold(),
             'GovernorAlpha::cancel: proposer above threshold'
         );
 
@@ -326,8 +306,7 @@ contract GovernorAlpha {
         bytes32 r,
         bytes32 s
     ) public {
-        bytes32 domainSeparator =
-            keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)), getChainId(), address(this)));
+        bytes32 domainSeparator = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)), getChainId(), address(this)));
         bytes32 structHash = keccak256(abi.encode(BALLOT_TYPEHASH, proposalId, support));
         bytes32 digest = keccak256(abi.encodePacked('\x19\x01', domainSeparator, structHash));
         address signatory = ecrecover(digest, v, r, s);

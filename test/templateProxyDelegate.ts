@@ -264,7 +264,8 @@ describe('Template 2', async () => {
                 poolFactory.address,
                 sha256(Buffer.from('borrower')),
                 poolLogic.address,
-                false
+                false,
+                {}
             );
 
             const nonce = (await poolFactory.provider.getTransactionCount(poolFactory.address)) + 1;
@@ -350,7 +351,8 @@ describe('Template 2', async () => {
                 poolFactory.address,
                 salt,
                 poolLogic.address,
-                false
+                false,
+                {}
             );
 
             const nonce = (await poolFactory.provider.getTransactionCount(poolFactory.address)) + 1;

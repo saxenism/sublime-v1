@@ -204,7 +204,8 @@ describe.skip('Template For Test cases', async () => {
                     poolFactory.address,
                     sha256(Buffer.from('borrower')),
                     poolImpl.address,
-                    false
+                    false,
+                    {}
                 );
 
                 const nonce = (await poolFactory.provider.getTransactionCount(poolFactory.address)) + 1;
