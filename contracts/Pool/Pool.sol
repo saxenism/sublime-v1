@@ -582,8 +582,10 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         _withdrawRepayment(msg.sender);
         //to add transfer if not included in above (can be transferred with liquidity)
         poolToken.burn(msg.sender, _actualBalance);
-        //transfer liquidity provided
-        SavingsAccountUtil.transferTokens(poolConstants.borrowAsset, _toTransfer, address(this), msg.sender);
+        if (_loanStatus == LoanStatus.DEFAULTED) {
+            //transfer liquidity provided
+            SavingsAccountUtil.transferTokens(poolConstants.borrowAsset, _toTransfer, address(this), msg.sender);
+        }
 
         // TODO: Something wrong in the below event. Please have a look
         emit LiquidityWithdrawn(_toTransfer, msg.sender);
