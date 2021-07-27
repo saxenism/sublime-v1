@@ -558,12 +558,14 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
 
         uint256 _totalCollateralToken = calculateTotalCollateralTokens(creditLineHash);
         uint256 currentDebt = calculateCurrentDebt(creditLineHash);
-        uint256 collateralRatioIfAmountIsWithdrawn =
-            ((_totalCollateralToken.sub(amount)).mul(_ratioOfPrices).div(currentDebt)).div(10**_decimals);
-        require(
-            collateralRatioIfAmountIsWithdrawn >= creditLineInfo[creditLineHash].idealCollateralRatio,
-            "CreditLine::withdrawCollateralFromCreditLine - The current collateral ration doesn't allow to withdraw"
-        );
+        if (currentDebt != 0) {
+            uint256 collateralRatioIfAmountIsWithdrawn =
+                ((_totalCollateralToken.sub(amount)).mul(_ratioOfPrices).div(currentDebt)).div(10**_decimals);
+            require(
+                collateralRatioIfAmountIsWithdrawn >= creditLineInfo[creditLineHash].idealCollateralRatio,
+                "CreditLine::withdrawCollateralFromCreditLine - The current collateral ration doesn't allow to withdraw"
+            );
+        }
         address _collateralAsset = creditLineInfo[creditLineHash].collateralAsset;
         _withdrawCollateral(_collateralAsset, amount, creditLineHash);
     }
