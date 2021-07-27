@@ -143,10 +143,9 @@ contract GovernorAlpha {
         uint256[] memory values,
         string[] memory signatures,
         bytes[] memory calldatas,
-        string memory description,
-        uint256 acceptanceRatio //if aacceptanceRatio = 10000 it means 100%
+        string memory description
     ) public returns (uint256) {
-        require(acceptanceRatio > 5000 && acceptanceRatio <= 10000, 'Acceptance Ratio should be in permissible limits');
+        uint256 acceptanceRatio = 8500; //if aacceptanceRatio = 10000 it means 100%
         require(
             LIME.getPriorVotes(msg.sender, sub256(block.number, 1)) > proposalThreshold(),
             'GovernorAlpha::propose: proposer votes below proposal threshold'
