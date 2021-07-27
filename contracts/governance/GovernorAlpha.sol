@@ -72,6 +72,10 @@ contract GovernorAlpha {
         bool executed;
         // @notice Receipts of ballots for the entire set of voters
         mapping(address => Receipt) receipts;
+        // for weight - derived from acceptance ratio
+        uint256 forWeight;
+        // against weight - derived from acceptance ratio
+        uint256 againstWeight;
     }
 
     /// @notice Ballot receipt record for a voter
@@ -139,8 +143,10 @@ contract GovernorAlpha {
         uint256[] memory values,
         string[] memory signatures,
         bytes[] memory calldatas,
-        string memory description
+        string memory description,
+        uint256 acceptanceRatio //if aacceptanceRatio = 10000 it means 100%
     ) public returns (uint256) {
+        require(acceptanceRatio > 5000 && acceptanceRatio <= 10000, 'Acceptance Ratio should be in permissible limits');
         require(
             LIME.getPriorVotes(msg.sender, sub256(block.number, 1)) > proposalThreshold(),
             'GovernorAlpha::propose: proposer votes below proposal threshold'
@@ -168,6 +174,22 @@ contract GovernorAlpha {
         uint256 startBlock = add256(block.number, votingDelay());
         uint256 endBlock = add256(startBlock, votingPeriod());
 
+        uint256 againstWeight = acceptanceRatio;
+        uint256 forWeight = sub256(10000, acceptanceRatio);
+        return _createProposal(targets, values, signatures, calldatas, description, startBlock, endBlock, againstWeight, forWeight);
+    }
+
+    function _createProposal(
+        address[] memory targets,
+        uint256[] memory values,
+        string[] memory signatures,
+        bytes[] memory calldatas,
+        string memory description,
+        uint256 startBlock,
+        uint256 endBlock,
+        uint256 againstWeight,
+        uint256 forWeight
+    ) internal returns (uint256) {
         proposalCount++;
         Proposal storage newProposal = proposals[proposalCount];
         newProposal.id = proposalCount;
@@ -183,6 +205,8 @@ contract GovernorAlpha {
         newProposal.againstVotes = 0;
         newProposal.canceled = false;
         newProposal.executed = false;
+        newProposal.againstWeight = againstWeight;
+        newProposal.forWeight = forWeight;
 
         latestProposalIds[newProposal.proposer] = newProposal.id;
 
@@ -282,7 +306,9 @@ contract GovernorAlpha {
             return ProposalState.Pending;
         } else if (block.number <= proposal.endBlock) {
             return ProposalState.Active;
-        } else if (3 * proposal.forVotes <= 17 * proposal.againstVotes || proposal.forVotes < quorumVotes()) {
+        } else if (
+            proposal.forWeight * proposal.forVotes <= proposal.againstWeight * proposal.againstVotes || proposal.forVotes < quorumVotes()
+        ) {
             return ProposalState.Defeated;
         } else if (proposal.eta == 0) {
             return ProposalState.Succeeded;
