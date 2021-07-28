@@ -542,7 +542,8 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         require(
             _loanStatus == LoanStatus.CLOSED ||
                 _loanStatus == LoanStatus.CANCELLED ||
-                _loanStatus == LoanStatus.DEFAULTED,
+                _loanStatus == LoanStatus.DEFAULTED ||
+                _loanStatus == LoanStatus.TERMINATED,
             '24'
         );
 
@@ -553,7 +554,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         uint256 _actualBalance = poolToken.balanceOf(msg.sender);
         uint256 _toTransfer = _actualBalance;
 
-        if (_loanStatus == LoanStatus.DEFAULTED) {
+        if (_loanStatus == LoanStatus.DEFAULTED || _loanStatus == LoanStatus.TERMINATED) {
             uint256 _totalAsset;
             if (poolConstants.borrowAsset != address(0)) {
                 _totalAsset = IERC20(poolConstants.borrowAsset).balanceOf(address(this));
@@ -577,15 +578,15 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         //     .amountWithdrawn
         //     .add(_due);
         delete lenders[msg.sender].principalWithdrawn;
-
-        //transfer repayment
-        _withdrawRepayment(msg.sender);
+        if(_loanStatus == LoanStatus.CLOSED) {
+            //transfer repayment
+            _withdrawRepayment(msg.sender);
+        }
         //to add transfer if not included in above (can be transferred with liquidity)
         poolToken.burn(msg.sender, _actualBalance);
-        if (_loanStatus == LoanStatus.DEFAULTED) {
-            //transfer liquidity provided
-            SavingsAccountUtil.transferTokens(poolConstants.borrowAsset, _toTransfer, address(this), msg.sender);
-        }
+
+        //transfer liquidity provided
+        SavingsAccountUtil.transferTokens(poolConstants.borrowAsset, _toTransfer, address(this), msg.sender);
 
         // TODO: Something wrong in the below event. Please have a look
         emit LiquidityWithdrawn(_toTransfer, msg.sender);
