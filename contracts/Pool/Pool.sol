@@ -468,7 +468,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             .mul(poolToken.totalSupply())
             .mul(_penalityTime)
             .div(365 days)
-            .div(10**60)
+            .div(10**60);
         _cancelPool(penality);
     }
 
