@@ -179,6 +179,9 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         _;
     }
 
+    /**
+     * @notice initializing the pool and adding initial collateral
+     */
     function initialize(
         uint256 _borrowAmountRequested,
         uint256 _minborrowAmount,
@@ -281,13 +284,13 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     }
 
     /**
-    * @notice internal function used to get collateral deposited to the pool
+    * @notice internal function used to get amount of collateral deposited to the pool
     * @param _fromSavingsAccount if true, collateral is transferred from _sender's savings account, if false, it is transferred from _sender's wallet
     * @param _toSavingsAccount if true, collateral is transferred to pool's savings account, if false, it is withdrawn from _sender's savings account
     * @param _asset address of the asset to be deposited
     * @param _amount amount of tokens to be deposited in the pool
     * @param _poolSavingsStrategy address of the saving strategy used for collateral deposit
-    * @param _depositFrom address from which the tokens are withdrawn
+    * @param _depositFrom address which makes the deposit
     * @param _depositTo address to which the tokens are deposited
     * @return _sharesReceived number of equivalent shares for given _asset
     */
@@ -328,7 +331,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     * @notice used to add extra collateral deposit during margin calls
     * @param _lender the address of the _lender who has requested for margin call
     * @param _amount amount of tokens requested for the margin call
-    * @param _transferFromSavingsAccount if true, collateral is transferred from _sender's savings account, if false, it is transferred from _sender's wallet
+    * @param _transferFromSavingsAccount if true, collateral is transferred from borrower's savings account, if false, it is transferred from borrower's wallet
     */
     function addCollateralInMarginCall(
         address _lender,
@@ -432,7 +435,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     * @notice used by lender to supply liquidity to a borrow pool
     * @param _lender address of the lender
     * @param _amountLent amount of liquidity supplied by the _lender
-    * @param _fromSavingsAccount if true, collateral is transferred from _sender's savings account, if false, it is transferred from _sender's wallet
+    * @param _fromSavingsAccount if true, collateral is transferred from _lender's savings account, if false, it is transferred from _lender's wallet
     */
     function lend(
         address _lender,
@@ -706,10 +709,10 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     }
 
     /**
-    * @notice used to calculate the collateral ratio of the borrow pool
+    * @notice used to calculate the collateral ratio
     * @param _balance the principal amount lent 
-    * @param _liquidityShares amount of collateral tokens available in the borrow pool
-    * @return _ratio the collateral ratio of the borrow pool
+    * @param _liquidityShares amount of collateral tokens available
+    * @return _ratio the collateral ratio
     */
     function calculateCollateralRatio(uint256 _balance, uint256 _liquidityShares) public returns (uint256 _ratio) {
         uint256 _interest = interestTillNow(_balance);
@@ -801,7 +804,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
 
     /**
     * @notice internal function used to withdraw tokens
-    * @param _toSavingsAccount if true, liquidity transfered to sender's savings account. If false, liquidity transfered to sender's wallet
+    * @param _toSavingsAccount if true, liquidity transfered to receiver's savings account. If false, liquidity transfered to receiver's wallet
     * @param _recieveLiquidityShare if true, equivalent liquidity tokens are withdrawn. If false, assets are withdrawn
     * @param _asset address of the asset to be withdrawn
     * @param _poolSavingsStrategy address of the saving strategy used for collateral deposit
@@ -873,7 +876,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
 
     /**
     * @notice internal function to liquidate lender of the borrow pool
-    * @param _fromSavingsAccount if true, collateral is transferred from sender's savings account, if false, it is transferred from sender's wallet
+    * @param _fromSavingsAccount if true, collateral is transferred from lender's savings account, if false, it is transferred from lender's wallet
     * @param _lender address of the lender to be liquidated
     * @param _lenderCollateralTokens share of the lender in collateral tokens
     */
@@ -909,8 +912,8 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     /**
     * @notice used to liquidate lender and burn lender's shares
     * @param _lender address of the lender to be liquidated
-    * @param _fromSavingsAccount if true, collateral is transferred from sender's savings account, if false, it is transferred from sender's wallet
-    * @param _toSavingsAccount if true, liquidity transfered to sender's savings account. If false, liquidity transfered to sender's wallet
+    * @param _fromSavingsAccount if true, collateral is transferred from lender's savings account, if false, it is transferred from lender's wallet
+    * @param _toSavingsAccount if true, liquidity transfered to receiver's savings account. If false, liquidity transfered to receiver's wallet
     * @param _recieveLiquidityShare if true, equivalent liquidity tokens are withdrawn. If false, assets are withdrawn
     */
     function liquidateLender(
@@ -952,7 +955,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     * @notice used to get corresponding borrow tokens for given collateral tokens 
     * @param _totalCollateralTokens amount of collateral tokens 
     * @param _poolFactory address of the open borrow pool
-    * @param _fraction volatility fraction
+    * @param _fraction Collateralization ratio of the collateral to borrrow asset
     * @return corresponding borrow tokens for collateral tokens
     */
     function correspondingBorrowTokens(
@@ -975,7 +978,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     /**
     * @notice used to get the interest per second on the principal amount
     * @param _principal amount of principal lent
-    * @return interest accrued on the principal
+    * @return interest accrued on the principal in a second
     */
     function interestPerSecond(uint256 _principal) public view returns (uint256) {
         uint256 _interest = ((_principal).mul(poolConstants.borrowRate)).div(365 days);
@@ -984,8 +987,8 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
 
     /**
     * @notice used to get the interest per period on the principal amount
-    * @param _balance amount of 
-    * @return 
+    * @param _balance amount of principal lent
+    * @return interest accrued on the principal in a period
     */
     function interestPerPeriod(uint256 _balance) public view returns (uint256) {
         return (interestPerSecond(_balance).mul(poolConstants.repaymentInterval));
