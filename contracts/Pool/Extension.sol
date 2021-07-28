@@ -51,7 +51,10 @@ contract Extension is Initializable, IExtension {
 
     function initializePoolExtension(uint256 _repaymentInterval) external override {
         IPoolFactory _poolFactory = poolFactory;
-        require(poolInfo[msg.sender].repaymentInterval == 0, 'Extension::initializePoolExtension - _repaymentInterval cannot be 0');
+        require(
+            poolInfo[msg.sender].repaymentInterval == 0,
+            'Extension::initializePoolExtension - _repaymentInterval is already initialized'
+        );
         require(_poolFactory.openBorrowPoolRegistry(msg.sender), 'Repayments::onlyValidPool - Invalid Pool');
         poolInfo[msg.sender].repaymentInterval = _repaymentInterval;
     }

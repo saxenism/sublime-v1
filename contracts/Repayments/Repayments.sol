@@ -216,6 +216,7 @@ contract Repayments is RepaymentStorage, IRepayment {
         return _interestOverdue;
     }
 
+    // only interest
     function repayAmount(address _poolID, uint256 _amount) public payable isPoolInitialized(_poolID) {
         IPool _pool = IPool(_poolID);
         _amount = _amount * 10**30;
@@ -288,6 +289,7 @@ contract Repayments is RepaymentStorage, IRepayment {
         }
     }
 
+    // only principle
     function repayPrincipal(address payable _poolID, uint256 _amount) public payable isPoolInitialized(_poolID) {
         IPool _pool = IPool(_poolID);
         uint256 _loanStatus = _pool.getLoanStatus();
