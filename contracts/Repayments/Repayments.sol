@@ -8,6 +8,13 @@ import '../interfaces/IPool.sol';
 import '../interfaces/IRepayment.sol';
 import '../interfaces/ISavingsAccount.sol';
 
+/**
+ * @title Repayments contract
+ * @dev For accuracy considering base itself as (10**30)
+ * @notice Implements the functions related to repayments (payments that
+ * have to made by the borrower back to the pool)
+ * @author Sublime
+ */
 contract Repayments is RepaymentStorage, IRepayment {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
