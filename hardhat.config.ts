@@ -56,7 +56,7 @@ const config: HardhatUserConfig = {
                 url: 'https://eth-mainnet.alchemyapi.io/v2/snGskhAXMQaRLnJaxbcfOL7U5_bSZl_Y',
                 blockNumber: 12869777,
             },
-            blockGasLimit: 1200000,
+            blockGasLimit: 12500000,
             accounts: getHardhatPrivateKeys(),
             live: true,
             saveDeployments: process.env.SAVE_DEPLOYMENT && process.env.SAVE_DEPLOYMENT.toLowerCase() === 'true' ? true : false,
