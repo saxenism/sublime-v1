@@ -64,7 +64,7 @@ contract PoolToken is Initializable, ERC20PresetMinterPauserUpgradeable {
     ) internal virtual override{
         if (to != address(0)) {
             super._beforeTokenTransfer(from, to, amount);
-            require(!paused(), 'ERC20Pausable: token transfer while paused');
+            //require(!paused(), 'ERC20Pausable: token transfer while paused');
         }
     }
 
