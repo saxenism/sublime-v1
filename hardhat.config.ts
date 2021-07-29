@@ -27,6 +27,7 @@ import {
     KOVAN_DEPLOY_MNEMONIC,
     KOVAN_DEPLOY_PRIVATE_KEY,
 } from './utils/keys';
+import { boolean } from 'hardhat/internal/core/params/argumentTypes';
 
 function getHardhatPrivateKeys() {
     return privateKeys.map((key) => {
@@ -57,8 +58,8 @@ const config: HardhatUserConfig = {
             },
             accounts: getHardhatPrivateKeys(),
             live: true,
-            saveDeployments: false,
-            loggingEnabled: false,
+            saveDeployments: Boolean(process.env.SAVE_DEPLOYMENT),
+            loggingEnabled: Boolean(process.env.LOGGING),
             tags: ['hardhat'],
         },
         localhost: {
@@ -66,7 +67,8 @@ const config: HardhatUserConfig = {
             timeout: 100000,
             live: false,
             accounts: process.env.PRIVATE_KEYS ? process.env.PRIVATE_KEYS.split(',') : [],
-            saveDeployments: false,
+            saveDeployments: Boolean(process.env.SAVE_DEPLOYMENT),
+            loggingEnabled: Boolean(process.env.LOGGING),
             tags: ['localhost'],
         },
         kovan: {
@@ -76,17 +78,17 @@ const config: HardhatUserConfig = {
             accounts: process.env.PRIVATE_KEYS ? process.env.PRIVATE_KEYS.split(',') : [],
             live: true,
             gasPrice: 3000000000,
-            saveDeployments: true,
+            saveDeployments: Boolean(process.env.SAVE_DEPLOYMENT),
+            loggingEnabled: Boolean(process.env.LOGGING),
             tags: ['kovan'],
-            loggingEnabled: true,
         },
         kovan_privKey: {
             chainId: 42,
             url: 'https://kovan.infura.io/v3/' + INFURA_TOKEN,
             // @ts-ignore
             accounts: [`0x${KOVAN_DEPLOY_PRIVATE_KEY}`],
-            live: true,
-            saveDeployments: true,
+            saveDeployments: Boolean(process.env.SAVE_DEPLOYMENT),
+            loggingEnabled: Boolean(process.env.LOGGING),
             tags: ['kovan_privKey'],
         },
         kovan_custom_accounts: {
@@ -94,17 +96,17 @@ const config: HardhatUserConfig = {
             url: 'https://kovan.infura.io/v3/' + INFURA_TOKEN,
             // @ts-ignore
             accounts: kovanPrivateKeys,
-            live: true,
-            saveDeployments: true,
+            saveDeployments: Boolean(process.env.SAVE_DEPLOYMENT),
+            loggingEnabled: Boolean(process.env.LOGGING),
             tags: ['kovan_custom_accounts'],
         },
         kovan_fork: {
             url: 'http://127.0.0.1:8545',
             // @ts-ignore
             accounts: process.env.PRIVATE_KEYS ? process.env.PRIVATE_KEYS.split(',') : [],
-            live: true,
+            saveDeployments: Boolean(process.env.SAVE_DEPLOYMENT),
+            loggingEnabled: Boolean(process.env.LOGGING),
             gasPrice: 1000000000,
-            saveDeployments: true,
             tags: ['kovan_fork'],
         },
         ropsten: {
@@ -112,8 +114,8 @@ const config: HardhatUserConfig = {
             url: 'https://ropsten.infura.io/v3/' + INFURA_TOKEN,
             // @ts-ignore
             accounts: { mnemonic: ROPSTEN_DEPLOY_MNEMONIC },
-            live: true,
-            saveDeployments: true,
+            saveDeployments: Boolean(process.env.SAVE_DEPLOYMENT),
+            loggingEnabled: Boolean(process.env.LOGGING),
             tags: ['ropsten'],
         },
         ropsten_privKey: {
@@ -121,15 +123,15 @@ const config: HardhatUserConfig = {
             url: 'https://ropsten.infura.io/v3/' + INFURA_TOKEN,
             // @ts-ignore
             accounts: [`0x${ROPSTEN_DEPLOY_PRIVATE_KEY}`],
-            live: true,
-            saveDeployments: true,
+            saveDeployments: Boolean(process.env.SAVE_DEPLOYMENT),
+            loggingEnabled: Boolean(process.env.LOGGING),
             tags: ['ropsten_privKey'],
         },
         ropsten_fork: {
             chainId: 3,
             url: 'http://127.0.0.1:8545',
-            live: true,
-            saveDeployments: true,
+            saveDeployments: Boolean(process.env.SAVE_DEPLOYMENT),
+            loggingEnabled: Boolean(process.env.LOGGING),
             tags: ['ropsten_fork'],
         },
         mainnet: {
@@ -137,8 +139,8 @@ const config: HardhatUserConfig = {
             url: 'https://mainnet.infura.io/v3/' + INFURA_TOKEN,
             // @ts-ignore
             accounts: { mnemonic: MAINNET_DEPLOY_MNEMONIC },
-            live: true,
-            saveDeployments: true,
+            saveDeployments: Boolean(process.env.SAVE_DEPLOYMENT),
+            loggingEnabled: Boolean(process.env.LOGGING),
             tags: ['mainnet'],
         },
         mainnet_privKey: {
@@ -146,15 +148,15 @@ const config: HardhatUserConfig = {
             url: 'https://mainnet.infura.io/v3/' + INFURA_TOKEN,
             // @ts-ignore
             accounts: [`0x${MAINNET_DEPLOY_PRIVATE_KEY}`],
-            live: true,
-            saveDeployments: true,
+            saveDeployments: Boolean(process.env.SAVE_DEPLOYMENT),
+            loggingEnabled: Boolean(process.env.LOGGING),
             tags: ['mainnet_privKey'],
         },
         mainnet_fork: {
             chainId: 1,
             url: 'http://127.0.0.1:8545',
-            live: true,
-            saveDeployments: true,
+            saveDeployments: Boolean(process.env.SAVE_DEPLOYMENT),
+            loggingEnabled: Boolean(process.env.LOGGING),
             tags: ['mainnet_fork'],
         },
     },
