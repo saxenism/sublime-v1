@@ -34,6 +34,10 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     }
 
     address PoolFactory;
+    
+    /**
+    * @notice instance of IPooltoken
+    */
     IPoolToken public poolToken;
 
     struct LendingDetails {
@@ -67,8 +71,19 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         uint256 penalityLiquidityAmount;
     }
 
+    /**
+    * @notice used to keep track of lenders' details
+    */
     mapping(address => LendingDetails) public lenders;
+
+    /**
+    * @notice object of type PoolConstants
+    */
     PoolConstants public poolConstants;
+
+    /**
+    * @notice object of type PoolVars
+    */
     PoolVars public poolVars;
 
     /**
@@ -154,26 +169,43 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
      */
     event PoolLiquidated(address liquidator);
 
+    /** 
+     * @notice checks if the _user is pool's valid borrower
+     * @param _user address of the borrower
+     */
     modifier OnlyBorrower(address _user) {
         require(_user == poolConstants.borrower, '1');
         _;
     }
 
+    /** 
+     * @notice checks if the _lender is pool's valid lender
+     * @param _lender address of the lender
+     */
     modifier isLender(address _lender) {
         require(poolToken.balanceOf(_lender) != 0, '2');
         _;
     }
 
+    /** 
+     * @notice checks if the msg.sender is pool's valid owner
+     */
     modifier onlyOwner {
         require(msg.sender == IPoolFactory(PoolFactory).owner(), '3');
         _;
     }
 
+    /** 
+     * @notice checks if the msg.sender is pool's latest extension implementation
+     */
     modifier onlyExtension {
         require(msg.sender == IPoolFactory(PoolFactory).extension(), '5');
         _;
     }
 
+    /** 
+     * @notice checks if the msg.sender is pool's latest repayment implementation
+     */
     modifier OnlyRepaymentImpl {
         require(msg.sender == IPoolFactory(PoolFactory).repaymentImpl(), '25');
         _;
@@ -181,6 +213,20 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
 
     /**
      * @notice initializing the pool and adding initial collateral
+     * @param _borrowAmountRequested the amount of borrow asset requested by the borrower
+     * @param _minborrowAmount the minimum borrow amount that can be requested
+     * @param _borrower address of the borrower
+     * @param _borrowAsset address of the borrow asset
+     * @param _collateralAsset address of the collateral asset
+     * @param _idealCollateralRatio the ideal collateral ratio of the pool
+     * @param _borrowRate the borrow rate as specified by borrower
+     * @param _repaymentInterval the interval between to repayments
+     * @param _noOfRepaymentIntervals number of repayments to be done by borrower
+     * @param _poolSavingsStrategy address of the savings strategy preferred
+     * @param _collateralAmount amount of collateral to be deposited by the borrower
+     * @param _transferFromSavingsAccount if true, collateral is transferred from msg.sender's savings account, if false, it is transferred from their wallet
+     * @param _loanWithdrawalDuration time interval for the borrower to withdraw the lent amount in borrow asset
+     * @param _collectionPeriod time interval where lender lend into the borrow pool
      */
     function initialize(
         uint256 _borrowAmountRequested,
@@ -955,7 +1001,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     * @notice used to get corresponding borrow tokens for given collateral tokens 
     * @param _totalCollateralTokens amount of collateral tokens 
     * @param _poolFactory address of the open borrow pool
-    * @param _fraction Collateralization ratio of the collateral to borrrow asset
+    * @param _fraction Incentivizing fraction for the liquidator
     * @return corresponding borrow tokens for collateral tokens
     */
     function correspondingBorrowTokens(
