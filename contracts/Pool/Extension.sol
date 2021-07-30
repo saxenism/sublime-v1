@@ -52,15 +52,15 @@ contract Extension is Initializable, IExtension {
     event ExtensionRequested(uint256 extensionVoteEndTime);
 
     /**
-    * @notice emitted when the requested extension for Open Borrow Pools is passed
+    * @notice emitted when the requested extension for Open Borrow Pools is approved
     * @param loanInterval the value of the current loan interval for Open Borrow Pools
     */
     event ExtensionPassed(uint256 loanInterval);
 
     /**
     * @notice emitted when the lender for Open Borrow Pools has voted on extension request
-    * @param lender address of the lender for Open Borrow Pools
-    * @param totalExtensionSupport the value if the total extension support for the Open Borrow Pools
+    * @param lender address of the lender who voted
+    * @param totalExtensionSupport the value of the total extension support for the Open Borrow Pools
     * @param lastVoteTime the last time the lender has voted on an extension request
     */
     event LenderVoted(address lender, uint256 totalExtensionSupport, uint256 lastVoteTime);
