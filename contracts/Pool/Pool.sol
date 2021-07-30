@@ -738,9 +738,11 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     * @param _balance the principal amount lent
     * @return ineterest accrued till current time
     */
-    function interestTillNow(uint256 _balance) public view returns (uint256) {
-        uint256 _totalSupply = poolToken.totalSupply();
-        uint256 _interestPerPeriod = interestPerPeriod(_balance);
+    function interestTillNow(
+        uint256 _balance
+        ) public view returns (uint256) {
+        //uint256 _totalSupply = poolToken.totalSupply();
+        //uint256 _interestPerPeriod = interestPerPeriod(_balance);
         IPoolFactory _poolFactory = IPoolFactory(PoolFactory);
         (uint256 _loanDurationCovered, uint256 _interestPerSecond) =
             IRepayment(_poolFactory.repaymentImpl()).getInterestCalculationVars(address(this));
@@ -762,6 +764,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     */
     function calculateCollateralRatio(uint256 _balance, uint256 _liquidityShares) public returns (uint256 _ratio) {
         uint256 _interest = interestTillNow(_balance);
+        //uint256 _interest = interestTillNow();
         address _collateralAsset = poolConstants.collateralAsset;
 
         address _strategy = poolConstants.poolSavingsStrategy;
