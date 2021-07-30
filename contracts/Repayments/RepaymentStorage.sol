@@ -11,7 +11,7 @@ import '../interfaces/IPoolFactory.sol';
 contract RepaymentStorage is OwnableUpgradeable {
     address internal _owner;
 
-    /// @notice instance of the IPoolFactory interface
+    // instance of the IPoolFactory interface
     IPoolFactory poolFactory;
 
     address savingsAccount;
@@ -32,16 +32,16 @@ contract RepaymentStorage is OwnableUpgradeable {
         TERMINATED // Pool terminated by admin
     }
 
-    /// @notice ratio of votes from liquidators required to reach a decision by concensus
+    // ratio of votes from liquidators required to reach a decision by concensus
     uint256 votingPassRatio;
 
-    /// @notice penalty rate to be imposed in the grace period
+    // penalty rate to be imposed in the grace period
     uint256 gracePenaltyRate;
     
-    /// @notice fraction of the repayment interval
+    // fraction of the repayment interval
     uint256 gracePeriodFraction; 
     
-    /// @notice uint expressing a year in number of seconds
+    // uint expressing a year in number of seconds
     uint256 constant yearInSeconds = 365 days;
 
     /// @notice a struct consisting of the variables associated with a Repayment object
