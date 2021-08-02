@@ -11,7 +11,7 @@ import './interfaces/IPriceOracle.sol';
 contract PriceOracle is Initializable, OwnableUpgradeable, IPriceOracle {
     using SafeMath for uint256;
 
-    uint256 uniswapPriceAveragingPeriod;
+    uint32 uniswapPriceAveragingPeriod;
     struct PriceData {
         address oracle;
         uint256 decimals;
@@ -22,14 +22,14 @@ contract PriceOracle is Initializable, OwnableUpgradeable, IPriceOracle {
 
     event ChainlinkFeedUpdated(address token, address priceOracle);
     event UniswapFeedUpdated(address token1, address token2, bytes32 feedId, address pool);
-    event setUniswapPriceAveragingPeriod(uint256 uniswapPriceAveragingPeriod);
+    event UniswapPriceAveragingPeriodUpdated(uint32 uniswapPriceAveragingPeriod);
 
     function initialize(address _admin) public initializer {
         OwnableUpgradeable.__Ownable_init();
         OwnableUpgradeable.transferOwnership(_admin);
     }
 
-    function getChainlinkLatestPrice(address num, address den) public view override returns (uint256, uint256) {
+    function getChainlinkLatestPrice(address num, address den) public view returns (uint256, uint256) {
         PriceData memory _feedData1 = chainlinkFeedAddresses[num];
         PriceData memory _feedData2 = chainlinkFeedAddresses[den];
         if(_feedData1.oracle == address(0) || _feedData2.oracle == address(0)) {
@@ -45,35 +45,36 @@ contract PriceOracle is Initializable, OwnableUpgradeable, IPriceOracle {
         return (price, 30);
     }
 
-    function getUniswapLatestPrice(address num, address den) public view override returns (uint256, uint256) {
+    function getUniswapLatestPrice(address num, address den) public view returns (uint256, uint256) {
         bytes32 _poolTokensId = getUniswapPoolTokenId(num, den);
         address _pool = uniswapPools[_poolTokensId];
         if(_pool == address(0)) {
             return (0, 0);
         }
-        int256 _twapTick = OracleLibrary.consult(_pool, uniswapPriceAveragingPeriod);
+        int24 _twapTick = OracleLibrary.consult(_pool, uniswapPriceAveragingPeriod);
         uint256 _numTokens = OracleLibrary.getQuoteAtTick(_twapTick, 10**30, den, num);
-        return (_numToken, 30);
+        return (_numTokens, 30);
     }
 
-    function getUniswapPoolTokenId(address num, address den) internal returns(bytes32) {
+    function getUniswapPoolTokenId(address num, address den) internal pure returns(bytes32) {
         if(uint256(num) < uint256(den)) {
-            return keccak256(num, den);
+            return keccak256(abi.encodePacked(num, den));
         } else {
-            return keccak256(den, num);
+            return keccak256(abi.encodePacked(num, den));
         }
     }
 
-    function getLatestPrice(address num, address den) public view override returns (uint256 _price, uint256 _decimals) {
-
-        (_price, _decimals) = getChainlinkLatestPrice();
+    function getLatestPrice(address num, address den) public view override returns (uint256, uint256) {
+        uint256 _price;
+        uint256 _decimals;
+        (_price, _decimals) = getChainlinkLatestPrice(num, den);
         if(_decimals != 0) {
-            return;
+            return (_price, _decimals);
         }
 
-        (_price, _decimals) = getUniswapLatestPrice();
+        (_price, _decimals) = getUniswapLatestPrice(num, den);
         if(_decimals != 0) {
-            return;
+            return (_price, _decimals);
         }
 
         revert("PriceOracle::getLatestPrice - Price Feed doesn't exist");
@@ -104,13 +105,13 @@ contract PriceOracle is Initializable, OwnableUpgradeable, IPriceOracle {
         emit ChainlinkFeedUpdated(token, priceOracle);
     }
 
-    function setUniswapFeedAddress(address token1, address token2 address pool) external onlyOwner {
-        uint256 _poolTokensId = getUniswapPoolTokenId(token1, token2);
+    function setUniswapFeedAddress(address token1, address token2, address pool) external onlyOwner {
+        bytes32 _poolTokensId = getUniswapPoolTokenId(token1, token2);
         uniswapPools[_poolTokensId] = pool;
         emit UniswapFeedUpdated(token1, token2, _poolTokensId, pool);
     }
 
-    function setUniswapPriceAveragingPeriod(uint256 _uniswapPriceAveragingPeriod) external onlyOwner {
+    function setUniswapPriceAveragingPeriod(uint32 _uniswapPriceAveragingPeriod) external onlyOwner {
         uniswapPriceAveragingPeriod = _uniswapPriceAveragingPeriod;
         emit UniswapPriceAveragingPeriodUpdated(_uniswapPriceAveragingPeriod);
     }

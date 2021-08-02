@@ -338,11 +338,8 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         require(collateralVolatilityThreshold <= _collateralRatio, 'PoolFactory:createPool - Invalid collateral ratio');
         require(isBorrowToken[_borrowTokenType], 'PoolFactory::createPool - Invalid borrow token type');
         require(isCollateralToken[_collateralTokenType], 'PoolFactory::createPool - Invalid collateral token type');
-        address[] memory tokens = new address[](2);
-        tokens[0] = _collateralTokenType;
-        tokens[1] = _borrowTokenType;
         require(
-            IPriceOracle(priceOracle).doesFeedExist(tokens),
+            IPriceOracle(priceOracle).doesFeedExist(_collateralTokenType, _borrowTokenType),
             "PoolFactory::createPool - Price feed doesn't support token pair"
         );
         require(
