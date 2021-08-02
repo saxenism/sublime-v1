@@ -350,7 +350,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         IPoolFactory _poolFactory = IPoolFactory(PoolFactory);
         require(
             _currentCollateralRatio >=
-                poolConstants.idealCollateralRatio.sub(_poolFactory.collateralVolatilityThreshold()),
+                poolConstants.idealCollateralRatio.sub(_poolFactory.volatilityThreshold(poolConstants.collateralAsset)),
             '13'
         );
 
@@ -606,7 +606,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         uint256 _idealCollateralRatio = poolConstants.idealCollateralRatio;
         require(
             _idealCollateralRatio >
-                getCurrentCollateralRatio(msg.sender).add(_poolFactory.collateralVolatilityThreshold()),
+                getCurrentCollateralRatio(msg.sender).add(_poolFactory.volatilityThreshold(poolConstants.collateralAsset)),
             '26'
         );
 
@@ -747,7 +747,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         require(_marginCallEndTime < block.timestamp, '28');
 
         require(
-            poolConstants.idealCollateralRatio.sub(IPoolFactory(PoolFactory).collateralVolatilityThreshold()) >
+            poolConstants.idealCollateralRatio.sub(IPoolFactory(PoolFactory).volatilityThreshold(poolConstants.collateralAsset)) >
                 getCurrentCollateralRatio(_lender),
             '29'
         );
