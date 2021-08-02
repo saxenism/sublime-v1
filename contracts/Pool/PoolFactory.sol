@@ -39,24 +39,96 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     }
 
     // TODO contract addresses should end with Impl
+    /**
+     * @notice function definition of the pool contract
+     */
     bytes4 public poolInitFuncSelector; //  bytes4(keccak256("initialize(uint256,address,address,address,uint256,uint256,uint256,uint256,bool)"))
+
+    /**
+     * @notice function definition of the pool token contract
+     */
     bytes4 public poolTokenInitFuncSelector;
+
+    /**
+     * @notice address of the latest implementation of the pool logic
+     */
     address public poolImpl;
+
+    /**
+     * @notice address of the latest implementation of the pool token logic
+     */
     address public poolTokenImpl;
+
+    /**
+     * @notice address of the contract storing the user registry
+     */
     address public userRegistry;
+
+    /**
+     * @notice address of the contract storing the strategy registry
+     */
     address public strategyRegistry;
+
+    /**
+     * @notice address of the latest implementation of the extension logic
+     */
     address public override extension;
+
+    /**
+     * @notice address of the latest implementation of the repayment logic
+     */
     address public override repaymentImpl;
+
+    /**
+     * @notice address of the latest implementation of the pool logic
+     */
     address public override priceOracle;
+
+    /**
+     * @notice address of the savings account used
+     */
     address public override savingsAccount;
 
+
+    /**
+     * @notice the time interval for the lenders to make contributions to pool
+     */
     uint256 public override collectionPeriod;
+
+    /**
+     * @notice the time interval for the borrower to withdraw the loan from pool
+     */
     uint256 public override matchCollateralRatioInterval;
+    
+
+    /**
+     * @notice the time interval for the active stage of the margin call
+     */
     uint256 public override marginCallDuration;
+
+    /**
+     * @notice the volatility threshold for the collateral asset
+     */
     uint256 public override collateralVolatilityThreshold;
+
+    /**
+     * @notice the fraction used for calculating the grace period penalty
+     */
     uint256 public override gracePeriodPenaltyFraction;
+
+    /**
+     * @notice the fraction used for calculating the liquidator reward
+     */
     uint256 public override liquidatorRewardFraction;
+
+    /**
+     * @notice the fraction specifying the voting pass threshold
+     */
     uint256 public override votingPassRatio;
+
+    /**
+     * @notice the fraction used for calculating the penalty when the pool is cancelled
+     */
     uint256 public override poolCancelPenalityFraction;
 
     /*
@@ -107,7 +179,16 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
      */
     event PoolCreated(address pool, address borrower, address poolToken);
 
+    /**
+     * @notice emitted when the init function definition Pool.sol logic is updated
+     * @param updatedSelector the new init function definition for the Pool logic contract
+     */
     event PoolInitSelectorUpdated(bytes4 updatedSelector);
+
+    /**
+     * @notice emitted when the init function definition PoolToken.sol logic is updated
+     * @param updatedSelector the new init function definition for the Pool token logic contract
+     */
     event PoolTokenInitFuncSelector(bytes4 updatedSelector);
 
     /**
@@ -152,6 +233,10 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
      */
     event CollectionPeriodUpdated(uint256 updatedCollectionPeriod);
 
+    /**
+     * @notice emitted when the loan withdrawal parameter for Open Borrow Pools is updated
+     * @param updatedMatchCollateralRatioInterval the new value of the loan withdrawal period for Open Borrow Pools
+     */
     event MatchCollateralRatioIntervalUpdated(uint256 updatedMatchCollateralRatioInterval);
 
     /**
@@ -232,15 +317,12 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
      * @param _strategyRegistry address of the contract storing the strategy registry
      * @param _admin address of the admin of the contract
      * @param _collectionPeriod the collection period of the Open borrow Pool
-     * DOUBT
-     * @param _matchCollateralRatioInterval DOUBT
+     * @param _loanWithdrawalDuration the time interval where a borrower withdraws the loan
      * @param _marginCallDuration the duration for which the margin call is active
      * @param _collateralVolatilityThreshold the volatility threshold for the collateral
      * @param _gracePeriodPenaltyFraction the penalty fraction for the grace period
-     * DOUBT
-     * @param _poolInitFuncSelector DOUBT
-     * DOUBT
-     * @param _poolTokenInitFuncSelector DOUBT
+     * @param _poolInitFuncSelector Initializing function definition when creating Open Borrow Pool
+     * @param _poolTokenInitFuncSelector Initializing function definition when creating the pool token
      * @param _liquidatorRewardFraction the fractions specifying the liquidator reward
      * @param _priceOracle the address of the implementation of the price oracle
      * @param _savingsAccount the address of the savings account used
@@ -253,7 +335,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         address _strategyRegistry,
         address _admin,
         uint256 _collectionPeriod,
-        uint256 _matchCollateralRatioInterval,
+        uint256 _loanWithdrawalDuration,
         uint256 _marginCallDuration,
         uint256 _collateralVolatilityThreshold,
         uint256 _gracePeriodPenaltyFraction,
@@ -273,7 +355,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         strategyRegistry = _strategyRegistry;
 
         collectionPeriod = _collectionPeriod;
-        matchCollateralRatioInterval = _matchCollateralRatioInterval;
+        matchCollateralRatioInterval = _loanWithdrawalDuration;
         marginCallDuration = _marginCallDuration;
         collateralVolatilityThreshold = _collateralVolatilityThreshold;
         gracePeriodPenaltyFraction = _gracePeriodPenaltyFraction;
@@ -482,11 +564,19 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         emit CollateralTokenUpdated(_collateralToken, _isSupported);
     }
 
+    /**
+     * @notice used to update the pointer to Initializer function of the proxy pool contract
+     * @param _functionId updated function definition of the proxy pool contract
+     */
     function updatepoolInitFuncSelector(bytes4 _functionId) external onlyOwner {
         poolInitFuncSelector = _functionId;
         emit PoolInitSelectorUpdated(_functionId);
     }
 
+    /**
+     * @notice used to update the pointer to Initializer function of the proxy pool token contract
+     * @param _functionId updated function definition of the proxy pool token contract
+     */
     function updatePoolTokenInitFuncSelector(bytes4 _functionId) external onlyOwner {
         poolTokenInitFuncSelector = _functionId;
         emit PoolTokenInitFuncSelector(_functionId);
@@ -555,9 +645,13 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         emit CollectionPeriodUpdated(_collectionPeriod);
     }
 
-    function updateMatchCollateralRatioInterval(uint256 _matchCollateralRatioInterval) external onlyOwner {
-        matchCollateralRatioInterval = _matchCollateralRatioInterval;
-        emit MatchCollateralRatioIntervalUpdated(_matchCollateralRatioInterval);
+    /**
+     * @notice used to update the loan withdrawal duration of the Open Borrow Pool
+     * @param _loanWithdrawalDuration updated value of the loan withdrawal duration
+     */
+    function updateMatchCollateralRatioInterval(uint256 _loanWithdrawalDuration) external onlyOwner {
+        matchCollateralRatioInterval = _loanWithdrawalDuration;
+        emit MatchCollateralRatioIntervalUpdated(_loanWithdrawalDuration);
     }
 
     /**
