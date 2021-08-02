@@ -735,6 +735,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         _withdrawRepayment(_lender);
     }
 
+    // if margin call is not accepted
     function liquidateLender(
         address _lender,
         bool _fromSavingsAccount,
@@ -804,7 +805,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     }
 
     // Withdraw Repayment, Also all the extra state variables are added here only for the review
-
+    // here repayment refers to borrower's repayment
     function withdrawRepayment() external isLender(msg.sender) {
         _withdrawRepayment(msg.sender);
     }
@@ -816,9 +817,9 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             return;
         }
 
-        SavingsAccountUtil.transferTokens(poolConstants.borrowAsset, _amountToWithdraw, address(this), _lender);
-
         lenders[_lender].interestWithdrawn = lenders[_lender].interestWithdrawn.add(_amountToWithdraw);
+
+        SavingsAccountUtil.transferTokens(poolConstants.borrowAsset, _amountToWithdraw, address(this), _lender);
     }
 
     function getMarginCallEndTime(address _lender) public view override returns (uint256) {
