@@ -107,6 +107,9 @@ library SavingsAccountUtil {
         address _from,
         address _to
     ) internal returns (uint256) {
+        if(_amount == 0) {
+            return 0;
+        }
         if (_asset == address(0)) {
             require(msg.value >= _amount, '');
             if (_to != address(this)) {
