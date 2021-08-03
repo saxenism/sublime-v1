@@ -338,7 +338,12 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     function withdrawBorrowedAmount() external override OnlyBorrower(msg.sender) nonReentrant {
         LoanStatus _poolStatus = poolVars.loanStatus;
         uint256 _tokensLent = poolToken.totalSupply();
-        require(_poolStatus == LoanStatus.COLLECTION && poolConstants.loanStartTime < block.timestamp, '12');
+        require(
+            _poolStatus == LoanStatus.COLLECTION && 
+            poolConstants.loanStartTime < block.timestamp &&
+            block.timestamp < poolConstants.loanWithdrawalDeadline, 
+            '12'
+        );
         require(_tokensLent >= poolConstants.minborrowAmount, '');
 
         poolVars.loanStatus = LoanStatus.ACTIVE;
