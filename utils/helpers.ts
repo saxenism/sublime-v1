@@ -1,6 +1,8 @@
 import { Network } from 'hardhat/types';
-import { BytesLike, ethers } from 'ethers';
+import { BigNumber, BytesLike, ethers } from 'ethers';
 import { Address } from 'hardhat-deploy/dist/types';
+import { BigNumberish } from '@ethersproject/bignumber';
+import { expect } from 'chai';
 
 export function getRandomFromArray<T>(items: T[]): T {
     return items[Math.floor(Math.random() * items.length)];
@@ -87,4 +89,19 @@ function getInitCodehash(proxyBytecode: BytesLike, poolImplAddr: Address, poolDa
 
 function print(data: any) {
     console.log(JSON.stringify(data, null, 4));
+}
+
+export function expectApproxEqual(a: BigNumberish, b: BigNumberish, delta: BigNumberish = BigNumber.from(1000)) {
+    let _a: BigNumber = BigNumber.from(a);
+    let _b: BigNumber = BigNumber.from(b);
+    let aGreaterThanB = _a.gte(_b);
+    if (aGreaterThanB) {
+        _a = BigNumber.from(a);
+        _b = BigNumber.from(b);
+    } else {
+        _a = BigNumber.from(b);
+        _b = BigNumber.from(a);
+    }
+    let _delta = _a.sub(_b);
+    expect(_delta).lte(delta);
 }

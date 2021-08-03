@@ -278,14 +278,11 @@ contract Repayments is RepaymentStorage, IRepayment {
         if (_asset == address(0)) {
             require(_amountRequired <= msg.value, 'Repayments::repayAmount amount does not match message value.');
             payable(address(_poolID)).transfer(_amountRequired);
-        } else {
-            IERC20(_asset).transferFrom(msg.sender, _poolID, _amountRequired);
-        }
-
-        if (_asset == address(0)) {
             if (msg.value > _amountRequired) {
                 payable(address(msg.sender)).transfer(msg.value.sub(_amountRequired));
             }
+        } else {
+            IERC20(_asset).transferFrom(msg.sender, _poolID, _amountRequired);
         }
     }
 

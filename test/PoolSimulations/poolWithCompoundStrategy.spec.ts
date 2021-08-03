@@ -2,6 +2,7 @@ import { ethers, network } from 'hardhat';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { BigNumber, BigNumberish } from '@ethersproject/bignumber';
 import { expect } from 'chai';
+import { blockTravel, timeTravel } from '../../utils/time';
 
 import {
     aaveYieldParams,
@@ -16,13 +17,14 @@ import {
     ChainLinkAggregators,
     OperationalAmounts,
     extensionParams,
+    repaymentParams,
 } from '../../utils/constants';
 import DeployHelper from '../../utils/deploys';
 
 import { SavingsAccount } from '@typechain/SavingsAccount';
 import { StrategyRegistry } from '@typechain/StrategyRegistry';
 
-import { getPoolAddress, getRandomFromArray, incrementChain } from '../../utils/helpers';
+import { getPoolAddress, getRandomFromArray, incrementChain, expectApproxEqual } from '../../utils/helpers';
 
 import { Address } from 'hardhat-deploy/dist/types';
 import { AaveYield } from '@typechain/AaveYield';
@@ -43,10 +45,9 @@ import { Repayments } from '@typechain/Repayments';
 import { getContractAddress } from '@ethersproject/address';
 
 import { SublimeProxy } from '@typechain/SublimeProxy';
-import { Token } from '@typechain/Token';
 import { IYield } from '@typechain/IYield';
 
-describe('Pool With Compound Strategy', async () => {
+describe.only('Pool With Compound Strategy', async () => {
     let savingsAccount: SavingsAccount;
     let savingsAccountLogic: SavingsAccount;
 
@@ -58,6 +59,7 @@ describe('Pool With Compound Strategy', async () => {
     let admin: SignerWithAddress;
     let borrower: SignerWithAddress;
     let lender: SignerWithAddress;
+    let extraLenders: SignerWithAddress[];
 
     let aaveYield: AaveYield;
     let aaveYieldLogic: AaveYield;
@@ -88,19 +90,22 @@ describe('Pool With Compound Strategy', async () => {
 
     let poolLogic: Pool;
     let poolTokenLogic: PoolToken;
+
     let repaymentLogic: Repayments;
+    let repayments: Repayments;
 
     let poolFactoryLogic: PoolFactory;
     let poolFactory: PoolFactory;
 
     let pool: Pool;
-    let testToken1: Token;
-    let testToken2: Token;
+
+    let poolToken: PoolToken;
 
     before(async () => {
         [proxyAdmin, admin, mockCreditLines, borrower, lender] = await ethers.getSigners();
+        extraLenders = await (await ethers.getSigners()).slice(-100);
+
         let deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
-        console.log('Deploying savings account logic');
         savingsAccountLogic = await deployHelper.core.deploySavingsAccount();
         let savingsAccountProxy: SublimeProxy = await deployHelper.helper.deploySublimeProxy(
             savingsAccountLogic.address,
@@ -108,7 +113,6 @@ describe('Pool With Compound Strategy', async () => {
         );
         savingsAccount = await deployHelper.core.getSavingsAccount(savingsAccountProxy.address);
 
-        console.log('Deploying strategy registry');
         strategyRegistryLogic = await deployHelper.core.deployStrategyRegistry();
         let strategyRegistryProxy: SublimeProxy = await deployHelper.helper.deploySublimeProxy(
             strategyRegistryLogic.address,
@@ -159,7 +163,7 @@ describe('Pool With Compound Strategy', async () => {
         await DaiTokenContract.connect(WhaleAccount).transfer(admin.address, BigNumber.from('10').pow(23)); // 10,000 DAI
 
         WBTCTokenContract = await deployHelper.mock.getMockERC20(Contracts.WBTC);
-        await WBTCTokenContract.connect(WBTCWhale).transfer(admin.address, BigNumber.from('10').pow(9)); // 10 BTC
+        await WBTCTokenContract.connect(WBTCWhale).transfer(admin.address, BigNumber.from('10').pow(10)); // 100 BTC
 
         aaveYieldLogic = await deployHelper.core.deployAaveYield();
         let aaveYieldProxy = await deployHelper.helper.deploySublimeProxy(aaveYieldLogic.address, proxyAdmin.address);
@@ -196,14 +200,12 @@ describe('Pool With Compound Strategy', async () => {
 
         await strategyRegistry.connect(admin).addStrategy(zeroAddress);
 
-        console.log('Deploying verification');
         verificationLogic = await deployHelper.helper.deployVerification();
         let verificationProxy = await deployHelper.helper.deploySublimeProxy(verificationLogic.address, proxyAdmin.address);
         verification = await deployHelper.helper.getVerification(verificationProxy.address);
         await verification.connect(admin).initialize(admin.address);
         await verification.connect(admin).registerUser(borrower.address, sha256(Buffer.from('Borrower')));
 
-        console.log('Deploying price oracle');
         priceOracleLogic = await deployHelper.helper.deployPriceOracle();
         let priceOracleProxy = await deployHelper.helper.deploySublimeProxy(priceOracleLogic.address, proxyAdmin.address);
         priceOracle = await deployHelper.helper.getPriceOracle(priceOracleProxy.address);
@@ -213,16 +215,27 @@ describe('Pool With Compound Strategy', async () => {
         await priceOracle.connect(admin).setfeedAddress(Contracts.DAI, ChainLinkAggregators['DAI/USD']);
         await priceOracle.connect(admin).setfeedAddress(Contracts.WBTC, ChainLinkAggregators['BTC/USD']);
 
-        console.log('Deploying pool factory');
         poolFactoryLogic = await deployHelper.pool.deployPoolFactory();
         let poolFactoryProxy = await deployHelper.helper.deploySublimeProxy(poolFactoryLogic.address, proxyAdmin.address);
         poolFactory = await deployHelper.pool.getPoolFactory(poolFactoryProxy.address);
 
-        console.log('Deploying extenstions');
         extenstionLogic = await deployHelper.pool.deployExtenstion();
         let extenstionProxy = await deployHelper.helper.deploySublimeProxy(extenstionLogic.address, proxyAdmin.address);
         extenstion = await deployHelper.pool.getExtension(extenstionProxy.address);
         await extenstion.connect(admin).initialize(poolFactory.address, extensionParams.votingPassRatio);
+
+        repaymentLogic = await deployHelper.pool.deployRepayments();
+        let repaymentProxy = await deployHelper.helper.deploySublimeProxy(repaymentLogic.address, proxyAdmin.address);
+        repayments = await deployHelper.pool.getRepayments(repaymentProxy.address);
+        await repayments
+            .connect(admin)
+            .initialize(
+                admin.address,
+                poolFactory.address,
+                repaymentParams.gracePenalityRate,
+                repaymentParams.gracePeriodFraction,
+                savingsAccount.address
+            );
 
         let {
             _collectionPeriod,
@@ -235,6 +248,7 @@ describe('Pool With Compound Strategy', async () => {
             _poolTokenInitFuncSelector,
             _poolCancelPenalityFraction,
         } = testPoolFactoryParams;
+
         await poolFactory
             .connect(admin)
             .initialize(
@@ -254,12 +268,9 @@ describe('Pool With Compound Strategy', async () => {
                 extenstion.address,
                 _poolCancelPenalityFraction
             );
-        console.log('Deploying pool logic');
+
         poolLogic = await deployHelper.pool.deployPool();
-        console.log('Deploying pool token logic');
         poolTokenLogic = await deployHelper.pool.deployPoolToken();
-        console.log('Deploying repayment logic');
-        repaymentLogic = await deployHelper.pool.deployRepayments();
 
         await poolFactory.connect(admin).updateSupportedCollateralTokens(Contracts.DAI, true);
         await poolFactory.connect(admin).updateSupportedCollateralTokens(Contracts.LINK, true);
@@ -271,14 +282,16 @@ describe('Pool With Compound Strategy', async () => {
         await poolFactory.connect(admin).updateSupportedBorrowTokens(Contracts.WBTC, true);
         await poolFactory.connect(admin).updateSupportedBorrowTokens(zeroAddress, true);
 
-        await poolFactory.connect(admin).setImplementations(poolLogic.address, repaymentLogic.address, poolTokenLogic.address);
+        await poolFactory.connect(admin).setImplementations(poolLogic.address, repayments.address, poolTokenLogic.address);
+    });
 
-        deployHelper = new DeployHelper(borrower);
+    async function createPool() {
+        let deployHelper = new DeployHelper(borrower);
         let collateralToken: ERC20 = await deployHelper.mock.getMockERC20(Contracts.WBTC);
         let iyield: IYield = await deployHelper.mock.getYield(compoundYield.address);
 
-        // let salt = sha256(Buffer.from(`borrower-${new Date().valueOf()}`));
-        let salt = sha256(Buffer.from(`borrower}`));
+        let salt = sha256(Buffer.from(`borrower-${new Date().valueOf()}`));
+        // let salt = sha256(Buffer.from(`borrower}`));
 
         let generatedPoolAddress: Address = await getPoolAddress(
             borrower.address,
@@ -311,10 +324,6 @@ describe('Pool With Compound Strategy', async () => {
         await collateralToken.connect(admin).transfer(borrower.address, _collateralAmount.mul(2)); // Transfer quantity to borrower
         await collateralToken.connect(borrower).approve(generatedPoolAddress, _collateralAmount.mul(2));
 
-        console.log({ borrower: borrower.address });
-        console.log({ generatedPoolAddress });
-        console.log({ savingsAccount: savingsAccount.address });
-
         await expect(
             poolFactory
                 .connect(borrower)
@@ -341,10 +350,134 @@ describe('Pool With Compound Strategy', async () => {
         expect(await newlyCreatedToken.name()).eq('Open Borrow Pool Tokens');
         expect(await newlyCreatedToken.symbol()).eq('OBPT');
         expect(await newlyCreatedToken.decimals()).eq(18);
+        poolToken = newlyCreatedToken;
 
         pool = await deployHelper.pool.getPool(generatedPoolAddress);
-        await pool.connect(borrower).depositCollateral(_collateralAmount, false);
+        // await pool.connect(borrower).depositCollateral(_collateralAmount, false);
+    }
+
+    describe('Check ratios', async () => {
+        async function lenderLendsTokens(amount: BigNumberish, fromSavingsAccount = false): Promise<void> {
+            await DaiTokenContract.connect(admin).transfer(lender.address, amount);
+            await DaiTokenContract.connect(lender).approve(pool.address, amount);
+            await pool.connect(lender).lend(lender.address, amount, fromSavingsAccount);
+            return;
+        }
+
+        beforeEach(async () => {
+            // lender supplies 1 DAI to the pool and lender.address is lender
+            await createPool();
+            let deployHelper = new DeployHelper(borrower);
+            let token: PoolToken = await deployHelper.pool.getPoolToken(DaiTokenContract.address);
+            let decimals = await token.decimals();
+            let expDecimals = BigNumber.from(10).pow(decimals);
+            let oneToken = BigNumber.from(1).mul(expDecimals);
+            await lenderLendsTokens(oneToken);
+        });
+
+        it('Check Ratio after borrowing borrow total 10 DAI with 1 WBTC Collateral', async () => {
+            let deployHelper = new DeployHelper(borrower);
+            let token: PoolToken = await deployHelper.pool.getPoolToken(DaiTokenContract.address);
+            let decimals = await token.decimals();
+            let numberOfTokens = 10;
+            let expDecimals = BigNumber.from(numberOfTokens).pow(decimals);
+            let oneToken = BigNumber.from(1).mul(expDecimals);
+
+            let { _minborrowAmount } = createPoolParams;
+
+            let borrowTokens = _minborrowAmount.sub(oneToken);
+            await lenderLendsTokens(borrowTokens);
+
+            const { loanStartTime } = await pool.poolConstants();
+            await blockTravel(network, parseInt(loanStartTime.add(1).toString()));
+            await pool.connect(borrower).withdrawBorrowedAmount();
+
+            let pricePerToken = await priceOracle.connect(borrower).callStatic.getLatestPrice(Contracts.WBTC, Contracts.DAI);
+            let ratio = await pool.callStatic['getCurrentCollateralRatio()']();
+
+            expectApproxEqual(pricePerToken[0], ratio.mul(numberOfTokens), BigNumber.from(10).pow(30).div(1000)); // 0.1 percent deviation
+            expect(await DaiTokenContract.balanceOf(borrower.address)).to.eq(_minborrowAmount);
+        });
+
+        it('User cannot borrow if lender/s has not supplied minimum number of tokens', async () => {
+            const { loanStartTime } = await pool.poolConstants();
+            await blockTravel(network, parseInt(loanStartTime.add(1).toString()));
+            await expect(pool.connect(borrower).withdrawBorrowedAmount()).to.be.revertedWith('13');
+        });
     });
 
-    it('Print Add Addresses', async () => {});
+    describe('Check Interest Rates', async () => {
+        beforeEach(async () => {
+            // lender supplies minimum DAI to the pool and lender.address is lender
+            await createPool();
+            await DaiTokenContract.connect(admin).transfer(lender.address, createPoolParams._minborrowAmount);
+            await DaiTokenContract.connect(lender).approve(pool.address, createPoolParams._minborrowAmount);
+            await pool.connect(lender).lend(lender.address, createPoolParams._minborrowAmount, false);
+        });
+
+        it('Increase time by one day and check interest and total Debt', async () => {
+            const { loanStartTime } = await pool.poolConstants();
+            await blockTravel(network, parseInt(loanStartTime.add(1).toString()));
+
+            await pool.connect(borrower).withdrawBorrowedAmount();
+            await blockTravel(network, parseInt(loanStartTime.add(BigNumber.from(1).mul(86400)).toString()));
+
+            let interestFromChain = await pool.callStatic.interestTillNow(createPoolParams._minborrowAmount);
+            let expectedInterest = BigNumber.from(createPoolParams._minborrowAmount)
+                .mul(createPoolParams._borrowRate)
+                .div(BigNumber.from(10).pow(30))
+                .div(365);
+            // console.table({ interestFromChain: interestFromChain.toString(), expectedInterest: expectedInterest.toString() });
+            expectApproxEqual(interestFromChain, expectedInterest, expectedInterest.div(10000)); // 0.01 %
+        });
+
+        it('Increase time by one month and check interest and total Debt', async () => {
+            const { loanStartTime } = await pool.poolConstants();
+            await blockTravel(network, parseInt(loanStartTime.add(1).toString()));
+
+            await pool.connect(borrower).withdrawBorrowedAmount();
+            await blockTravel(network, parseInt(loanStartTime.add(BigNumber.from(30).mul(86400)).toString()));
+
+            let interestFromChain = await pool.callStatic.interestTillNow(createPoolParams._minborrowAmount);
+            let expectedInterest = BigNumber.from(createPoolParams._minborrowAmount)
+                .mul(createPoolParams._borrowRate)
+                .div(BigNumber.from(10).pow(30))
+                .mul(30)
+                .div(365);
+            // console.table({ interestFromChain: interestFromChain.toString(), expectedInterest: expectedInterest.toString() });
+            expectApproxEqual(interestFromChain, expectedInterest, expectedInterest.div(10000)); // 0.01 %
+        });
+
+        it('Increase time by 6 months and check interest and total Debt', async () => {
+            const { loanStartTime } = await pool.poolConstants();
+            await blockTravel(network, parseInt(loanStartTime.add(1).toString()));
+
+            await pool.connect(borrower).withdrawBorrowedAmount();
+            await blockTravel(network, parseInt(loanStartTime.add(BigNumber.from(182).mul(86400)).toString()));
+
+            let interestFromChain = await pool.callStatic.interestTillNow(createPoolParams._minborrowAmount);
+            let expectedInterest = BigNumber.from(createPoolParams._minborrowAmount)
+                .mul(createPoolParams._borrowRate)
+                .div(BigNumber.from(10).pow(30))
+                .mul(182)
+                .div(365);
+            // console.table({ interestFromChain: interestFromChain.toString(), expectedInterest: expectedInterest.toString() });
+            expectApproxEqual(interestFromChain, expectedInterest, expectedInterest.div(10000)); // 0.01 %
+        });
+
+        it('Increase time by 1 year and check interest and total Debt', async () => {
+            const { loanStartTime } = await pool.poolConstants();
+            await blockTravel(network, parseInt(loanStartTime.add(1).toString()));
+
+            await pool.connect(borrower).withdrawBorrowedAmount();
+            await blockTravel(network, parseInt(loanStartTime.add(BigNumber.from(365).mul(86400)).toString()));
+
+            let interestFromChain = await pool.callStatic.interestTillNow(createPoolParams._minborrowAmount);
+            let expectedInterest = BigNumber.from(createPoolParams._minborrowAmount)
+                .mul(createPoolParams._borrowRate)
+                .div(BigNumber.from(10).pow(30));
+            // console.table({ interestFromChain: interestFromChain.toString(), expectedInterest: expectedInterest.toString() });
+            expectApproxEqual(interestFromChain, expectedInterest, expectedInterest.div(10000)); // 0.01 %
+        });
+    });
 });

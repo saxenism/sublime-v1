@@ -239,7 +239,6 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         uint256 _equivalentCollateral =
             getEquivalentTokens(poolConstants.borrowAsset, poolConstants.collateralAsset, poolConstants.borrowAmountRequested);
         require(_amount >= poolConstants.idealCollateralRatio.mul(_equivalentCollateral).div(1e30), '36');
-
         _depositCollateral(_borrower, _amount, _transferFromSavingsAccount);
     }
 
@@ -613,7 +612,6 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     function calculateCollateralRatio(uint256 _balance, uint256 _liquidityShares) public returns (uint256 _ratio) {
         uint256 _interest = interestTillNow(_balance);
         address _collateralAsset = poolConstants.collateralAsset;
-
         address _strategy = poolConstants.poolSavingsStrategy;
         uint256 _currentCollateralTokens =
             _strategy == address(0) ? _liquidityShares : IYield(_strategy).getTokensForShares(_liquidityShares, _collateralAsset);
