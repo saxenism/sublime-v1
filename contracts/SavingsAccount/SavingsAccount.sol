@@ -267,8 +267,6 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable, R
     }
 
     function withdrawAll(address _asset) external override returns (uint256 tokenReceived) {
-        tokenReceived = userLockedBalance[msg.sender][_asset][address(0)];
-
         // Withdraw tokens
         address[] memory _strategyList = IStrategyRegistry(strategyRegistry).getStrategies();
 
@@ -277,6 +275,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable, R
                 tokenReceived = tokenReceived.add(
                     IYield(_strategyList[index]).unlockTokens(_asset, userLockedBalance[msg.sender][_asset][_strategyList[index]])
                 );
+                delete userLockedBalance[msg.sender][_asset][_strategyList[index]];
             }
         }
 
