@@ -391,7 +391,7 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable, R
         address[] memory _strategyList = IStrategyRegistry(strategyRegistry).getStrategies();
 
         for (uint256 _index = 0; _index < _strategyList.length; _index++) {
-            uint256 _liquidityShares = userLockedBalance[_user][_strategyList[_index]][_asset];
+            uint256 _liquidityShares = userLockedBalance[_user][_asset][_strategyList[_index]];
 
             if (_liquidityShares != 0) {
                 uint256 _tokenInStrategy = _liquidityShares;
