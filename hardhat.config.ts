@@ -27,7 +27,6 @@ import {
     KOVAN_DEPLOY_MNEMONIC,
     KOVAN_DEPLOY_PRIVATE_KEY,
 } from './utils/keys';
-import { boolean } from 'hardhat/internal/core/params/argumentTypes';
 
 function getHardhatPrivateKeys() {
     return privateKeys.map((key) => {
