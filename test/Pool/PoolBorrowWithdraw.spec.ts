@@ -466,7 +466,7 @@ describe('Pool Borrow Withdrawal stage', async () => {
                 );
             });
 
-            it('Borrower can cancel pool with penality before withdrawing', async () => {
+            it.only('Borrower can cancel pool with penality before withdrawing', async () => {
                 const collateralBalanceBorrowerSavings = await savingsAccount.userLockedBalance(
                     borrower.address,
                     collateralToken.address,
@@ -482,11 +482,13 @@ describe('Pool Borrow Withdrawal stage', async () => {
                 const penality = baseLiquidityShares
                     .mul(testPoolFactoryParams._poolCancelPenalityFraction)
                     .mul(await poolToken.totalSupply())
-                    .div(createPoolParams._poolSize)
-                    .div(BigNumber.from(10).pow(30));
+                    .mul(createPoolParams._borrowRate)
+                    .mul(createPoolParams._repaymentInterval)
+                    .div(365*24*60*60)
+                    .div(BigNumber.from(10).pow(60));
                 await pool.connect(borrower).cancelPool();
                 const collateralBalanceBorrowerSavingsAfter = await savingsAccount.userLockedBalance(
-                    borrower.address,
+                    borrower.address, 
                     collateralToken.address,
                     poolStrategy.address
                 );
