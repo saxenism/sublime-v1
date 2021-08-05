@@ -509,12 +509,16 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         creditLineUsage[creditLineHash].principal = creditLineUsage[creditLineHash].principal.add(borrowAmount);
         creditLineUsage[creditLineHash].lastPrincipalUpdateTime = block.timestamp;
 
-        //transferFromSavingAccount(_borrowAsset,borrowAmount,_lender,address(this));
+        uint256 _protocolFee = borrowAmount.mul(protocolFeeFraction).div(10**30);
+        borrowAmount = borrowAmount.sub(_protocolFee);
         _withdrawBorrowAmount(_borrowAsset, borrowAmount, _lender);
         if (_borrowAsset == address(0)) {
+            (bool feeSuccess, ) = protocolFeeCollector.call{value: _protocolFee}('');
+            require(feeSuccess, 'Transfer fail');
             (bool success, ) = msg.sender.call{value: borrowAmount}('');
             require(success, 'Transfer fail');
         } else {
+            IERC20(_borrowAsset).safeTransfer(protocolFeeCollector, _protocolFee);
             IERC20(_borrowAsset).safeTransfer(msg.sender, borrowAmount);
         }
         emit BorrowedFromCreditLine(borrowAmount, creditLineHash);

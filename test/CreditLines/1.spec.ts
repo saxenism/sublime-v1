@@ -217,7 +217,6 @@ describe('Credit Lines', async () => {
 
         it('Check global variables', async () => {
             expect(await creditLine.CreditLineCounter()).to.eq(0);
-            expect(await creditLine.PoolFactory()).to.eq(poolFactory.address);
             expect(await creditLine.strategyRegistry()).to.eq(strategyRegistry.address);
             expect(await creditLine.defaultStrategy()).to.eq(yearnYield.address);
         });
@@ -429,8 +428,8 @@ describe('Credit Lines', async () => {
             });
 
             it('Check global variables', async () => {
+                // TODO: check all global variables
                 expect(await creditLine.CreditLineCounter()).to.eq(0);
-                expect(await creditLine.PoolFactory()).to.eq(poolFactory.address);
                 expect(await creditLine.strategyRegistry()).to.eq(strategyRegistry.address);
                 expect(await creditLine.defaultStrategy()).to.eq(yearnYield.address);
             });
