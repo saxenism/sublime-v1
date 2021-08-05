@@ -11,6 +11,8 @@ import '../interfaces/ISavingsAccount.sol';
 import '../SavingsAccount/SavingsAccountUtil.sol';
 import '../interfaces/IStrategyRegistry.sol';
 
+import "hardhat/console.sol";
+
 /**
  * @title Credit Line contract with Methods related to credit Line
  * @notice Implements the functions related to Credit Line
@@ -510,8 +512,8 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         creditLineUsage[creditLineHash].lastPrincipalUpdateTime = block.timestamp;
 
         uint256 _protocolFee = borrowAmount.mul(protocolFeeFraction).div(10**30);
-        borrowAmount = borrowAmount.sub(_protocolFee);
         _withdrawBorrowAmount(_borrowAsset, borrowAmount, _lender);
+        borrowAmount = borrowAmount.sub(_protocolFee);
         if (_borrowAsset == address(0)) {
             (bool feeSuccess, ) = protocolFeeCollector.call{value: _protocolFee}('');
             require(feeSuccess, 'Transfer fail');
