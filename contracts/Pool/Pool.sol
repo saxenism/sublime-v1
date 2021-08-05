@@ -460,7 +460,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         }
         uint256 _cancelPenalityMultiple = IPoolFactory(PoolFactory).poolCancelPenalityFraction();
         uint256 penality =
-            _cancelPenalityMultiple.mul(poolConstants.borrowRate).mul(poolToken.totalSupply()).mul(_penalityTime).div(365 days).div(10**60);
+            _cancelPenalityMultiple.mul(poolConstants.borrowRate).mul(_collateralLiquidityShare).mul(_penalityTime).div(365 days).div(10**60);
         _cancelPool(penality);
     }
 
