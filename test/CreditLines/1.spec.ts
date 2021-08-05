@@ -67,9 +67,10 @@ describe('Credit Lines', async () => {
 
     let Binance7: any;
     let WhaleAccount: any;
+    let protocolFeeCollector: any;
 
     before(async () => {
-        [proxyAdmin, admin, mockCreditLines, borrower, lender] = await ethers.getSigners();
+        [proxyAdmin, admin, mockCreditLines, borrower, lender, protocolFeeCollector] = await ethers.getSigners();
         const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
         savingsAccount = await deployHelper.core.deploySavingsAccount();
         strategyRegistry = await deployHelper.core.deployStrategyRegistry();
@@ -170,6 +171,7 @@ describe('Credit Lines', async () => {
                 _poolInitFuncSelector,
                 _poolTokenInitFuncSelector,
                 _poolCancelPenalityFraction,
+                _protocolFeeFraction,
             } = testPoolFactoryParams;
 
             await poolFactory
@@ -183,7 +185,9 @@ describe('Credit Lines', async () => {
                     _poolInitFuncSelector,
                     _poolTokenInitFuncSelector,
                     _liquidatorRewardFraction,
-                    _poolCancelPenalityFraction
+                    _poolCancelPenalityFraction,
+                    _protocolFeeFraction,
+                    protocolFeeCollector.address
                 );
                 
             const poolImpl = await deployHelper.pool.deployPool();
@@ -202,15 +206,17 @@ describe('Credit Lines', async () => {
 
             await creditLine.connect(admin).initialize(
                 yearnYield.address, 
-                poolFactory.address, 
+                priceOracle.address, 
+                savingsAccount.address,
                 strategyRegistry.address,
-                admin.address
+                admin.address,
+                _protocolFeeFraction,
+                protocolFeeCollector.address
             );
         });
 
         it('Check global variables', async () => {
             expect(await creditLine.CreditLineCounter()).to.eq(0);
-            expect(await creditLine.PoolFactory()).to.eq(poolFactory.address);
             expect(await creditLine.strategyRegistry()).to.eq(strategyRegistry.address);
             expect(await creditLine.defaultStrategy()).to.eq(yearnYield.address);
         });
@@ -377,6 +383,7 @@ describe('Credit Lines', async () => {
                     _poolInitFuncSelector,
                     _poolTokenInitFuncSelector,
                     _poolCancelPenalityFraction,
+                    _protocolFeeFraction,
                 } = testPoolFactoryParams;
 
                 await poolFactory
@@ -390,7 +397,9 @@ describe('Credit Lines', async () => {
                         _poolInitFuncSelector,
                         _poolTokenInitFuncSelector,
                         _liquidatorRewardFraction,
-                        _poolCancelPenalityFraction
+                        _poolCancelPenalityFraction,
+                        _protocolFeeFraction,
+                        protocolFeeCollector.address
                     );
                 
                 const poolImpl = await deployHelper.pool.deployPool();
@@ -409,15 +418,18 @@ describe('Credit Lines', async () => {
                     
                 await creditLine.connect(admin).initialize(
                     yearnYield.address, 
-                    poolFactory.address, 
+                    priceOracle.address, 
+                    savingsAccount.address,
                     strategyRegistry.address,
-                    admin.address
+                    admin.address,
+                    _protocolFeeFraction,
+                    protocolFeeCollector.address
                 );
             });
 
             it('Check global variables', async () => {
+                // TODO: check all global variables
                 expect(await creditLine.CreditLineCounter()).to.eq(0);
-                expect(await creditLine.PoolFactory()).to.eq(poolFactory.address);
                 expect(await creditLine.strategyRegistry()).to.eq(strategyRegistry.address);
                 expect(await creditLine.defaultStrategy()).to.eq(yearnYield.address);
             });

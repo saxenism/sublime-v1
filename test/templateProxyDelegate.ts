@@ -78,6 +78,7 @@ describe('Template 2', async () => {
 
     let Binance7: any;
     let WhaleAccount: any;
+    let protocolFeeCollector: any;
 
     let extenstionLogic: Extension;
     let extenstion: Extension;
@@ -94,7 +95,7 @@ describe('Template 2', async () => {
     let testToken2: Token;
 
     before(async () => {
-        [proxyAdmin, admin, mockCreditLines, borrower, lender] = await ethers.getSigners();
+        [proxyAdmin, admin, mockCreditLines, borrower, lender, protocolFeeCollector] = await ethers.getSigners();
         let deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
         console.log('Deploying savings account logic');
         savingsAccountLogic = await deployHelper.core.deploySavingsAccount();
@@ -218,6 +219,7 @@ describe('Template 2', async () => {
             _poolInitFuncSelector,
             _poolTokenInitFuncSelector,
             _poolCancelPenalityFraction,
+            _protocolFeeFraction,
         } = testPoolFactoryParams;
         await poolFactory
             .connect(admin)
@@ -230,7 +232,9 @@ describe('Template 2', async () => {
                 _poolInitFuncSelector,
                 _poolTokenInitFuncSelector,
                 _liquidatorRewardFraction,
-                _poolCancelPenalityFraction
+                _poolCancelPenalityFraction,
+                _protocolFeeFraction,
+                protocolFeeCollector.address
             );
         console.log('Deploying pool logic');
         poolLogic = await deployHelper.pool.deployPool();

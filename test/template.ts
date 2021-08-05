@@ -65,9 +65,10 @@ describe.skip('Template For Test cases', async () => {
 
     let Binance7: any;
     let WhaleAccount: any;
+    let protocolFeeCollector: any;
 
     before(async () => {
-        [proxyAdmin, admin, mockCreditLines, borrower, lender] = await ethers.getSigners();
+        [proxyAdmin, admin, mockCreditLines, borrower, lender, protocolFeeCollector] = await ethers.getSigners();
         const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
         savingsAccount = await deployHelper.core.deploySavingsAccount();
         strategyRegistry = await deployHelper.core.deployStrategyRegistry();
@@ -158,6 +159,7 @@ describe.skip('Template For Test cases', async () => {
                 _poolInitFuncSelector,
                 _poolTokenInitFuncSelector,
                 _poolCancelPenalityFraction,
+                _protocolFeeFraction,
             } = testPoolFactoryParams;
             await poolFactory
                 .connect(admin)
@@ -170,7 +172,9 @@ describe.skip('Template For Test cases', async () => {
                     _poolInitFuncSelector,
                     _poolTokenInitFuncSelector,
                     _liquidatorRewardFraction,
-                    _poolCancelPenalityFraction
+                    _poolCancelPenalityFraction,
+                    _protocolFeeFraction,
+                    protocolFeeCollector.address
                 );
             poolImpl = await deployHelper.pool.deployPool();
             poolTokenImpl = await deployHelper.pool.deployPoolToken();

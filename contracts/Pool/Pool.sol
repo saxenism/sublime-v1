@@ -365,7 +365,12 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             poolConstants.borrowAsset
         );
         IExtension(_poolFactory.extension()).initializePoolExtension(_repaymentInterval);
-        SavingsAccountUtil.transferTokens(poolConstants.borrowAsset, _tokensLent, address(this), msg.sender);
+        
+        address _borrowAsset = poolConstants.borrowAsset;
+        (uint256 _protocolFeeFraction, address _collector) = _poolFactory.getProtocolFeeData();
+        uint256 _protocolFee = _tokensLent.mul(_protocolFeeFraction).div(10**30);
+        SavingsAccountUtil.transferTokens(_borrowAsset, _protocolFee, address(this), _collector);
+        SavingsAccountUtil.transferTokens(_borrowAsset, _tokensLent.sub(_protocolFee), address(this), msg.sender);
 
         delete poolConstants.loanWithdrawalDeadline;
         emit AmountBorrowed(_tokensLent);

@@ -5,7 +5,6 @@ import '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import '@openzeppelin/contracts/math/SafeMath.sol';
 import '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 import './CreditLineStorage.sol';
-import '../interfaces/IPoolFactory.sol';
 import '../interfaces/IPriceOracle.sol';
 import '../interfaces/IYield.sol';
 import '../interfaces/ISavingsAccount.sol';
@@ -22,9 +21,12 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
-    address public PoolFactory;
+    address public savingsAccount;
+    address public priceOracle;
     address public strategyRegistry;
     address public defaultStrategy;
+    uint256 public protocolFeeFraction;
+    address public protocolFeeCollector;
     /**
      * @dev checks if Credit Line exists
      * @param creditLineHash credit hash
@@ -64,24 +66,43 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
     event CreditLineClosed(bytes32 creditLineHash);
 
     event DefaultStrategyUpdated(address defaultStrategy);
-    event PoolFactoryUpdated(address poolFactory);
+    event PriceOracleUpdated(address priceOracle);
+    event SavingsAccountUpdated(address savingsAccount);
     event StrategyRegistryUpdated(address strategyRegistry);
+
+    /*
+     * @notice emitted when fee that protocol changes for pools is updated
+     * @param updatedProtocolFee updated value of protocolFeeFraction
+     */
+    event ProtocolFeeFractionUpdated(uint256 updatedProtocolFee);
+
+    /*
+     * @notice emitted when address which receives fee that protocol changes for pools is updated
+     * @param updatedProtocolFeeCollector updated value of protocolFeeCollector
+     */
+    event ProtocolFeeCollectorUpdated(address updatedProtocolFeeCollector);
 
     function initialize(
         address _defaultStrategy,
-        address _poolFactory,
+        address _priceOracle,
+        address _savingsAccount,
         address _strategyRegistry,
-        address _owner
+        address _owner,
+        uint256 _protocolFeeFraction,
+        address _protocolFeeCollector
     ) public initializer {
         OwnableUpgradeable.__Ownable_init();
         OwnableUpgradeable.transferOwnership(_owner);
 
         _updateDefaultStrategy(_defaultStrategy);
-        _updatePoolFactory(_poolFactory);
+        _updatePriceOracle(_priceOracle);
+        _updateSavingsAccount(_savingsAccount);
         _updateStrategyRegistry(_strategyRegistry);
+        _updateProtocolFeeFraction(_protocolFeeFraction);
+        _updateProtocolFeeCollector(_protocolFeeCollector);
     }
 
-    function updateDefaultStrategy(address _defaultStrategy) public onlyOwner {
+    function updateDefaultStrategy(address _defaultStrategy) external onlyOwner {
         _updateDefaultStrategy(_defaultStrategy);
     }
 
@@ -90,14 +111,40 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         emit DefaultStrategyUpdated(_defaultStrategy);
     }
 
-    function updatePoolFactory(address _poolFactory) public onlyOwner {
-        _updatePoolFactory(_poolFactory);
+    function updatePriceOracle(address _priceOracle) external onlyOwner {
+        _updatePriceOracle(_priceOracle);
     }
 
-    function _updatePoolFactory(address _poolFactory) internal {
-        require(_poolFactory != address(0), 'CL::I zero address');
-        PoolFactory = _poolFactory;
-        emit PoolFactoryUpdated(_poolFactory);
+    function _updatePriceOracle(address _priceOracle) internal {
+        priceOracle = _priceOracle;
+        emit PriceOracleUpdated(_priceOracle);
+    }
+
+    function updateSavingsAccount(address _savingsAccount) external onlyOwner {
+        _updateSavingsAccount(_savingsAccount);
+    }
+
+    function _updateSavingsAccount(address _savingsAccount) internal {
+        savingsAccount = _savingsAccount;
+        emit SavingsAccountUpdated(_savingsAccount);
+    }
+
+    function updateProtocolFeeFraction(uint256 _protocolFee) external onlyOwner {
+        _updateProtocolFeeFraction(_protocolFee);
+    }
+
+    function _updateProtocolFeeFraction(uint256 _protocolFee) internal {
+        protocolFeeFraction = _protocolFee;
+        emit ProtocolFeeFractionUpdated(_protocolFee);
+    }
+
+    function updateProtocolFeeCollector(address _protocolFeeCollector) external onlyOwner {
+        _updateProtocolFeeCollector(_protocolFeeCollector);
+    }
+
+    function _updateProtocolFeeCollector(address _protocolFeeCollector) internal {
+        protocolFeeCollector = _protocolFeeCollector;
+        emit ProtocolFeeCollectorUpdated(_protocolFeeCollector);
     }
 
     function updateStrategyRegistry(address _strategyRegistry) public onlyOwner {
@@ -160,7 +207,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
 
     function calculateBorrowableAmount(bytes32 _creditLineHash) public returns (uint256) {
         (uint256 _ratioOfPrices, uint256 _decimals) =
-            IPriceOracle(IPoolFactory(PoolFactory).priceOracle()).getLatestPrice(
+            IPriceOracle(priceOracle).getLatestPrice(
                 creditLineInfo[_creditLineHash].collateralAsset,
                 creditLineInfo[_creditLineHash].borrowAsset
             );
@@ -193,7 +240,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         address _recipient
     ) internal {
         address[] memory _strategyList = IStrategyRegistry(strategyRegistry).getStrategies();
-        ISavingsAccount _savingsAccount = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
+        ISavingsAccount _savingsAccount = ISavingsAccount(savingsAccount);
         uint256 _activeAmount;
 
         for (uint256 _index = 0; _index < _strategyList.length; _index++) {
@@ -240,7 +287,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         //require(userData[lender].blockCreditLineRequests == true,
         //        "CreditLine: External requests blocked");
         require(
-            IPriceOracle(IPoolFactory(PoolFactory).priceOracle()).doesFeedExist(_borrowAsset, _collateralAsset),
+            IPriceOracle(priceOracle).doesFeedExist(_borrowAsset, _collateralAsset),
             "CL: No price feed"
         );
         bytes32 _creditLineHash =
@@ -274,7 +321,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         //require(userData[borrower].blockCreditLineRequests == true,
         //        "CreditLine: External requests blocked");
         require(
-            IPriceOracle(IPoolFactory(PoolFactory).priceOracle()).doesFeedExist(_borrowAsset, _collateralAsset),
+            IPriceOracle(priceOracle).doesFeedExist(_borrowAsset, _collateralAsset),
             "CL: No price feed"
         );
         bytes32 _creditLineHash =
@@ -291,7 +338,11 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
                 true
             );
         // setRepayments(creditLineHash);
-        ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()).approveFromToCreditLine(_borrowAsset, msg.sender, _borrowLimit);
+        ISavingsAccount(savingsAccount).approveFromToCreditLine(
+            _borrowAsset,
+            msg.sender,
+            _borrowLimit
+        );
 
         emit CreditLineRequestedToBorrower(_creditLineHash, msg.sender, _borrower);
         return _creditLineHash;
@@ -332,7 +383,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
      */
     function acceptCreditLineLender(bytes32 _creditLineHash) external onlyCreditLineLender(_creditLineHash) {
         _acceptCreditLine(_creditLineHash, false);
-        ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()).approveFromToCreditLine(
+        ISavingsAccount(savingsAccount).approveFromToCreditLine(
             creditLineInfo[_creditLineHash].borrowAsset,
             creditLineInfo[_creditLineHash].lender,
             creditLineInfo[_creditLineHash].borrowLimit
@@ -377,7 +428,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
             transferFromSavingAccount(_collateralAsset, _collateralAmount, msg.sender, address(this));
         } else {
             address _strategy = defaultStrategy;
-            ISavingsAccount _savingsAccount = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
+            ISavingsAccount _savingsAccount = ISavingsAccount(savingsAccount);
             if (_collateralAsset == address(0)) {
                 require(msg.value == _collateralAmount, "CreditLine ::borrowFromCreditLine - value to transfer doesn't match argument");
             } else {
@@ -403,7 +454,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
     ) internal {
         //address _lender = creditLineInfo[creditLineHash].lender;
         address[] memory _strategyList = IStrategyRegistry(strategyRegistry).getStrategies();
-        ISavingsAccount _savingsAccount = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
+        ISavingsAccount _savingsAccount = ISavingsAccount(savingsAccount);
         uint256 _activeAmount;
         for (uint256 _index = 0; _index < _strategyList.length; _index++) {
             uint256 _liquidityShares = _savingsAccount.userLockedBalance(_lender, _asset, _strategyList[_index]);
@@ -437,7 +488,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         require(_currentDebt.add(borrowAmount) <= creditLineInfo[creditLineHash].borrowLimit, 'CreditLine: Amount exceeds borrow limit.');
 
         (uint256 _ratioOfPrices, uint256 _decimals) =
-            IPriceOracle(IPoolFactory(PoolFactory).priceOracle()).getLatestPrice(
+            IPriceOracle(priceOracle).getLatestPrice(
                 creditLineInfo[creditLineHash].collateralAsset,
                 creditLineInfo[creditLineHash].borrowAsset
             );
@@ -458,12 +509,16 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         creditLineUsage[creditLineHash].principal = creditLineUsage[creditLineHash].principal.add(borrowAmount);
         creditLineUsage[creditLineHash].lastPrincipalUpdateTime = block.timestamp;
 
-        //transferFromSavingAccount(_borrowAsset,borrowAmount,_lender,address(this));
+        uint256 _protocolFee = borrowAmount.mul(protocolFeeFraction).div(10**30);
         _withdrawBorrowAmount(_borrowAsset, borrowAmount, _lender);
+        borrowAmount = borrowAmount.sub(_protocolFee);
         if (_borrowAsset == address(0)) {
+            (bool feeSuccess, ) = protocolFeeCollector.call{value: _protocolFee}('');
+            require(feeSuccess, 'Transfer fail');
             (bool success, ) = msg.sender.call{value: borrowAmount}('');
             require(success, 'Transfer fail');
         } else {
+            IERC20(_borrowAsset).safeTransfer(protocolFeeCollector, _protocolFee);
             IERC20(_borrowAsset).safeTransfer(msg.sender, borrowAmount);
         }
         emit BorrowedFromCreditLine(borrowAmount, creditLineHash);
@@ -495,7 +550,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
     ) internal {
         address _borrowAsset = creditLineInfo[_creditLineHash].borrowAsset;
         address _lender = creditLineInfo[_creditLineHash].lender;
-        ISavingsAccount _savingsAccount = ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount());
+        ISavingsAccount _savingsAccount = ISavingsAccount(savingsAccount);
         address _defaultStrategy = defaultStrategy;
         if (!_transferFromSavingAccount) {
             if (_borrowAsset == address(0)) {
@@ -565,7 +620,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
 
     function calculateCurrentCollateralRatio(bytes32 creditLineHash) public ifCreditLineExists(creditLineHash) returns (uint256) {
         (uint256 _ratioOfPrices, uint256 _decimals) =
-            IPriceOracle(IPoolFactory(PoolFactory).priceOracle()).getLatestPrice(
+            IPriceOracle(priceOracle).getLatestPrice(
                 creditLineInfo[creditLineHash].collateralAsset,
                 creditLineInfo[creditLineHash].borrowAsset
             );
@@ -594,7 +649,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
     function withdrawCollateralFromCreditLine(bytes32 creditLineHash, uint256 amount) public onlyCreditLineBorrower(creditLineHash) {
         //check for ideal ratio
         (uint256 _ratioOfPrices, uint256 _decimals) =
-            IPriceOracle(IPoolFactory(PoolFactory).priceOracle()).getLatestPrice(
+            IPriceOracle(priceOracle).getLatestPrice(
                 creditLineInfo[creditLineHash].collateralAsset,
                 creditLineInfo[creditLineHash].borrowAsset
             );
@@ -640,7 +695,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
                 _strategyList[index]
             ]
                 .sub(liquidityShares);
-            ISavingsAccount(IPoolFactory(PoolFactory).savingsAccount()).withdraw(
+            ISavingsAccount(savingsAccount).withdraw(
                 msg.sender,
                 _tokensToTransfer,
                 _asset,
@@ -674,7 +729,10 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
                 transferFromSavingAccount(_collateralAsset, _totalCollateralToken, address(this), msg.sender);
             } else {
                 (uint256 _ratioOfPrices, uint256 _decimals) =
-                    IPriceOracle(IPoolFactory(PoolFactory).priceOracle()).getLatestPrice(_borrowAsset, _collateralAsset);
+                    IPriceOracle(priceOracle).getLatestPrice(
+                        _borrowAsset,
+                        _collateralAsset
+                    );
 
                 uint256 _borrowToken = (_totalCollateralToken.mul(_ratioOfPrices).div(10**_decimals));
                 IERC20(_borrowAsset).safeTransferFrom(msg.sender, _lender, _borrowToken);
@@ -690,7 +748,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
     }
 
     receive() external payable {
-        require(msg.sender == IPoolFactory(PoolFactory).savingsAccount(), 'CreditLine::receive invalid transaction');
+        require(msg.sender == savingsAccount, 'CreditLine::receive invalid transaction');
     }
 
     // Think about threshHold liquidation
