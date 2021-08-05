@@ -88,11 +88,7 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable, ReentrancyGuard
         address _protocolDataProvider,
         address _lendingPoolAddressesProvider
     ) public onlyOwner {
-        _updateAaveAddresses(
-            _wethGateway,
-            _protocolDataProvider,
-            _lendingPoolAddressesProvider
-        );
+        _updateAaveAddresses(_wethGateway, _protocolDataProvider, _lendingPoolAddressesProvider);
     }
 
     function _updateAaveAddresses(
@@ -119,8 +115,8 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable, ReentrancyGuard
 
         if (_asset == address(0)) {
             received = _withdrawETH(amount);
-            (bool success, ) = _wallet.call{ value: received }("");
-            require(success, "Transfer failed");
+            (bool success, ) = _wallet.call{value: received}('');
+            require(success, 'Transfer failed');
         } else {
             received = _withdrawERC(_asset, amount);
             IERC20(_asset).safeTransfer(_wallet, received);
@@ -164,8 +160,8 @@ contract AaveYield is IYield, Initializable, OwnableUpgradeable, ReentrancyGuard
 
         if (asset == address(0)) {
             received = _withdrawETH(amount);
-            (bool success, ) = savingsAccount.call{ value: received }("");
-            require(success, "Transfer failed");
+            (bool success, ) = savingsAccount.call{value: received}('');
+            require(success, 'Transfer failed');
         } else {
             received = _withdrawERC(asset, amount);
             IERC20(asset).safeTransfer(savingsAccount, received);

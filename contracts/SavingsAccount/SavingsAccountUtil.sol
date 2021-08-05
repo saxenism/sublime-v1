@@ -90,14 +90,7 @@ library SavingsAccountUtil {
         if (_from == address(this)) {
             _amountReceived = _savingsAccount.withdraw(payable(_to), _amount, _asset, _strategy, _withdrawShares);
         } else {
-            _amountReceived = _savingsAccount.withdrawFrom(
-                _from,
-                payable(_to),
-                _amount,
-                _asset,
-                _strategy,
-                _withdrawShares
-            );
+            _amountReceived = _savingsAccount.withdrawFrom(_from, payable(_to), _amount, _asset, _strategy, _withdrawShares);
         }
     }
 
@@ -110,12 +103,12 @@ library SavingsAccountUtil {
         if (_asset == address(0)) {
             require(msg.value >= _amount, '');
             if (_to != address(this)) {
-                (bool success, ) = payable(_to).call{ value: _amount }("");
-                require(success, "Transfer failed");
+                (bool success, ) = payable(_to).call{value: _amount}('');
+                require(success, 'Transfer failed');
             }
             if (msg.value >= _amount) {
-                (bool success, ) = payable(address(msg.sender)).call{ value: msg.value - _amount }("");
-                require(success, "Transfer failed");
+                (bool success, ) = payable(address(msg.sender)).call{value: msg.value - _amount}('');
+                require(success, 'Transfer failed');
             } else {
                 revert('Insufficient Ether');
             }
