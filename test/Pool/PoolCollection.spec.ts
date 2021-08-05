@@ -163,7 +163,6 @@ describe('Pool Collection stage', async () => {
                 _collectionPeriod,
                 _matchCollateralRatioInterval,
                 _marginCallDuration,
-                _collateralVolatilityThreshold,
                 _gracePeriodPenaltyFraction,
                 _poolInitFuncSelector,
                 _poolTokenInitFuncSelector,
@@ -173,6 +172,9 @@ describe('Pool Collection stage', async () => {
         await poolFactory.connect(admin).updateSupportedBorrowTokens(Contracts.LINK, true);
 
         await poolFactory.connect(admin).updateSupportedCollateralTokens(Contracts.DAI, true);
+
+        await poolFactory.connect(admin).updateVolatilityThreshold(Contracts.DAI, testPoolFactoryParams._collateralVolatilityThreshold);
+        await poolFactory.connect(admin).updateVolatilityThreshold(Contracts.LINK, testPoolFactoryParams._collateralVolatilityThreshold);
 
         poolImpl = await deployHelper.pool.deployPool();
         poolTokenImpl = await deployHelper.pool.deployPoolToken();

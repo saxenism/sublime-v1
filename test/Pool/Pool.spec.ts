@@ -163,7 +163,6 @@ describe('Pool', async () => {
                     _collectionPeriod,
                     _matchCollateralRatioInterval,
                     _marginCallDuration,
-                    _collateralVolatilityThreshold,
                     _gracePeriodPenaltyFraction,
                     _poolInitFuncSelector,
                     _poolTokenInitFuncSelector,
@@ -281,6 +280,8 @@ describe('Pool', async () => {
             await poolFactory.connect(admin).updateSupportedBorrowTokens(Contracts.DAI, true);
 
             await poolFactory.connect(admin).updateSupportedCollateralTokens(Contracts.LINK, true);
+            await poolFactory.connect(admin).updateVolatilityThreshold(Contracts.DAI, testPoolFactoryParams._collateralVolatilityThreshold);
+            await poolFactory.connect(admin).updateVolatilityThreshold(Contracts.LINK, testPoolFactoryParams._collateralVolatilityThreshold);
 
             await poolFactory.connect(admin).setImplementations(
                 poolImpl.address, 
@@ -370,6 +371,8 @@ describe('Pool', async () => {
                 await poolFactory.connect(admin).updateSupportedBorrowTokens(Contracts.DAI, true);
 
                 await poolFactory.connect(admin).updateSupportedCollateralTokens(Contracts.LINK, true);
+                await poolFactory.connect(admin).updateVolatilityThreshold(Contracts.DAI, testPoolFactoryParams._collateralVolatilityThreshold);
+                await poolFactory.connect(admin).updateVolatilityThreshold(Contracts.LINK, testPoolFactoryParams._collateralVolatilityThreshold);
 
                 await poolFactory.connect(admin).setImplementations(
                     poolImpl.address, 
@@ -490,6 +493,8 @@ describe('Pool', async () => {
                 await poolFactory.connect(admin).updateSupportedBorrowTokens(Contracts.DAI, true);
 
                 await poolFactory.connect(admin).updateSupportedCollateralTokens(Contracts.LINK, true);
+                await poolFactory.connect(admin).updateVolatilityThreshold(Contracts.DAI, testPoolFactoryParams._collateralVolatilityThreshold);
+                await poolFactory.connect(admin).updateVolatilityThreshold(Contracts.LINK, testPoolFactoryParams._collateralVolatilityThreshold);
 
                 await poolFactory.connect(admin).setImplementations(
                     poolImpl.address, 

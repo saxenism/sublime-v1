@@ -40,7 +40,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     uint256 public override collectionPeriod;
     uint256 public override matchCollateralRatioInterval;
     uint256 public override marginCallDuration;
-    uint256 public override collateralVolatilityThreshold;
+    mapping(address => uint256) public override volatilityThreshold;
     uint256 public override gracePeriodPenaltyFraction;
     uint256 public override liquidatorRewardFraction;
     uint256 public override votingPassRatio;
@@ -160,10 +160,11 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     event MarginCallDurationUpdated(uint256 updatedMarginCallDuration);
 
     /*
-     * @notice emitted when collateralVolatilityThreshold variable is updated
-     * @param updatedCollateralVolatilityThreshold Updated value of collateralVolatilityThreshold
+     * @notice emitted when volatilityThreshold variable of a token is updated
+     * @param token is the token for which the volatilityThreshold is being changed
+     * @param updatedVolatilityThreshold Updated value of volatilityThreshold
      */
-    event CollateralVolatilityThresholdUpdated(uint256 updatedCollateralVolatilityThreshold);
+    event VolatilityThresholdUpdated(address indexed token, uint256 updatedVolatilityThreshold);
 
     /*
      * @notice emitted when gracePeriodPenaltyFraction variable is updated
@@ -236,7 +237,6 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
      * @param _collectionPeriod
      * @param _matchCollateralRatioInterval
      * @param _marginCallDuration
-     * @param _collateralVolatilityThreshold
      * @param _gracePeriodPenaltyFraction
      * @param _poolInitFuncSelector
      * @param _poolTokenInitFuncSelector
@@ -252,7 +252,6 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         uint256 _collectionPeriod,
         uint256 _matchCollateralRatioInterval,
         uint256 _marginCallDuration,
-        uint256 _collateralVolatilityThreshold,
         uint256 _gracePeriodPenaltyFraction,
         bytes4 _poolInitFuncSelector,
         bytes4 _poolTokenInitFuncSelector,
@@ -266,7 +265,6 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         _updateCollectionPeriod(_collectionPeriod);
         _updateMatchCollateralRatioInterval(_matchCollateralRatioInterval);
         _updateMarginCallDuration(_marginCallDuration);
-        _updateCollateralVolatilityThreshold(_collateralVolatilityThreshold);
         _updateGracePeriodPenaltyFraction(_gracePeriodPenaltyFraction);
         _updatepoolInitFuncSelector(_poolInitFuncSelector);
         _updatePoolTokenInitFuncSelector(_poolTokenInitFuncSelector);
@@ -332,7 +330,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         bytes32 _salt
     ) external payable onlyBorrower {
         require(_minBorrowAmount <= _poolSize, 'PoolFactory::createPool - invalid min borrow amount');
-        require(collateralVolatilityThreshold <= _collateralRatio, 'PoolFactory:createPool - Invalid collateral ratio');
+        require(volatilityThreshold[_collateralTokenType] <= _collateralRatio, 'PoolFactory:createPool - Invalid collateral ratio');
         require(isBorrowToken[_borrowTokenType], 'PoolFactory::createPool - Invalid borrow token type');
         require(isCollateralToken[_collateralTokenType], 'PoolFactory::createPool - Invalid collateral token type');
         require(
@@ -583,13 +581,13 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         emit MarginCallDurationUpdated(_marginCallDuration);
     }
 
-    function updateCollateralVolatilityThreshold(uint256 _collateralVolatilityThreshold) public onlyOwner {
-        _updateCollateralVolatilityThreshold(_collateralVolatilityThreshold);
+    function updateVolatilityThreshold(address _token, uint256 _volatilityThreshold) public onlyOwner {
+        _updateVolatilityThreshold(_token, _volatilityThreshold);
     }
 
-    function _updateCollateralVolatilityThreshold(uint256 _collateralVolatilityThreshold) internal {
-        collateralVolatilityThreshold = _collateralVolatilityThreshold;
-        emit CollateralVolatilityThresholdUpdated(_collateralVolatilityThreshold);
+    function _updateVolatilityThreshold(address _token, uint256 _volatilityThreshold) internal {
+        volatilityThreshold[_token] = _volatilityThreshold;
+        emit VolatilityThresholdUpdated(_token, _volatilityThreshold);
     }
 
     function updateGracePeriodPenaltyFraction(uint256 _gracePeriodPenaltyFraction) public onlyOwner {
