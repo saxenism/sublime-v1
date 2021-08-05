@@ -287,7 +287,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         //require(userData[lender].blockCreditLineRequests == true,
         //        "CreditLine: External requests blocked");
         require(
-            IPriceOracle(IPoolFactory(PoolFactory).priceOracle()).doesFeedExist(_borrowAsset, _collateralAsset),
+            IPriceOracle(priceOracle).doesFeedExist(_borrowAsset, _collateralAsset),
             "CL: No price feed"
         );
         bytes32 _creditLineHash =
@@ -321,7 +321,7 @@ contract CreditLine is CreditLineStorage, ReentrancyGuard {
         //require(userData[borrower].blockCreditLineRequests == true,
         //        "CreditLine: External requests blocked");
         require(
-            IPriceOracle(IPoolFactory(PoolFactory).priceOracle()).doesFeedExist(_borrowAsset, _collateralAsset),
+            IPriceOracle(priceOracle).doesFeedExist(_borrowAsset, _collateralAsset),
             "CL: No price feed"
         );
         bytes32 _creditLineHash =

@@ -210,9 +210,12 @@ describe('Credit Lines', async () => {
 
             await creditLine.connect(admin).initialize(
                 yearnYield.address, 
-                poolFactory.address, 
+                priceOracle.address, 
+                savingsAccount.address,
                 strategyRegistry.address,
-                admin.address
+                admin.address,
+                _protocolFeeFraction,
+                protocolFeeCollector.address
             );
         });
 
