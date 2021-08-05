@@ -142,8 +142,8 @@ describe('Pool Borrow Withdrawal stage', async () => {
 
         priceOracle = await deployHelper.helper.deployPriceOracle();
         await priceOracle.connect(admin).initialize(admin.address);
-        await priceOracle.connect(admin).setfeedAddress(Contracts.LINK, ChainLinkAggregators['LINK/USD']);
-        await priceOracle.connect(admin).setfeedAddress(Contracts.DAI, ChainLinkAggregators['DAI/USD']);
+        await priceOracle.connect(admin).setChainlinkFeedAddress(Contracts.LINK, ChainLinkAggregators['LINK/USD']);
+        await priceOracle.connect(admin).setChainlinkFeedAddress(Contracts.DAI, ChainLinkAggregators['DAI/USD']);
 
         poolFactory = await deployHelper.pool.deployPoolFactory();
         extenstion = await deployHelper.pool.deployExtenstion();
@@ -167,7 +167,6 @@ describe('Pool Borrow Withdrawal stage', async () => {
                 _collectionPeriod,
                 _matchCollateralRatioInterval,
                 _marginCallDuration,
-                _collateralVolatilityThreshold,
                 _gracePeriodPenaltyFraction,
                 _poolInitFuncSelector,
                 _poolTokenInitFuncSelector,
@@ -179,6 +178,8 @@ describe('Pool Borrow Withdrawal stage', async () => {
         await poolFactory.connect(admin).updateSupportedBorrowTokens(Contracts.LINK, true);
 
         await poolFactory.connect(admin).updateSupportedCollateralTokens(Contracts.DAI, true);
+        await poolFactory.connect(admin).updateVolatilityThreshold(Contracts.DAI, testPoolFactoryParams._collateralVolatilityThreshold);
+        await poolFactory.connect(admin).updateVolatilityThreshold(Contracts.LINK, testPoolFactoryParams._collateralVolatilityThreshold);
 
         poolImpl = await deployHelper.pool.deployPool();
         poolTokenImpl = await deployHelper.pool.deployPoolToken();

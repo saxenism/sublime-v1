@@ -349,7 +349,11 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         poolVars.loanStatus = LoanStatus.ACTIVE;
         uint256 _currentCollateralRatio = getCurrentCollateralRatio();
         IPoolFactory _poolFactory = IPoolFactory(PoolFactory);
-        require(_currentCollateralRatio >= poolConstants.idealCollateralRatio.sub(_poolFactory.collateralVolatilityThreshold()), '13');
+        require(
+            _currentCollateralRatio >=
+                poolConstants.idealCollateralRatio.sub(_poolFactory.volatilityThreshold(poolConstants.collateralAsset)),
+            '13'
+        );
 
         uint256 _noOfRepaymentIntervals = poolConstants.noOfRepaymentIntervals;
         uint256 _repaymentInterval = poolConstants.repaymentInterval;
@@ -595,7 +599,11 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         IPoolFactory _poolFactory = IPoolFactory(PoolFactory);
         require(getMarginCallEndTime(msg.sender) == 0, 'RMC1');
         uint256 _idealCollateralRatio = poolConstants.idealCollateralRatio;
-        require(_idealCollateralRatio > getCurrentCollateralRatio(msg.sender).add(_poolFactory.collateralVolatilityThreshold()), '26');
+        require(
+            _idealCollateralRatio >
+                getCurrentCollateralRatio(msg.sender).add(_poolFactory.volatilityThreshold(poolConstants.collateralAsset)),
+            '26'
+        );
 
         lenders[msg.sender].marginCallEndTime = block.timestamp.add(_poolFactory.marginCallDuration());
 
@@ -719,7 +727,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         require(_marginCallEndTime < block.timestamp, '28');
 
         require(
-            poolConstants.idealCollateralRatio.sub(IPoolFactory(PoolFactory).collateralVolatilityThreshold()) >
+            poolConstants.idealCollateralRatio.sub(IPoolFactory(PoolFactory).volatilityThreshold(poolConstants.collateralAsset)) >
                 getCurrentCollateralRatio(_lender),
             '29'
         );

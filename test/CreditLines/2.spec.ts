@@ -139,8 +139,8 @@ describe('Credit Lines', async () => {
 
         priceOracle = await deployHelper.helper.deployPriceOracle();
         await priceOracle.connect(admin).initialize(admin.address);
-        await priceOracle.connect(admin).setfeedAddress(Contracts.LINK, ChainLinkAggregators['LINK/USD']);
-        await priceOracle.connect(admin).setfeedAddress(Contracts.DAI, ChainLinkAggregators['DAI/USD']);
+        await priceOracle.connect(admin).setChainlinkFeedAddress(Contracts.LINK, ChainLinkAggregators['LINK/USD']);
+        await priceOracle.connect(admin).setChainlinkFeedAddress(Contracts.DAI, ChainLinkAggregators['DAI/USD']);
     });
 
     describe('Create Credit Lines Contract Amount Checks', async () => {
@@ -186,7 +186,6 @@ describe('Credit Lines', async () => {
                     _collectionPeriod,
                     _matchCollateralRatioInterval,
                     _marginCallDuration,
-                    _collateralVolatilityThreshold,
                     _gracePeriodPenaltyFraction,
                     _poolInitFuncSelector,
                     _poolTokenInitFuncSelector,
