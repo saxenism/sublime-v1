@@ -72,9 +72,12 @@ describe('Pool Borrow Withdrawal stage', async () => {
 
     let Binance7: any;
     let WhaleAccount: any;
+    let protocolFeeCollector: any;
+
+    const scaler = BigNumber.from('10').pow(30)
 
     before(async () => {
-        [proxyAdmin, admin, mockCreditLines, borrower, lender, lender1, random] = await ethers.getSigners();
+        [proxyAdmin, admin, mockCreditLines, borrower, lender, lender1, random, protocolFeeCollector] = await ethers.getSigners();
         const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
         savingsAccount = await deployHelper.core.deploySavingsAccount();
         strategyRegistry = await deployHelper.core.deployStrategyRegistry();
@@ -155,6 +158,7 @@ describe('Pool Borrow Withdrawal stage', async () => {
             _poolInitFuncSelector,
             _poolTokenInitFuncSelector,
             _poolCancelPenalityFraction,
+            _protocolFeeFraction
         } = testPoolFactoryParams;
         await poolFactory
             .connect(admin)
@@ -168,7 +172,9 @@ describe('Pool Borrow Withdrawal stage', async () => {
                 _poolInitFuncSelector,
                 _poolTokenInitFuncSelector,
                 _liquidatorRewardFraction,
-                _poolCancelPenalityFraction
+                _poolCancelPenalityFraction,
+                _protocolFeeFraction,
+                protocolFeeCollector.address
             );
         await poolFactory.connect(admin).updateSupportedBorrowTokens(Contracts.LINK, true);
 
@@ -448,11 +454,12 @@ describe('Pool Borrow Withdrawal stage', async () => {
                     zeroAddress
                 );
                 const tokensLentAfter = await poolToken.totalSupply();
+                const protocolFee = tokensLent.mul(testPoolFactoryParams._protocolFeeFraction).div(scaler);
 
                 assert(tokensLent.toString() == tokensLentAfter.toString(), 'Tokens lent changing while withdrawing borrowed amount');
                 assert(
-                    borrowAssetBalanceBorrower.add(tokensLent).toString() == borrowAssetBalanceBorrowerAfter.toString(),
-                    'Borrower not receiving correct lent amount'
+                    borrowAssetBalanceBorrower.add(tokensLent).sub(protocolFee).toString() == borrowAssetBalanceBorrowerAfter.toString(),
+                    `Borrower not receiving correct lent amount. Expected: ${borrowAssetBalanceBorrower.add(tokensLent).toString()} Actual: ${borrowAssetBalanceBorrowerAfter.toString()}`
                 );
                 assert(
                     borrowAssetBalancePool.toString() == borrowAssetBalancePoolAfter.add(tokensLentAfter).toString(),
@@ -1246,11 +1253,12 @@ describe('Pool Borrow Withdrawal stage', async () => {
                     zeroAddress
                 );
                 const tokensLentAfter = await poolToken.totalSupply();
+                const protocolFee = tokensLent.mul(testPoolFactoryParams._protocolFeeFraction).div(scaler);
 
                 assert(tokensLent.toString() == tokensLentAfter.toString(), 'Tokens lent changing while withdrawing borrowed amount');
                 assert(tokensLent.toString() == createPoolParams._minborrowAmount.toString(), 'TokensLent is not same as minBorrowAmount');
                 assert(
-                    borrowAssetBalanceBorrower.add(tokensLent).toString() == borrowAssetBalanceBorrowerAfter.toString(),
+                    borrowAssetBalanceBorrower.add(tokensLent).sub(protocolFee).toString() == borrowAssetBalanceBorrowerAfter.toString(),
                     'Borrower not receiving correct lent amount'
                 );
                 assert(
@@ -1375,10 +1383,11 @@ describe('Pool Borrow Withdrawal stage', async () => {
                     zeroAddress
                 );
                 const tokensLentAfter = await poolToken.totalSupply();
+                const protocolFee = tokensLent.mul(testPoolFactoryParams._protocolFeeFraction).div(scaler);
 
                 assert(tokensLent.toString() == tokensLentAfter.toString(), 'Tokens lent changing while withdrawing borrowed amount');
                 assert(
-                    borrowAssetBalanceBorrower.add(tokensLent).toString() == borrowAssetBalanceBorrowerAfter.toString(),
+                    borrowAssetBalanceBorrower.add(tokensLent).sub(protocolFee).toString() == borrowAssetBalanceBorrowerAfter.toString(),
                     'Borrower not receiving correct lent amount'
                 );
                 assert(
