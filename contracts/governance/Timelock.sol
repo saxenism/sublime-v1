@@ -9,30 +9,9 @@ contract Timelock {
     event NewAdmin(address indexed newAdmin);
     event NewPendingAdmin(address indexed newPendingAdmin);
     event NewDelay(uint256 indexed newDelay);
-    event CancelTransaction(
-        bytes32 indexed txHash,
-        address indexed target,
-        uint256 value,
-        string signature,
-        bytes data,
-        uint256 eta
-    );
-    event ExecuteTransaction(
-        bytes32 indexed txHash,
-        address indexed target,
-        uint256 value,
-        string signature,
-        bytes data,
-        uint256 eta
-    );
-    event QueueTransaction(
-        bytes32 indexed txHash,
-        address indexed target,
-        uint256 value,
-        string signature,
-        bytes data,
-        uint256 eta
-    );
+    event CancelTransaction(bytes32 indexed txHash, address indexed target, uint256 value, string signature, bytes data, uint256 eta);
+    event ExecuteTransaction(bytes32 indexed txHash, address indexed target, uint256 value, string signature, bytes data, uint256 eta);
+    event QueueTransaction(bytes32 indexed txHash, address indexed target, uint256 value, string signature, bytes data, uint256 eta);
 
     uint256 public constant GRACE_PERIOD = 14 days;
     uint256 public constant MINIMUM_DELAY = 2 days;
@@ -88,10 +67,7 @@ contract Timelock {
         uint256 eta
     ) public returns (bytes32) {
         require(msg.sender == admin, 'Timelock::queueTransaction: Call must come from admin.');
-        require(
-            eta >= getBlockTimestamp().add(delay),
-            'Timelock::queueTransaction: Estimated execution block must satisfy delay.'
-        );
+        require(eta >= getBlockTimestamp().add(delay), 'Timelock::queueTransaction: Estimated execution block must satisfy delay.');
 
         bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
         queuedTransactions[txHash] = true;

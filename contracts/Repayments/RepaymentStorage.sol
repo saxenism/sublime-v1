@@ -24,6 +24,7 @@ contract RepaymentStorage {
     struct RepaymentVars {
         uint256 totalRepaidAmount;
         uint256 repaymentPeriodCovered;
+        uint256 repaidAmount;
         bool isLoanExtensionActive;
         uint256 loanDurationCovered;
         uint256 nextDuePeriod;

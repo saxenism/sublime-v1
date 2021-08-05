@@ -61,8 +61,8 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable, ReentrancyG
 
         if (_asset == address(0)) {
             received = _withdrawETH(investedTo, amount);
-            (bool success, ) = _wallet.call{ value: received }("");
-            require(success, "Transfer failed");
+            (bool success, ) = _wallet.call{value: received}('');
+            require(success, 'Transfer failed');
         } else {
             received = _withdrawERC(_asset, investedTo, amount);
             IERC20(_asset).safeTransfer(_wallet, received);
@@ -107,8 +107,8 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable, ReentrancyG
 
         if (asset == address(0)) {
             received = _withdrawETH(investedTo, amount);
-            (bool success, ) = savingsAccount.call{ value: received }("");
-            require(success, "Transfer failed");
+            (bool success, ) = savingsAccount.call{value: received}('');
+            require(success, 'Transfer failed');
         } else {
             received = _withdrawERC(asset, investedTo, amount);
             IERC20(asset).safeTransfer(savingsAccount, received);
@@ -139,9 +139,7 @@ contract CompoundYield is IYield, Initializable, OwnableUpgradeable, ReentrancyG
         //balanceOfUnderlying returns underlying balance for total shares
         if (shares == 0) return 0;
         address cToken = liquidityToken[asset];
-        amount = ICToken(cToken).balanceOfUnderlying(address(this)).mul(shares).div(
-            IERC20(cToken).balanceOf(address(this))
-        );
+        amount = ICToken(cToken).balanceOfUnderlying(address(this)).mul(shares).div(IERC20(cToken).balanceOf(address(this)));
     }
 
     function getSharesForTokens(uint256 amount, address asset) external override returns (uint256 shares) {
