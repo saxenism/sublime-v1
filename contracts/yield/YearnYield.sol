@@ -60,8 +60,8 @@ contract YearnYield is IYield, Initializable, OwnableUpgradeable, ReentrancyGuar
 
         if (_asset == address(0)) {
             received = _withdrawETH(investedTo, amount);
-            (bool success, ) = _wallet.call{ value: received }("");
-            require(success, "Transfer failed");
+            (bool success, ) = _wallet.call{value: received}('');
+            require(success, 'Transfer failed');
         } else {
             received = _withdrawERC(_asset, investedTo, amount);
             IERC20(_asset).safeTransfer(_wallet, received);
@@ -107,8 +107,8 @@ contract YearnYield is IYield, Initializable, OwnableUpgradeable, ReentrancyGuar
 
         if (asset == address(0)) {
             received = _withdrawETH(investedTo, amount);
-            (bool success, ) = savingsAccount.call{ value: received }("");
-            require(success, "Transfer failed");
+            (bool success, ) = savingsAccount.call{value: received}('');
+            require(success, 'Transfer failed');
         } else {
             received = _withdrawERC(asset, investedTo, amount);
             IERC20(asset).safeTransfer(savingsAccount, received);

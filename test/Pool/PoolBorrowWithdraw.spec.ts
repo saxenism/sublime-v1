@@ -72,9 +72,12 @@ describe('Pool Borrow Withdrawal stage', async () => {
 
     let Binance7: any;
     let WhaleAccount: any;
+    let protocolFeeCollector: any;
+
+    const scaler = BigNumber.from('10').pow(30)
 
     before(async () => {
-        [proxyAdmin, admin, mockCreditLines, borrower, lender, lender1, random] = await ethers.getSigners();
+        [proxyAdmin, admin, mockCreditLines, borrower, lender, lender1, random, protocolFeeCollector] = await ethers.getSigners();
         const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
         savingsAccount = await deployHelper.core.deploySavingsAccount();
         strategyRegistry = await deployHelper.core.deployStrategyRegistry();
@@ -139,8 +142,8 @@ describe('Pool Borrow Withdrawal stage', async () => {
 
         priceOracle = await deployHelper.helper.deployPriceOracle();
         await priceOracle.connect(admin).initialize(admin.address);
-        await priceOracle.connect(admin).setfeedAddress(Contracts.LINK, ChainLinkAggregators['LINK/USD']);
-        await priceOracle.connect(admin).setfeedAddress(Contracts.DAI, ChainLinkAggregators['DAI/USD']);
+        await priceOracle.connect(admin).setChainlinkFeedAddress(Contracts.LINK, ChainLinkAggregators['LINK/USD']);
+        await priceOracle.connect(admin).setChainlinkFeedAddress(Contracts.DAI, ChainLinkAggregators['DAI/USD']);
 
         poolFactory = await deployHelper.pool.deployPoolFactory();
         extenstion = await deployHelper.pool.deployExtenstion();
@@ -155,6 +158,7 @@ describe('Pool Borrow Withdrawal stage', async () => {
             _poolInitFuncSelector,
             _poolTokenInitFuncSelector,
             _poolCancelPenalityFraction,
+            _protocolFeeFraction
         } = testPoolFactoryParams;
         await poolFactory
             .connect(admin)
@@ -163,16 +167,19 @@ describe('Pool Borrow Withdrawal stage', async () => {
                 _collectionPeriod,
                 _matchCollateralRatioInterval,
                 _marginCallDuration,
-                _collateralVolatilityThreshold,
                 _gracePeriodPenaltyFraction,
                 _poolInitFuncSelector,
                 _poolTokenInitFuncSelector,
                 _liquidatorRewardFraction,
-                _poolCancelPenalityFraction
+                _poolCancelPenalityFraction,
+                _protocolFeeFraction,
+                protocolFeeCollector.address
             );
         await poolFactory.connect(admin).updateSupportedBorrowTokens(Contracts.LINK, true);
 
         await poolFactory.connect(admin).updateSupportedCollateralTokens(Contracts.DAI, true);
+        await poolFactory.connect(admin).updateVolatilityThreshold(Contracts.DAI, testPoolFactoryParams._collateralVolatilityThreshold);
+        await poolFactory.connect(admin).updateVolatilityThreshold(Contracts.LINK, testPoolFactoryParams._collateralVolatilityThreshold);
 
         poolImpl = await deployHelper.pool.deployPool();
         poolTokenImpl = await deployHelper.pool.deployPoolToken();
@@ -448,11 +455,12 @@ describe('Pool Borrow Withdrawal stage', async () => {
                     zeroAddress
                 );
                 const tokensLentAfter = await poolToken.totalSupply();
+                const protocolFee = tokensLent.mul(testPoolFactoryParams._protocolFeeFraction).div(scaler);
 
                 assert(tokensLent.toString() == tokensLentAfter.toString(), 'Tokens lent changing while withdrawing borrowed amount');
                 assert(
-                    borrowAssetBalanceBorrower.add(tokensLent).toString() == borrowAssetBalanceBorrowerAfter.toString(),
-                    'Borrower not receiving correct lent amount'
+                    borrowAssetBalanceBorrower.add(tokensLent).sub(protocolFee).toString() == borrowAssetBalanceBorrowerAfter.toString(),
+                    `Borrower not receiving correct lent amount. Expected: ${borrowAssetBalanceBorrower.add(tokensLent).toString()} Actual: ${borrowAssetBalanceBorrowerAfter.toString()}`
                 );
                 assert(
                     borrowAssetBalancePool.toString() == borrowAssetBalancePoolAfter.add(tokensLentAfter).toString(),
@@ -479,14 +487,27 @@ describe('Pool Borrow Withdrawal stage', async () => {
                 );
                 const { baseLiquidityShares } = await pool.poolVars();
                 await expect(pool.connect(lender).cancelPool()).to.revertedWith('CP2');
+                const tx = await pool.connect(borrower).cancelPool();
+
+                let blockTime = 0;
+                if(tx.blockNumber) {
+                    blockTime = (await ethers.provider.getBlock(tx.blockNumber)).timestamp;
+                }
+                const loanStartTime = (await pool.poolConstants()).loanStartTime;
+                let extraPenalityTime = 0;
+                if(loanStartTime.lt(blockTime)) {
+                    extraPenalityTime = (BigNumber.from(blockTime).sub(loanStartTime)).toNumber();
+                }
+
                 const penality = baseLiquidityShares
                     .mul(testPoolFactoryParams._poolCancelPenalityFraction)
-                    .mul(await poolToken.totalSupply())
-                    .div(createPoolParams._poolSize)
-                    .div(BigNumber.from(10).pow(30));
-                await pool.connect(borrower).cancelPool();
+                    .mul(createPoolParams._borrowRate)
+                    .mul(createPoolParams._repaymentInterval.add(extraPenalityTime))
+                    .div(365*24*60*60)
+                    .div(BigNumber.from(10).pow(60));
+
                 const collateralBalanceBorrowerSavingsAfter = await savingsAccount.userLockedBalance(
-                    borrower.address,
+                    borrower.address, 
                     collateralToken.address,
                     poolStrategy.address
                 );
@@ -877,12 +898,24 @@ describe('Pool Borrow Withdrawal stage', async () => {
                     poolStrategy.address
                 );
                 const { baseLiquidityShares } = await pool.poolVars();
+                const tx = await pool.connect(borrower).cancelPool();
+
+                let blockTime = 0;
+                if(tx.blockNumber) {
+                    blockTime = (await ethers.provider.getBlock(tx.blockNumber)).timestamp;
+                }
+                const loanStartTime = (await pool.poolConstants()).loanStartTime;
+                let extraPenalityTime = 0;
+                if(loanStartTime.lt(blockTime)) {
+                    extraPenalityTime = (BigNumber.from(blockTime).sub(loanStartTime)).toNumber();
+                }
+
                 const penality = baseLiquidityShares
                     .mul(testPoolFactoryParams._poolCancelPenalityFraction)
-                    .mul(await poolToken.totalSupply())
-                    .div(createPoolParams._poolSize)
-                    .div(BigNumber.from(10).pow(30));
-                await pool.connect(random).cancelPool();
+                    .mul(createPoolParams._borrowRate)
+                    .mul(createPoolParams._repaymentInterval.add(extraPenalityTime))
+                    .div(365*24*60*60)
+                    .div(BigNumber.from(10).pow(60));
                 const collateralBalanceBorrowerSavingsAfter = await savingsAccount.userLockedBalance(
                     borrower.address,
                     collateralToken.address,
@@ -1221,11 +1254,12 @@ describe('Pool Borrow Withdrawal stage', async () => {
                     zeroAddress
                 );
                 const tokensLentAfter = await poolToken.totalSupply();
+                const protocolFee = tokensLent.mul(testPoolFactoryParams._protocolFeeFraction).div(scaler);
 
                 assert(tokensLent.toString() == tokensLentAfter.toString(), 'Tokens lent changing while withdrawing borrowed amount');
                 assert(tokensLent.toString() == createPoolParams._minborrowAmount.toString(), 'TokensLent is not same as minBorrowAmount');
                 assert(
-                    borrowAssetBalanceBorrower.add(tokensLent).toString() == borrowAssetBalanceBorrowerAfter.toString(),
+                    borrowAssetBalanceBorrower.add(tokensLent).sub(protocolFee).toString() == borrowAssetBalanceBorrowerAfter.toString(),
                     'Borrower not receiving correct lent amount'
                 );
                 assert(
@@ -1350,10 +1384,11 @@ describe('Pool Borrow Withdrawal stage', async () => {
                     zeroAddress
                 );
                 const tokensLentAfter = await poolToken.totalSupply();
+                const protocolFee = tokensLent.mul(testPoolFactoryParams._protocolFeeFraction).div(scaler);
 
                 assert(tokensLent.toString() == tokensLentAfter.toString(), 'Tokens lent changing while withdrawing borrowed amount');
                 assert(
-                    borrowAssetBalanceBorrower.add(tokensLent).toString() == borrowAssetBalanceBorrowerAfter.toString(),
+                    borrowAssetBalanceBorrower.add(tokensLent).sub(protocolFee).toString() == borrowAssetBalanceBorrowerAfter.toString(),
                     'Borrower not receiving correct lent amount'
                 );
                 assert(

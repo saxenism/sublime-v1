@@ -40,7 +40,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     uint256 public override collectionPeriod;
     uint256 public override matchCollateralRatioInterval;
     uint256 public override marginCallDuration;
-    uint256 public override collateralVolatilityThreshold;
+    mapping(address => uint256) public override volatilityThreshold;
     uint256 public override gracePeriodPenaltyFraction;
     uint256 public override liquidatorRewardFraction;
     uint256 public override votingPassRatio;
@@ -162,10 +162,11 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
     event MarginCallDurationUpdated(uint256 updatedMarginCallDuration);
 
     /*
-     * @notice emitted when collateralVolatilityThreshold variable is updated
-     * @param updatedCollateralVolatilityThreshold Updated value of collateralVolatilityThreshold
+     * @notice emitted when volatilityThreshold variable of a token is updated
+     * @param token is the token for which the volatilityThreshold is being changed
+     * @param updatedVolatilityThreshold Updated value of volatilityThreshold
      */
-    event CollateralVolatilityThresholdUpdated(uint256 updatedCollateralVolatilityThreshold);
+    event VolatilityThresholdUpdated(address indexed token, uint256 updatedVolatilityThreshold);
 
     /*
      * @notice emitted when gracePeriodPenaltyFraction variable is updated
@@ -231,10 +232,7 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
      * @notice functions affected by this modifier can only be invoked by the borrow of the Pool
      */
     modifier onlyBorrower() {
-        require(
-            IVerification(userRegistry).isUser(msg.sender),
-            'PoolFactory::onlyBorrower - Only a valid Borrower can create Pool'
-        );
+        require(IVerification(userRegistry).isUser(msg.sender), 'PoolFactory::onlyBorrower - Only a valid Borrower can create Pool');
         _;
     }
 
@@ -253,7 +251,6 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
      * @param _collectionPeriod
      * @param _matchCollateralRatioInterval
      * @param _marginCallDuration
-     * @param _collateralVolatilityThreshold
      * @param _gracePeriodPenaltyFraction
      * @param _poolInitFuncSelector
      * @param _poolTokenInitFuncSelector
@@ -269,7 +266,6 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         uint256 _collectionPeriod,
         uint256 _matchCollateralRatioInterval,
         uint256 _marginCallDuration,
-        uint256 _collateralVolatilityThreshold,
         uint256 _gracePeriodPenaltyFraction,
         bytes4 _poolInitFuncSelector,
         bytes4 _poolTokenInitFuncSelector,
@@ -285,7 +281,6 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         _updateCollectionPeriod(_collectionPeriod);
         _updateMatchCollateralRatioInterval(_matchCollateralRatioInterval);
         _updateMarginCallDuration(_marginCallDuration);
-        _updateCollateralVolatilityThreshold(_collateralVolatilityThreshold);
         _updateGracePeriodPenaltyFraction(_gracePeriodPenaltyFraction);
         _updatepoolInitFuncSelector(_poolInitFuncSelector);
         _updatePoolTokenInitFuncSelector(_poolTokenInitFuncSelector);
@@ -353,14 +348,11 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         bytes32 _salt
     ) external payable onlyBorrower {
         require(_minBorrowAmount <= _poolSize, 'PoolFactory::createPool - invalid min borrow amount');
-        require(collateralVolatilityThreshold <= _collateralRatio, 'PoolFactory:createPool - Invalid collateral ratio');
+        require(volatilityThreshold[_collateralTokenType] <= _collateralRatio, 'PoolFactory:createPool - Invalid collateral ratio');
         require(isBorrowToken[_borrowTokenType], 'PoolFactory::createPool - Invalid borrow token type');
         require(isCollateralToken[_collateralTokenType], 'PoolFactory::createPool - Invalid collateral token type');
-        address[] memory tokens = new address[](2);
-        tokens[0] = _collateralTokenType;
-        tokens[1] = _borrowTokenType;
         require(
-            IPriceOracle(priceOracle).doesFeedExist(tokens),
+            IPriceOracle(priceOracle).doesFeedExist(_collateralTokenType, _borrowTokenType),
             "PoolFactory::createPool - Price feed doesn't support token pair"
         );
         require(
@@ -407,14 +399,12 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
             );
 
         bytes32 salt = keccak256(abi.encodePacked(_salt, msg.sender));
-        bytes memory bytecode =
-            abi.encodePacked(type(SublimeProxy).creationCode, abi.encode(poolImpl, address(0x01), data));
+        bytes memory bytecode = abi.encodePacked(type(SublimeProxy).creationCode, abi.encode(poolImpl, address(0x01), data));
         uint256 amount = _collateralTokenType == address(0) ? _collateralAmount : 0;
 
         address pool = _deploy(amount, salt, bytecode);
 
-        bytes memory tokenData =
-            abi.encodeWithSelector(poolTokenInitFuncSelector, 'Open Borrow Pool Tokens', 'OBPT', pool);
+        bytes memory tokenData = abi.encodeWithSelector(poolTokenInitFuncSelector, 'Open Borrow Pool Tokens', 'OBPT', pool);
         address poolToken = address(new SublimeProxy(poolTokenImpl, address(0), tokenData));
         IPool(pool).setPoolToken(poolToken);
         openBorrowPoolRegistry[pool] = true;
@@ -605,13 +595,13 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         emit MarginCallDurationUpdated(_marginCallDuration);
     }
 
-    function updateCollateralVolatilityThreshold(uint256 _collateralVolatilityThreshold) external onlyOwner {
-        _updateCollateralVolatilityThreshold(_collateralVolatilityThreshold);
+    function updateVolatilityThreshold(address _token, uint256 _volatilityThreshold) public onlyOwner {
+        _updateVolatilityThreshold(_token, _volatilityThreshold);
     }
 
-    function _updateCollateralVolatilityThreshold(uint256 _collateralVolatilityThreshold) internal {
-        collateralVolatilityThreshold = _collateralVolatilityThreshold;
-        emit CollateralVolatilityThresholdUpdated(_collateralVolatilityThreshold);
+    function _updateVolatilityThreshold(address _token, uint256 _volatilityThreshold) internal {
+        volatilityThreshold[_token] = _volatilityThreshold;
+        emit VolatilityThresholdUpdated(_token, _volatilityThreshold);
     }
 
     function updateGracePeriodPenaltyFraction(uint256 _gracePeriodPenaltyFraction) external onlyOwner {

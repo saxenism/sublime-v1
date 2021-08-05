@@ -72,11 +72,12 @@ describe('Pool Active stage', async () => {
 
     let Binance7: any;
     let WhaleAccount: any;
+    let protocolFeeCollector: any;
 
     const scaler: BigNumberish = BigNumber.from(10).pow(30);
 
     before(async () => {
-        [proxyAdmin, admin, mockCreditLines, borrower, lender, lender1, random] = await ethers.getSigners();
+        [proxyAdmin, admin, mockCreditLines, borrower, lender, lender1, random, protocolFeeCollector] = await ethers.getSigners();
         const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
         savingsAccount = await deployHelper.core.deploySavingsAccount();
         strategyRegistry = await deployHelper.core.deployStrategyRegistry();
@@ -140,8 +141,8 @@ describe('Pool Active stage', async () => {
 
         priceOracle = await deployHelper.helper.deployPriceOracle();
         await priceOracle.connect(admin).initialize(admin.address);
-        await priceOracle.connect(admin).setfeedAddress(Contracts.LINK, ChainLinkAggregators['LINK/USD']);
-        await priceOracle.connect(admin).setfeedAddress(Contracts.DAI, ChainLinkAggregators['DAI/USD']);
+        await priceOracle.connect(admin).setChainlinkFeedAddress(Contracts.LINK, ChainLinkAggregators['LINK/USD']);
+        await priceOracle.connect(admin).setChainlinkFeedAddress(Contracts.DAI, ChainLinkAggregators['DAI/USD']);
 
         poolFactory = await deployHelper.pool.deployPoolFactory();
         extenstion = await deployHelper.pool.deployExtenstion();
@@ -156,6 +157,7 @@ describe('Pool Active stage', async () => {
             _poolInitFuncSelector,
             _poolTokenInitFuncSelector,
             _poolCancelPenalityFraction,
+            _protocolFeeFraction,
         } = testPoolFactoryParams;
         await poolFactory
             .connect(admin)
@@ -164,16 +166,19 @@ describe('Pool Active stage', async () => {
                 _collectionPeriod,
                 _matchCollateralRatioInterval,
                 _marginCallDuration,
-                _collateralVolatilityThreshold,
                 _gracePeriodPenaltyFraction,
                 _poolInitFuncSelector,
                 _poolTokenInitFuncSelector,
                 _liquidatorRewardFraction,
-                _poolCancelPenalityFraction
+                _poolCancelPenalityFraction,
+                _protocolFeeFraction,
+                protocolFeeCollector.address
             );
         await poolFactory.connect(admin).updateSupportedBorrowTokens(Contracts.LINK, true);
 
         await poolFactory.connect(admin).updateSupportedCollateralTokens(Contracts.DAI, true);
+        await poolFactory.connect(admin).updateVolatilityThreshold(Contracts.DAI, testPoolFactoryParams._collateralVolatilityThreshold);
+        await poolFactory.connect(admin).updateVolatilityThreshold(Contracts.LINK, testPoolFactoryParams._collateralVolatilityThreshold);
 
         poolImpl = await deployHelper.pool.deployPool();
         poolTokenImpl = await deployHelper.pool.deployPoolToken();
@@ -507,8 +512,6 @@ describe('Pool Active stage', async () => {
                             .mul(createPoolParams._repaymentInterval)
                             .div(scaler);
                         await blockTravel(network, parseInt(endOfExtension.add(gracePeriod).add(1).toString()));
-                        console.log('block travel done');
-                        console.log((await repaymentImpl.getInterestDueTillInstalmentDeadline(pool.address)).div(scaler).toString());
                         await expect(pool.connect(random).liquidatePool(false, false, false)).to.be.revertedWith(
                             'Pool::liquidatePool - No reason to liquidate the pool'
                         );
@@ -721,11 +724,11 @@ describe('Pool Active stage', async () => {
 
             context('Margin call when collateral ratio falls below ideal ratio', async () => {
                 beforeEach(async () => {
-                    await priceOracle.connect(admin).setfeedAddress(Contracts.LINK, ChainLinkAggregators['ETH/USD']);
+                    await priceOracle.connect(admin).setChainlinkFeedAddress(Contracts.LINK, ChainLinkAggregators['ETH/USD']);
                 });
 
                 afterEach(async () => {
-                    await priceOracle.connect(admin).setfeedAddress(Contracts.LINK, ChainLinkAggregators['LINK/USD']);
+                    await priceOracle.connect(admin).setChainlinkFeedAddress(Contracts.LINK, ChainLinkAggregators['LINK/USD']);
                 });
 
                 it("Margin called lender, can't send pool tokens", async () => {
@@ -777,7 +780,7 @@ describe('Pool Active stage', async () => {
 
                     await timeTravel(network, parseInt(testPoolFactoryParams._marginCallDuration.toString()));
 
-                    await priceOracle.connect(admin).setfeedAddress(Contracts.LINK, ChainLinkAggregators['LINK/USD']);
+                    await priceOracle.connect(admin).setChainlinkFeedAddress(Contracts.LINK, ChainLinkAggregators['LINK/USD']);
 
                     await expect(pool.liquidateLender(lender.address, false, false, false)).to.be.revertedWith('29');
                 });

@@ -76,8 +76,7 @@ contract TokenLogic is Initializable {
         delegates[bridge][address(0)] = uint96(bridgeSupply);
         emit Transfer(address(0), bridge, bridgeSupply);
 
-        uint96 remainingSupply =
-            sub96(uint96(totalSupply), uint96(bridgeSupply), 'Token: Subtraction overflow in the constructor');
+        uint96 remainingSupply = sub96(uint96(totalSupply), uint96(bridgeSupply), 'Token: Subtraction overflow in the constructor');
         balances[account] = remainingSupply;
         delegates[account][address(0)] = remainingSupply;
         emit Transfer(address(0), account, uint256(remainingSupply));
@@ -200,8 +199,7 @@ contract TokenLogic is Initializable {
         uint96 amount = safe96(rawAmount, 'Token::approve: amount exceeds 96 bits');
 
         if (spender != src && spenderAllowance != uint96(-1)) {
-            uint96 newAllowance =
-                sub96(spenderAllowance, amount, 'Token::transferFrom: transfer amount exceeds spender allowance');
+            uint96 newAllowance = sub96(spenderAllowance, amount, 'Token::transferFrom: transfer amount exceeds spender allowance');
             allowances[src][spender] = newAllowance;
 
             emit Approval(src, spender, newAllowance);
@@ -241,8 +239,7 @@ contract TokenLogic is Initializable {
         bytes32 s,
         uint96 amount
     ) public {
-        bytes32 domainSeparator =
-            keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)), getChainId(), address(this)));
+        bytes32 domainSeparator = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)), getChainId(), address(this)));
         bytes32 structHash = keccak256(abi.encode(DELEGATION_TYPEHASH, delegatee, nonce, expiry, amount));
         bytes32 digest = keccak256(abi.encodePacked('\x19\x01', domainSeparator, structHash));
         address signatory = ecrecover(digest, v, r, s);
@@ -261,8 +258,7 @@ contract TokenLogic is Initializable {
         bytes32 s,
         uint96 amount
     ) public {
-        bytes32 domainSeparator =
-            keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)), getChainId(), address(this)));
+        bytes32 domainSeparator = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)), getChainId(), address(this)));
         bytes32 structHash = keccak256(abi.encode(UNDELEGATION_TYPEHASH, delegatee, nonce, expiry, amount));
         bytes32 digest = keccak256(abi.encodePacked('\x19\x01', domainSeparator, structHash));
         address signatory = ecrecover(digest, v, r, s);
@@ -328,11 +324,7 @@ contract TokenLogic is Initializable {
         address delegatee,
         uint96 amount
     ) internal {
-        delegates[delegator][address(0)] = sub96(
-            delegates[delegator][address(0)],
-            amount,
-            'Token: delegates underflow'
-        );
+        delegates[delegator][address(0)] = sub96(delegates[delegator][address(0)], amount, 'Token: delegates underflow');
         delegates[delegator][delegatee] = add96(delegates[delegator][delegatee], amount, 'Token: delegates overflow');
 
         emit DelegateChanged(delegator, address(0), delegatee);
@@ -345,16 +337,8 @@ contract TokenLogic is Initializable {
         address delegatee,
         uint96 amount
     ) internal {
-        delegates[delegator][delegatee] = sub96(
-            delegates[delegator][delegatee],
-            amount,
-            'Token: undelegates underflow'
-        );
-        delegates[delegator][address(0)] = add96(
-            delegates[delegator][address(0)],
-            amount,
-            'Token: delegates underflow'
-        );
+        delegates[delegator][delegatee] = sub96(delegates[delegator][delegatee], amount, 'Token: undelegates underflow');
+        delegates[delegator][address(0)] = add96(delegates[delegator][address(0)], amount, 'Token: delegates underflow');
         emit DelegateChanged(delegator, delegatee, address(0));
         _moveDelegates(delegatee, address(0), amount);
     }
@@ -365,25 +349,14 @@ contract TokenLogic is Initializable {
         uint96 amount
     ) internal {
         require(src != address(0), 'Token::_transferTokens: cannot transfer from the zero address');
-        require(
-            delegates[src][address(0)] >= amount,
-            'Token: _transferTokens: undelegated amount should be greater than transfer amount'
-        );
+        require(delegates[src][address(0)] >= amount, 'Token: _transferTokens: undelegated amount should be greater than transfer amount');
         require(dst != address(0), 'Token::_transferTokens: cannot transfer to the zero address');
 
         balances[src] = sub96(balances[src], amount, 'Token::_transferTokens: transfer amount exceeds balance');
-        delegates[src][address(0)] = sub96(
-            delegates[src][address(0)],
-            amount,
-            'Token: _tranferTokens: undelegate subtraction error'
-        );
+        delegates[src][address(0)] = sub96(delegates[src][address(0)], amount, 'Token: _tranferTokens: undelegate subtraction error');
 
         balances[dst] = add96(balances[dst], amount, 'Token::_transferTokens: transfer amount overflows');
-        delegates[dst][address(0)] = add96(
-            delegates[dst][address(0)],
-            amount,
-            'Token: _transferTokens: undelegate addition error'
-        );
+        delegates[dst][address(0)] = add96(delegates[dst][address(0)], amount, 'Token: _transferTokens: undelegate addition error');
         emit Transfer(src, dst, amount);
 
         // _moveDelegates(delegates[src], delegates[dst], amount);
