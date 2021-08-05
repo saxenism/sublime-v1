@@ -310,6 +310,7 @@ contract Repayments is Initializable, RepaymentStorage, IRepayment, ReentrancyGu
 
         require(_amountRequired != 0, 'Repayments::repayAmount not necessary');
         _amountRequired = _amountRequired.div(10**30);
+        repaymentVars[_poolID].repaidAmount = repaymentVars[_poolID].repaidAmount.add(_amountRequired);
 
         if (_asset == address(0)) {
             require(_amountRequired <= msg.value, 'Repayments::repayAmount amount does not match message value.');
@@ -360,8 +361,8 @@ contract Repayments is Initializable, RepaymentStorage, IRepayment, ReentrancyGu
         return repaymentVars[poolID].repaymentPeriodCovered;
     }
     */
-    function getTotalRepaidAmount(address poolID) external view override returns (uint256) {
-        return repaymentVars[poolID].loanDurationCovered.mul(getInterestPerSecond(poolID)).div(10**60);
+    function getTotalRepaidAmount(address _poolID) external view override returns (uint256) {
+        return repaymentVars[_poolID].repaidAmount;
     }
 
     function instalmentDeadlineExtended(address _poolID, uint256 _period) external override {
