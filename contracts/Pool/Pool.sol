@@ -517,15 +517,10 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     function closeLoan() external payable override nonReentrant OnlyRepaymentImpl {
         require(poolVars.loanStatus == LoanStatus.ACTIVE, '22');
 
-        uint256 _principalToPayback = poolToken.totalSupply();
-        address _borrowAsset = poolConstants.borrowAsset;
-
-        SavingsAccountUtil.transferTokens(_borrowAsset, _principalToPayback, msg.sender, address(this));
-
         poolVars.loanStatus = LoanStatus.CLOSED;
 
         IExtension(IPoolFactory(PoolFactory).extension()).closePoolExtension();
-        _withdrawAllCollateral(msg.sender, 0);
+        _withdrawAllCollateral(poolConstants.borrower, 0);
         poolToken.pause();
 
         emit OpenBorrowPoolClosed();
