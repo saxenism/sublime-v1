@@ -369,10 +369,11 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         address _borrowAsset = poolConstants.borrowAsset;
         (uint256 _protocolFeeFraction, address _collector) = _poolFactory.getProtocolFeeData();
         uint256 _protocolFee = _tokensLent.mul(_protocolFeeFraction).div(10**30);
+        delete poolConstants.loanWithdrawalDeadline;
+
         SavingsAccountUtil.transferTokens(_borrowAsset, _protocolFee, address(this), _collector);
         SavingsAccountUtil.transferTokens(_borrowAsset, _tokensLent.sub(_protocolFee), address(this), msg.sender);
 
-        delete poolConstants.loanWithdrawalDeadline;
         emit AmountBorrowed(_tokensLent);
     }
 
@@ -384,6 +385,8 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         if (_poolSavingsStrategy != address(0)) {
             _collateralTokens = IYield(_poolSavingsStrategy).getTokensForShares(_collateralShares, _collateralAsset);
         }
+        poolVars.baseLiquidityShares = _penality;
+        delete poolVars.extraLiquidityShares;
 
         uint256 _sharesReceived;
         if (_collateralShares != 0) {
@@ -398,8 +401,6 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             );
         }
         emit CollateralWithdrawn(_receiver, _sharesReceived);
-        poolVars.baseLiquidityShares = _penality;
-        delete poolVars.extraLiquidityShares;
     }
 
     function lend(
@@ -495,8 +496,8 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         }
         uint256 _liquidationTokens =
             correspondingBorrowTokens(_collateralTokens, _poolFactory, IPoolFactory(_poolFactory).liquidatorRewardFraction());
-        SavingsAccountUtil.transferTokens(poolConstants.borrowAsset, _liquidationTokens, msg.sender, address(this));
         poolVars.penalityLiquidityAmount = _liquidationTokens;
+        SavingsAccountUtil.transferTokens(poolConstants.borrowAsset, _liquidationTokens, msg.sender, address(this));
         _withdraw(
             _toSavingsAccount,
             _receiveLiquidityShare,
@@ -686,11 +687,12 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         uint256 _poolBorrowTokens =
             correspondingBorrowTokens(_collateralTokens, _poolFactory, IPoolFactory(_poolFactory).liquidatorRewardFraction());
 
+        delete poolVars.extraLiquidityShares;
+        delete poolVars.baseLiquidityShares;
+        
         _deposit(_fromSavingsAccount, false, _borrowAsset, _poolBorrowTokens, address(0), msg.sender, address(this));
         _withdraw(_toSavingsAccount, _recieveLiquidityShare, _collateralAsset, _poolSavingsStrategy, _collateralTokens);
 
-        delete poolVars.extraLiquidityShares;
-        delete poolVars.baseLiquidityShares;
         emit PoolLiquidated(msg.sender);
     }
 
@@ -841,10 +843,9 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         if (_amountToWithdraw == 0) {
             return;
         }
+        lenders[_lender].interestWithdrawn = lenders[_lender].interestWithdrawn.add(_amountToWithdraw);
 
         SavingsAccountUtil.transferTokens(poolConstants.borrowAsset, _amountToWithdraw, address(this), _lender);
-
-        lenders[_lender].interestWithdrawn = lenders[_lender].interestWithdrawn.add(_amountToWithdraw);
     }
 
     function getMarginCallEndTime(address _lender) public view override returns (uint256) {
