@@ -62,9 +62,10 @@ describe('Pool', async () => {
 
     let Binance7: any;
     let WhaleAccount: any;
+    let protocolFeeCollector: any;
 
     before(async () => {
-        [proxyAdmin, admin, mockCreditLines, borrower, lender] = await ethers.getSigners();
+        [proxyAdmin, admin, mockCreditLines, borrower, lender, protocolFeeCollector] = await ethers.getSigners();
         const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
         savingsAccount = await deployHelper.core.deploySavingsAccount();
         strategyRegistry = await deployHelper.core.deployStrategyRegistry();
@@ -129,8 +130,8 @@ describe('Pool', async () => {
 
         priceOracle = await deployHelper.helper.deployPriceOracle();
         await priceOracle.connect(admin).initialize(admin.address);
-        await priceOracle.connect(admin).setfeedAddress(Contracts.LINK, ChainLinkAggregators['LINK/USD']);
-        await priceOracle.connect(admin).setfeedAddress(Contracts.DAI, ChainLinkAggregators['DAI/USD']);
+        await priceOracle.connect(admin).setChainlinkFeedAddress(Contracts.LINK, ChainLinkAggregators['LINK/USD']);
+        await priceOracle.connect(admin).setChainlinkFeedAddress(Contracts.DAI, ChainLinkAggregators['DAI/USD']);
     });
 
     describe('Use Pool', async () => {
@@ -155,29 +156,37 @@ describe('Pool', async () => {
                 _poolInitFuncSelector,
                 _poolTokenInitFuncSelector,
                 _poolCancelPenalityFraction,
+                _protocolFeeFraction,
             } = testPoolFactoryParams;
             await poolFactory
                 .connect(admin)
                 .initialize(
-                    verification.address,
-                    strategyRegistry.address,
                     admin.address,
                     _collectionPeriod,
                     _matchCollateralRatioInterval,
                     _marginCallDuration,
-                    _collateralVolatilityThreshold,
                     _gracePeriodPenaltyFraction,
                     _poolInitFuncSelector,
                     _poolTokenInitFuncSelector,
                     _liquidatorRewardFraction,
-                    priceOracle.address,
-                    savingsAccount.address,
-                    extenstion.address,
-                    _poolCancelPenalityFraction
+                    _poolCancelPenalityFraction,
+                    _protocolFeeFraction,
+                    protocolFeeCollector.address
                 );
             poolImpl = await deployHelper.pool.deployPool();
             poolTokenImpl = await deployHelper.pool.deployPoolToken();
             repaymentImpl = await deployHelper.pool.deployRepayments();
+
+            await poolFactory.connect(admin).setImplementations(
+                poolImpl.address, 
+                repaymentImpl.address, 
+                poolTokenImpl.address,
+                verification.address,
+                strategyRegistry.address,
+                priceOracle.address,
+                savingsAccount.address,
+                extenstion.address
+            )
         });
 
         describe('Failed Cases', async () => {
@@ -244,7 +253,16 @@ describe('Pool', async () => {
             });
             it('Should revert if any other address other than owner tries to update implementation contracts', async () => {
                 await expect(
-                    poolFactory.connect(proxyAdmin).setImplementations(poolFactory.address, repaymentImpl.address, poolTokenImpl.address)
+                    poolFactory.connect(proxyAdmin).setImplementations(
+                        poolImpl.address, 
+                        repaymentImpl.address, 
+                        poolTokenImpl.address,
+                        verification.address,
+                        strategyRegistry.address,
+                        priceOracle.address,
+                        savingsAccount.address,
+                        extenstion.address
+                    )
                 ).to.be.revertedWith('Ownable: caller is not the owner');
             });
         });
@@ -266,8 +284,19 @@ describe('Pool', async () => {
             await poolFactory.connect(admin).updateSupportedBorrowTokens(Contracts.DAI, true);
 
             await poolFactory.connect(admin).updateSupportedCollateralTokens(Contracts.LINK, true);
+            await poolFactory.connect(admin).updateVolatilityThreshold(Contracts.DAI, testPoolFactoryParams._collateralVolatilityThreshold);
+            await poolFactory.connect(admin).updateVolatilityThreshold(Contracts.LINK, testPoolFactoryParams._collateralVolatilityThreshold);
 
-            await poolFactory.connect(admin).setImplementations(poolImpl.address, repaymentImpl.address, poolTokenImpl.address);
+            await poolFactory.connect(admin).setImplementations(
+                poolImpl.address, 
+                repaymentImpl.address, 
+                poolTokenImpl.address,
+                verification.address,
+                strategyRegistry.address,
+                priceOracle.address,
+                savingsAccount.address,
+                extenstion.address
+            );
 
             let deployHelper: DeployHelper = new DeployHelper(borrower);
             let collateralToken: ERC20 = await deployHelper.mock.getMockERC20(Contracts.LINK);
@@ -346,8 +375,19 @@ describe('Pool', async () => {
                 await poolFactory.connect(admin).updateSupportedBorrowTokens(Contracts.DAI, true);
 
                 await poolFactory.connect(admin).updateSupportedCollateralTokens(Contracts.LINK, true);
+                await poolFactory.connect(admin).updateVolatilityThreshold(Contracts.DAI, testPoolFactoryParams._collateralVolatilityThreshold);
+                await poolFactory.connect(admin).updateVolatilityThreshold(Contracts.LINK, testPoolFactoryParams._collateralVolatilityThreshold);
 
-                await poolFactory.connect(admin).setImplementations(poolImpl.address, repaymentImpl.address, poolTokenImpl.address);
+                await poolFactory.connect(admin).setImplementations(
+                    poolImpl.address, 
+                    repaymentImpl.address, 
+                    poolTokenImpl.address,
+                    verification.address,
+                    strategyRegistry.address,
+                    priceOracle.address,
+                    savingsAccount.address,
+                    extenstion.address
+                );
 
                 let deployHelper: DeployHelper = new DeployHelper(borrower);
                 let collateralToken: ERC20 = await deployHelper.mock.getMockERC20(Contracts.LINK);
@@ -457,8 +497,19 @@ describe('Pool', async () => {
                 await poolFactory.connect(admin).updateSupportedBorrowTokens(Contracts.DAI, true);
 
                 await poolFactory.connect(admin).updateSupportedCollateralTokens(Contracts.LINK, true);
+                await poolFactory.connect(admin).updateVolatilityThreshold(Contracts.DAI, testPoolFactoryParams._collateralVolatilityThreshold);
+                await poolFactory.connect(admin).updateVolatilityThreshold(Contracts.LINK, testPoolFactoryParams._collateralVolatilityThreshold);
 
-                await poolFactory.connect(admin).setImplementations(poolImpl.address, repaymentImpl.address, poolTokenImpl.address);
+                await poolFactory.connect(admin).setImplementations(
+                    poolImpl.address, 
+                    repaymentImpl.address, 
+                    poolTokenImpl.address,
+                    verification.address,
+                    strategyRegistry.address,
+                    priceOracle.address,
+                    savingsAccount.address,
+                    extenstion.address
+                );
 
                 let deployHelper: DeployHelper = new DeployHelper(borrower);
                 let collateralToken: ERC20 = await deployHelper.mock.getMockERC20(Contracts.LINK);

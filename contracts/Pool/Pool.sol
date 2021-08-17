@@ -238,11 +238,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         bool _transferFromSavingsAccount
     ) internal {
         uint256 _equivalentCollateral =
-            getEquivalentTokens(
-                poolConstants.borrowAsset,
-                poolConstants.collateralAsset,
-                poolConstants.borrowAmountRequested
-            );
+            getEquivalentTokens(poolConstants.borrowAsset, poolConstants.collateralAsset, poolConstants.borrowAmountRequested);
         require(_amount >= poolConstants.idealCollateralRatio.mul(_equivalentCollateral).div(1e30), '36');
 
         _depositCollateral(_borrower, _amount, _transferFromSavingsAccount);
@@ -258,7 +254,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         address _depositor,
         uint256 _amount,
         bool _transferFromSavingsAccount
-    ) internal {
+    ) internal nonReentrant {
         uint256 _sharesReceived =
             _deposit(
                 _transferFromSavingsAccount,
@@ -310,7 +306,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         address _lender,
         uint256 _amount,
         bool _transferFromSavingsAccount
-    ) external payable override {
+    ) external payable override nonReentrant {
         require(poolVars.loanStatus == LoanStatus.ACTIVE, '9');
 
         require(getMarginCallEndTime(_lender) >= block.timestamp, '10');
@@ -342,7 +338,12 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     function withdrawBorrowedAmount() external override OnlyBorrower(msg.sender) nonReentrant {
         LoanStatus _poolStatus = poolVars.loanStatus;
         uint256 _tokensLent = poolToken.totalSupply();
-        require(_poolStatus == LoanStatus.COLLECTION && poolConstants.loanStartTime < block.timestamp, '12');
+        require(
+            _poolStatus == LoanStatus.COLLECTION && 
+            poolConstants.loanStartTime < block.timestamp &&
+            block.timestamp < poolConstants.loanWithdrawalDeadline, 
+            '12'
+        );
         require(_tokensLent >= poolConstants.minborrowAmount, '');
 
         poolVars.loanStatus = LoanStatus.ACTIVE;
@@ -350,7 +351,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         IPoolFactory _poolFactory = IPoolFactory(PoolFactory);
         require(
             _currentCollateralRatio >=
-                poolConstants.idealCollateralRatio.sub(_poolFactory.collateralVolatilityThreshold()),
+                poolConstants.idealCollateralRatio.sub(_poolFactory.volatilityThreshold(poolConstants.collateralAsset)),
             '13'
         );
 
@@ -364,9 +365,15 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             poolConstants.borrowAsset
         );
         IExtension(_poolFactory.extension()).initializePoolExtension(_repaymentInterval);
-        SavingsAccountUtil.transferTokens(poolConstants.borrowAsset, _tokensLent, address(this), msg.sender);
-
+        
+        address _borrowAsset = poolConstants.borrowAsset;
+        (uint256 _protocolFeeFraction, address _collector) = _poolFactory.getProtocolFeeData();
+        uint256 _protocolFee = _tokensLent.mul(_protocolFeeFraction).div(10**30);
         delete poolConstants.loanWithdrawalDeadline;
+
+        SavingsAccountUtil.transferTokens(_borrowAsset, _protocolFee, address(this), _collector);
+        SavingsAccountUtil.transferTokens(_borrowAsset, _tokensLent.sub(_protocolFee), address(this), msg.sender);
+
         emit AmountBorrowed(_tokensLent);
     }
 
@@ -378,6 +385,8 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         if (_poolSavingsStrategy != address(0)) {
             _collateralTokens = IYield(_poolSavingsStrategy).getTokensForShares(_collateralShares, _collateralAsset);
         }
+        poolVars.baseLiquidityShares = _penality;
+        delete poolVars.extraLiquidityShares;
 
         uint256 _sharesReceived;
         if (_collateralShares != 0) {
@@ -392,8 +401,6 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             );
         }
         emit CollateralWithdrawn(_receiver, _sharesReceived);
-        poolVars.baseLiquidityShares = _penality;
-        delete poolVars.extraLiquidityShares;
     }
 
     function lend(
@@ -420,7 +427,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         address _from,
         address _to,
         uint256 _amount
-    ) public override {
+    ) public override nonReentrant {
         require(msg.sender == address(poolToken));
         require(getMarginCallEndTime(_from) == 0, '18');
         require(getMarginCallEndTime(_to) == 0, '19');
@@ -446,8 +453,9 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     function cancelPool() external {
         LoanStatus _poolStatus = poolVars.loanStatus;
         require(_poolStatus == LoanStatus.COLLECTION, 'CP1');
+        uint256 _loanStartTime = poolConstants.loanStartTime;
 
-        if (poolConstants.loanStartTime < block.timestamp && poolToken.totalSupply() < poolConstants.minborrowAmount) {
+        if (_loanStartTime < block.timestamp && poolToken.totalSupply() < poolConstants.minborrowAmount) {
             return _cancelPool(0);
         }
 
@@ -456,13 +464,13 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         }
         // note: extra liquidity shares are not applicable as the loan never reaches active state
         uint256 _collateralLiquidityShare = poolVars.baseLiquidityShares;
+        uint256 _penalityTime = poolConstants.repaymentInterval;
+        if (block.timestamp > _loanStartTime) {
+            _penalityTime = _penalityTime.add(block.timestamp.sub(_loanStartTime));
+        }
+        uint256 _cancelPenalityMultiple = IPoolFactory(PoolFactory).poolCancelPenalityFraction();
         uint256 penality =
-            IPoolFactory(PoolFactory)
-                .poolCancelPenalityFraction()
-                .mul(_collateralLiquidityShare)
-                .mul(poolToken.totalSupply())
-                .div(poolConstants.borrowAmountRequested)
-                .div(10**30);
+            _cancelPenalityMultiple.mul(poolConstants.borrowRate).mul(_collateralLiquidityShare).mul(_penalityTime).div(365 days).div(10**60);
         _cancelPool(penality);
     }
 
@@ -475,7 +483,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     }
 
     // Note: _receiveLiquidityShares doesn't matter when _toSavingsAccount is true
-    function liquidateCancelPenality(bool _toSavingsAccount, bool _receiveLiquidityShare) external {
+    function liquidateCancelPenality(bool _toSavingsAccount, bool _receiveLiquidityShare) external nonReentrant {
         require(poolVars.loanStatus == LoanStatus.CANCELLED, '');
         require(poolVars.penalityLiquidityAmount == 0, '');
         address _poolFactory = PoolFactory;
@@ -487,13 +495,9 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
             _collateralTokens = IYield(_poolSavingsStrategy).getTokensForShares(_collateralTokens, _collateralAsset);
         }
         uint256 _liquidationTokens =
-            correspondingBorrowTokens(
-                _collateralTokens,
-                _poolFactory,
-                IPoolFactory(_poolFactory).liquidatorRewardFraction()
-            );
-        SavingsAccountUtil.transferTokens(poolConstants.borrowAsset, _liquidationTokens, msg.sender, address(this));
+            correspondingBorrowTokens(_collateralTokens, _poolFactory, IPoolFactory(_poolFactory).liquidatorRewardFraction());
         poolVars.penalityLiquidityAmount = _liquidationTokens;
+        SavingsAccountUtil.transferTokens(poolConstants.borrowAsset, _liquidationTokens, msg.sender, address(this));
         _withdraw(
             _toSavingsAccount,
             _receiveLiquidityShare,
@@ -511,18 +515,13 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         emit OpenBorrowPoolTerminated();
     }
 
-    function closeLoan() external payable override OnlyRepaymentImpl {
+    function closeLoan() external payable override nonReentrant OnlyRepaymentImpl {
         require(poolVars.loanStatus == LoanStatus.ACTIVE, '22');
-
-        uint256 _principalToPayback = poolToken.totalSupply();
-        address _borrowAsset = poolConstants.borrowAsset;
-
-        SavingsAccountUtil.transferTokens(_borrowAsset, _principalToPayback, msg.sender, address(this));
 
         poolVars.loanStatus = LoanStatus.CLOSED;
 
         IExtension(IPoolFactory(PoolFactory).extension()).closePoolExtension();
-        _withdrawAllCollateral(msg.sender, 0);
+        _withdrawAllCollateral(poolConstants.borrower, 0);
         poolToken.pause();
 
         emit OpenBorrowPoolClosed();
@@ -536,7 +535,8 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         require(
             _loanStatus == LoanStatus.CLOSED ||
                 _loanStatus == LoanStatus.CANCELLED ||
-                _loanStatus == LoanStatus.DEFAULTED,
+                _loanStatus == LoanStatus.DEFAULTED ||
+                _loanStatus == LoanStatus.TERMINATED,
             '24'
         );
 
@@ -547,7 +547,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         uint256 _actualBalance = poolToken.balanceOf(msg.sender);
         uint256 _toTransfer = _actualBalance;
 
-        if (_loanStatus == LoanStatus.DEFAULTED) {
+        if (_loanStatus == LoanStatus.DEFAULTED || _loanStatus == LoanStatus.TERMINATED) {
             uint256 _totalAsset;
             if (poolConstants.borrowAsset != address(0)) {
                 _totalAsset = IERC20(poolConstants.borrowAsset).balanceOf(address(this));
@@ -560,9 +560,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         }
 
         if (_loanStatus == LoanStatus.CANCELLED) {
-            _toTransfer = _toTransfer.add(
-                _toTransfer.mul(poolVars.penalityLiquidityAmount).div(poolToken.totalSupply())
-            );
+            _toTransfer = _toTransfer.add(_toTransfer.mul(poolVars.penalityLiquidityAmount).div(poolToken.totalSupply()));
         }
 
         // _due = _balance.add(_due);
@@ -571,11 +569,13 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         //     .amountWithdrawn
         //     .add(_due);
         delete lenders[msg.sender].principalWithdrawn;
-
-        //transfer repayment
-        _withdrawRepayment(msg.sender);
+        if (_loanStatus == LoanStatus.CLOSED) {
+            //transfer repayment
+            _withdrawRepayment(msg.sender);
+        }
         //to add transfer if not included in above (can be transferred with liquidity)
         poolToken.burn(msg.sender, _actualBalance);
+
         //transfer liquidity provided
         SavingsAccountUtil.transferTokens(poolConstants.borrowAsset, _toTransfer, address(this), msg.sender);
 
@@ -597,7 +597,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         uint256 _idealCollateralRatio = poolConstants.idealCollateralRatio;
         require(
             _idealCollateralRatio >
-                getCurrentCollateralRatio(msg.sender).add(_poolFactory.collateralVolatilityThreshold()),
+                getCurrentCollateralRatio(msg.sender).add(_poolFactory.volatilityThreshold(poolConstants.collateralAsset)),
             '26'
         );
 
@@ -619,15 +619,13 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
 
     // function amountPerPeriod() public view returns (uint256) {}
 
-    function interestTillNow(uint256 _balance) public view returns (uint256) {
-        uint256 _totalSupply = poolToken.totalSupply();
-        uint256 _interestPerPeriod = interestPerPeriod(_balance);
+    function interestTillNow() public view returns (uint256) {
         IPoolFactory _poolFactory = IPoolFactory(PoolFactory);
         (uint256 _loanDurationCovered, uint256 _interestPerSecond) =
             IRepayment(_poolFactory.repaymentImpl()).getInterestCalculationVars(address(this));
         uint256 _currentBlockTime = block.timestamp.mul(10**30);
         uint256 _loanDurationTillNow = _currentBlockTime.sub(poolConstants.loanStartTime.mul(10**30));
-        if(_loanDurationTillNow <= _loanDurationCovered) {
+        if (_loanDurationTillNow <= _loanDurationCovered) {
             return 0;
         }
         uint256 _interestAccrued = _interestPerSecond.mul(_loanDurationTillNow.sub(_loanDurationCovered)).div(10**60);
@@ -636,16 +634,13 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     }
 
     function calculateCollateralRatio(uint256 _balance, uint256 _liquidityShares) public returns (uint256 _ratio) {
-        uint256 _interest = interestTillNow(_balance);
+        uint256 _interest = interestTillNow();
         address _collateralAsset = poolConstants.collateralAsset;
 
         address _strategy = poolConstants.poolSavingsStrategy;
         uint256 _currentCollateralTokens =
-            _strategy == address(0)
-                ? _liquidityShares
-                : IYield(_strategy).getTokensForShares(_liquidityShares, _collateralAsset);
-        uint256 _equivalentCollateral =
-            getEquivalentTokens(_collateralAsset, poolConstants.borrowAsset, _currentCollateralTokens);
+            _strategy == address(0) ? _liquidityShares : IYield(_strategy).getTokensForShares(_liquidityShares, _collateralAsset);
+        uint256 _equivalentCollateral = getEquivalentTokens(_collateralAsset, poolConstants.borrowAsset, _currentCollateralTokens);
         _ratio = _equivalentCollateral.mul(10**30).div(_balance.add(_interest));
     }
 
@@ -658,9 +653,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     function getCurrentCollateralRatio(address _lender) public returns (uint256 _ratio) {
         uint256 _balanceOfLender = poolToken.balanceOf(_lender);
         uint256 _liquidityShares =
-            (poolVars.baseLiquidityShares.mul(_balanceOfLender).div(poolToken.totalSupply())).add(
-                lenders[_lender].extraLiquidityShares
-            );
+            (poolVars.baseLiquidityShares.mul(_balanceOfLender).div(poolToken.totalSupply())).add(lenders[_lender].extraLiquidityShares);
 
         return (calculateCollateralRatio(_balanceOfLender, _liquidityShares));
     }
@@ -688,24 +681,18 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
 
         uint256 _collateralTokens = _collateralLiquidityShare;
         if (_poolSavingsStrategy != address(0)) {
-            _collateralTokens = IYield(_poolSavingsStrategy).getTokensForShares(
-                _collateralLiquidityShare,
-                _collateralAsset
-            );
+            _collateralTokens = IYield(_poolSavingsStrategy).getTokensForShares(_collateralLiquidityShare, _collateralAsset);
         }
 
         uint256 _poolBorrowTokens =
-            correspondingBorrowTokens(
-                _collateralTokens,
-                _poolFactory,
-                IPoolFactory(_poolFactory).liquidatorRewardFraction()
-            );
-
-        _deposit(_fromSavingsAccount, false, _borrowAsset, _poolBorrowTokens, address(0), msg.sender, address(this));
-        _withdraw(_toSavingsAccount, _recieveLiquidityShare, _collateralAsset, _poolSavingsStrategy, _collateralTokens);
+            correspondingBorrowTokens(_collateralTokens, _poolFactory, IPoolFactory(_poolFactory).liquidatorRewardFraction());
 
         delete poolVars.extraLiquidityShares;
         delete poolVars.baseLiquidityShares;
+        
+        _deposit(_fromSavingsAccount, false, _borrowAsset, _poolBorrowTokens, address(0), msg.sender, address(this));
+        _withdraw(_toSavingsAccount, _recieveLiquidityShare, _collateralAsset, _poolSavingsStrategy, _collateralTokens);
+
         emit PoolLiquidated(msg.sender);
     }
 
@@ -731,16 +718,13 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     }
 
     function _canLenderBeLiquidated(address _lender) internal {
-        require(
-            (poolVars.loanStatus == LoanStatus.ACTIVE) && (block.timestamp > poolConstants.loanWithdrawalDeadline),
-            '27'
-        );
+        require((poolVars.loanStatus == LoanStatus.ACTIVE) && (block.timestamp > poolConstants.loanWithdrawalDeadline), '27');
         uint256 _marginCallEndTime = lenders[_lender].marginCallEndTime;
         require(getMarginCallEndTime(_lender) != 0, 'No margin call has been called.');
         require(_marginCallEndTime < block.timestamp, '28');
 
         require(
-            poolConstants.idealCollateralRatio.sub(IPoolFactory(PoolFactory).collateralVolatilityThreshold()) >
+            poolConstants.idealCollateralRatio.sub(IPoolFactory(PoolFactory).volatilityThreshold(poolConstants.collateralAsset)) >
                 getCurrentCollateralRatio(_lender),
             '29'
         );
@@ -771,22 +755,10 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
 
         address _poolFactory = PoolFactory;
         uint256 _lenderLiquidationTokens =
-            correspondingBorrowTokens(
-                _lenderCollateralTokens,
-                _poolFactory,
-                IPoolFactory(_poolFactory).liquidatorRewardFraction()
-            );
+            correspondingBorrowTokens(_lenderCollateralTokens, _poolFactory, IPoolFactory(_poolFactory).liquidatorRewardFraction());
 
         address _borrowAsset = poolConstants.borrowAsset;
-        _deposit(
-            _fromSavingsAccount,
-            false,
-            _borrowAsset,
-            _lenderLiquidationTokens,
-            _poolSavingsStrategy,
-            msg.sender,
-            _lender
-        );
+        _deposit(_fromSavingsAccount, false, _borrowAsset, _lenderLiquidationTokens, _poolSavingsStrategy, msg.sender, _lender);
 
         _withdrawRepayment(_lender);
     }
@@ -800,8 +772,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         _canLenderBeLiquidated(_lender);
 
         address _poolSavingsStrategy = poolConstants.poolSavingsStrategy;
-        (uint256 _lenderCollateralLPShare, uint256 _lenderBalance) =
-            updateLenderSharesDuringLiquidation(_lender);
+        (uint256 _lenderCollateralLPShare, uint256 _lenderBalance) = updateLenderSharesDuringLiquidation(_lender);
 
         uint256 _lenderCollateralTokens = _lenderCollateralLPShare;
         if (_poolSavingsStrategy != address(0)) {
@@ -833,14 +804,8 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     ) public view returns (uint256) {
         IPoolFactory _PoolFactory = IPoolFactory(_poolFactory);
         (uint256 _ratioOfPrices, uint256 _decimals) =
-            IPriceOracle(_PoolFactory.priceOracle()).getLatestPrice(
-                poolConstants.collateralAsset,
-                poolConstants.borrowAsset
-            );
-        return
-            _totalCollateralTokens.mul(_ratioOfPrices).mul(uint256(10**30).sub(_fraction)).div(10**_decimals).div(
-                10**30
-            );
+            IPriceOracle(_PoolFactory.priceOracle()).getLatestPrice(poolConstants.collateralAsset, poolConstants.borrowAsset);
+        return _totalCollateralTokens.mul(_ratioOfPrices).mul(uint256(10**30).sub(_fraction)).div(10**_decimals).div(10**30);
     }
 
     function interestPerSecond(uint256 _principal) public view returns (uint256) {
@@ -853,26 +818,22 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
     }
 
     function calculateCurrentPeriod() public view returns (uint256) {
-        uint256 _currentPeriod =
-            (block.timestamp.sub(poolConstants.loanStartTime, '34')).div(poolConstants.repaymentInterval);
+        uint256 _currentPeriod = (block.timestamp.sub(poolConstants.loanStartTime, '34')).div(poolConstants.repaymentInterval);
         return _currentPeriod;
     }
 
     function calculateRepaymentWithdrawable(address _lender) internal view returns (uint256) {
-        uint256 _totalRepaidAmount =
-            IRepayment(IPoolFactory(PoolFactory).repaymentImpl()).getTotalRepaidAmount(address(this));
+        uint256 _totalRepaidAmount = IRepayment(IPoolFactory(PoolFactory).repaymentImpl()).getTotalRepaidAmount(address(this));
 
         uint256 _amountWithdrawable =
-            (poolToken.balanceOf(_lender).mul(_totalRepaidAmount).div(poolToken.totalSupply())).sub(
-                lenders[_lender].interestWithdrawn
-            );
+            (poolToken.balanceOf(_lender).mul(_totalRepaidAmount).div(poolToken.totalSupply())).sub(lenders[_lender].interestWithdrawn);
 
         return _amountWithdrawable;
     }
 
     // Withdraw Repayment, Also all the extra state variables are added here only for the review
 
-    function withdrawRepayment() external isLender(msg.sender) {
+    function withdrawRepayment() external isLender(msg.sender) nonReentrant {
         _withdrawRepayment(msg.sender);
     }
 
@@ -882,10 +843,9 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         if (_amountToWithdraw == 0) {
             return;
         }
+        lenders[_lender].interestWithdrawn = lenders[_lender].interestWithdrawn.add(_amountToWithdraw);
 
         SavingsAccountUtil.transferTokens(poolConstants.borrowAsset, _amountToWithdraw, address(this), _lender);
-
-        lenders[_lender].interestWithdrawn = lenders[_lender].interestWithdrawn.add(_amountToWithdraw);
     }
 
     function getMarginCallEndTime(address _lender) public view override returns (uint256) {
@@ -952,8 +912,7 @@ contract Pool is Initializable, IPool, ReentrancyGuard {
         address _target,
         uint256 _amount
     ) public view returns (uint256) {
-        (uint256 _price, uint256 _decimals) =
-            IPriceOracle(IPoolFactory(PoolFactory).priceOracle()).getLatestPrice(_source, _target);
+        (uint256 _price, uint256 _decimals) = IPriceOracle(IPoolFactory(PoolFactory).priceOracle()).getLatestPrice(_source, _target);
         return _amount.mul(_price).div(10**_decimals);
     }
 
