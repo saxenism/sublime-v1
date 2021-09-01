@@ -272,9 +272,11 @@ contract SavingsAccount is ISavingsAccount, Initializable, OwnableUpgradeable, R
 
         for (uint256 index = 0; index < _strategyList.length; index++) {
             if (userLockedBalance[msg.sender][_asset][_strategyList[index]] != 0) {
-                tokenReceived = tokenReceived.add(
-                    IYield(_strategyList[index]).unlockTokens(_asset, userLockedBalance[msg.sender][_asset][_strategyList[index]])
-                );
+                uint256 _amount = userLockedBalance[msg.sender][_asset][_strategyList[index]];
+                if(_strategyList[index] != address(0)) {
+                    _amount = IYield(_strategyList[index]).unlockTokens(_asset, userLockedBalance[msg.sender][_asset][_strategyList[index]]);
+                }
+                tokenReceived = tokenReceived.add(_amount);
                 delete userLockedBalance[msg.sender][_asset][_strategyList[index]];
             }
         }

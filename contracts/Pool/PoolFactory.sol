@@ -347,6 +347,9 @@ contract PoolFactory is Initializable, OwnableUpgradeable, IPoolFactory {
         bool _transferFromSavingsAccount,
         bytes32 _salt
     ) external payable onlyBorrower {
+        if(_collateralTokenType == address(0)) {
+            require(msg.value == _collateralAmount, "PoolFactory::createPool - Ether send is different from collateral amount specified");
+        }
         require(_minBorrowAmount <= _poolSize, 'PoolFactory::createPool - invalid min borrow amount');
         require(volatilityThreshold[_collateralTokenType] <= _collateralRatio, 'PoolFactory:createPool - Invalid collateral ratio');
         require(isBorrowToken[_borrowTokenType], 'PoolFactory::createPool - Invalid borrow token type');
