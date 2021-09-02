@@ -72,6 +72,10 @@ contract GovernorAlpha {
         bool executed;
         // @notice Receipts of ballots for the entire set of voters
         mapping(address => Receipt) receipts;
+        // for weight - derived from acceptance ratio
+        uint256 forWeight;
+        // against weight - derived from acceptance ratio
+        uint256 againstWeight;
     }
 
     /// @notice Ballot receipt record for a voter
@@ -94,8 +98,7 @@ contract GovernorAlpha {
     mapping(address => uint256) public latestProposalIds;
 
     /// @notice The EIP-712 typehash for the contract's domain
-    bytes32 public constant DOMAIN_TYPEHASH =
-        keccak256('EIP712Domain(string name,uint256 chainId,address verifyingContract)');
+    bytes32 public constant DOMAIN_TYPEHASH = keccak256('EIP712Domain(string name,uint256 chainId,address verifyingContract)');
 
     /// @notice The EIP-712 typehash for the ballot struct used by the contract
     bytes32 public constant BALLOT_TYPEHASH = keccak256('Ballot(uint256 proposalId,bool support)');
@@ -142,14 +145,13 @@ contract GovernorAlpha {
         bytes[] memory calldatas,
         string memory description
     ) public returns (uint256) {
+        uint256 acceptanceRatio = 8500; //if aacceptanceRatio = 10000 it means 100%
         require(
             LIME.getPriorVotes(msg.sender, sub256(block.number, 1)) > proposalThreshold(),
             'GovernorAlpha::propose: proposer votes below proposal threshold'
         );
         require(
-            targets.length == values.length &&
-                targets.length == signatures.length &&
-                targets.length == calldatas.length,
+            targets.length == values.length && targets.length == signatures.length && targets.length == calldatas.length,
             'GovernorAlpha::propose: proposal function information arity mismatch'
         );
         require(targets.length != 0, 'GovernorAlpha::propose: must provide actions');
@@ -171,6 +173,22 @@ contract GovernorAlpha {
         uint256 startBlock = add256(block.number, votingDelay());
         uint256 endBlock = add256(startBlock, votingPeriod());
 
+        uint256 againstWeight = acceptanceRatio;
+        uint256 forWeight = sub256(10000, acceptanceRatio);
+        return _createProposal(targets, values, signatures, calldatas, description, startBlock, endBlock, againstWeight, forWeight);
+    }
+
+    function _createProposal(
+        address[] memory targets,
+        uint256[] memory values,
+        string[] memory signatures,
+        bytes[] memory calldatas,
+        string memory description,
+        uint256 startBlock,
+        uint256 endBlock,
+        uint256 againstWeight,
+        uint256 forWeight
+    ) internal returns (uint256) {
         proposalCount++;
         Proposal storage newProposal = proposals[proposalCount];
         newProposal.id = proposalCount;
@@ -186,28 +204,17 @@ contract GovernorAlpha {
         newProposal.againstVotes = 0;
         newProposal.canceled = false;
         newProposal.executed = false;
+        newProposal.againstWeight = againstWeight;
+        newProposal.forWeight = forWeight;
 
         latestProposalIds[newProposal.proposer] = newProposal.id;
 
-        emit ProposalCreated(
-            newProposal.id,
-            msg.sender,
-            targets,
-            values,
-            signatures,
-            calldatas,
-            startBlock,
-            endBlock,
-            description
-        );
+        emit ProposalCreated(newProposal.id, msg.sender, targets, values, signatures, calldatas, startBlock, endBlock, description);
         return newProposal.id;
     }
 
     function queue(uint256 proposalId) public {
-        require(
-            state(proposalId) == ProposalState.Succeeded,
-            'GovernorAlpha::queue: proposal can only be queued if it is succeeded'
-        );
+        require(state(proposalId) == ProposalState.Succeeded, 'GovernorAlpha::queue: proposal can only be queued if it is succeeded');
         Proposal storage proposal = proposals[proposalId];
         uint256 eta = add256(block.timestamp, timelock.delay());
         for (uint256 i = 0; i < proposal.targets.length; i++) {
@@ -232,10 +239,7 @@ contract GovernorAlpha {
     }
 
     function execute(uint256 proposalId) public payable {
-        require(
-            state(proposalId) == ProposalState.Queued,
-            'GovernorAlpha::execute: proposal can only be executed if it is queued'
-        );
+        require(state(proposalId) == ProposalState.Queued, 'GovernorAlpha::execute: proposal can only be executed if it is queued');
         Proposal storage proposal = proposals[proposalId];
         proposal.executed = true;
         for (uint256 i = 0; i < proposal.targets.length; i++) {
@@ -256,8 +260,7 @@ contract GovernorAlpha {
 
         Proposal storage proposal = proposals[proposalId];
         require(
-            msg.sender == guardian ||
-                LIME.getPriorVotes(proposal.proposer, sub256(block.number, 1)) < proposalThreshold(),
+            msg.sender == guardian || LIME.getPriorVotes(proposal.proposer, sub256(block.number, 1)) < proposalThreshold(),
             'GovernorAlpha::cancel: proposer above threshold'
         );
 
@@ -302,7 +305,9 @@ contract GovernorAlpha {
             return ProposalState.Pending;
         } else if (block.number <= proposal.endBlock) {
             return ProposalState.Active;
-        } else if (3 * proposal.forVotes <= 17 * proposal.againstVotes || proposal.forVotes < quorumVotes()) {
+        } else if (
+            proposal.forWeight * proposal.forVotes <= proposal.againstWeight * proposal.againstVotes || proposal.forVotes < quorumVotes()
+        ) {
             return ProposalState.Defeated;
         } else if (proposal.eta == 0) {
             return ProposalState.Succeeded;
@@ -326,8 +331,7 @@ contract GovernorAlpha {
         bytes32 r,
         bytes32 s
     ) public {
-        bytes32 domainSeparator =
-            keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)), getChainId(), address(this)));
+        bytes32 domainSeparator = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)), getChainId(), address(this)));
         bytes32 structHash = keccak256(abi.encode(BALLOT_TYPEHASH, proposalId, support));
         bytes32 digest = keccak256(abi.encodePacked('\x19\x01', domainSeparator, structHash));
         address signatory = ecrecover(digest, v, r, s);

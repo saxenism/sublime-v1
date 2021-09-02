@@ -20,7 +20,7 @@ interface IPoolFactory {
 
     function marginCallDuration() external view returns (uint256);
 
-    function collateralVolatilityThreshold() external view returns (uint256);
+    function volatilityThreshold(address token) external view returns (uint256);
 
     function gracePeriodPenaltyFraction() external view returns (uint256);
 
@@ -29,4 +29,6 @@ interface IPoolFactory {
     function votingPassRatio() external view returns (uint256);
 
     function poolCancelPenalityFraction() external view returns (uint256);
+
+    function getProtocolFeeData() external view returns (uint256, address);
 }

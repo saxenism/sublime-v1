@@ -78,10 +78,10 @@ import { Contracts } from '../existingContracts/compound.json';
 
 //     await priceOracle
 //         .connect(admin)
-//         .setfeedAddress('0x463514ea551b88f176dc9e71e529dd02eb2d0cf8', '0x22B58f1EbEDfCA50feF632bD73368b2FdA96D541');
+//         .setChainlinkFeedAddress('0x463514ea551b88f176dc9e71e529dd02eb2d0cf8', '0x22B58f1EbEDfCA50feF632bD73368b2FdA96D541');
 //     await priceOracle
 //         .connect(admin)
-//         .setfeedAddress('0xab2af84a9db35f92dfb5b0607bd91226f5e97469', '0x9326BFA02ADD2366b30bacB125260Af641031331');
+//         .setChainlinkFeedAddress('0xab2af84a9db35f92dfb5b0607bd91226f5e97469', '0x9326BFA02ADD2366b30bacB125260Af641031331');
 
 //     return 'Done';
 // }
