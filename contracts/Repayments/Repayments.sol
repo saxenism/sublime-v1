@@ -73,7 +73,6 @@ contract Repayments is Initializable, RepaymentStorage, IRepayment, ReentrancyGu
     /// @notice Initializes the contract (similar to a constructor)
     /// @dev Since we cannot use constructors when using OpenZeppelin Upgrades, we use the initialize function 
     ///and the initializer modifier makes sure that this function is called only once
-    /// @param _owner The address of the new owner. Different from the deployer of the contract (if required)
     /// @param _poolFactory The address of the pool factory
     /// @param _gracePenaltyRate The penalty rate levied in the grace period
     /// @param _gracePeriodFraction The fraction of repayment interval that will be allowed as grace period
@@ -446,7 +445,7 @@ contract Repayments is Initializable, RepaymentStorage, IRepayment, ReentrancyGu
     */
 
     /// @notice Returns the total amount that has been repaid by the borrower till now
-    /// @param poolID address of the pool
+    /// @param _poolID address of the pool
     /// @return total amount repaid
     function getTotalRepaidAmount(address _poolID) external view override returns (uint256) {
         return repaymentVars[_poolID].repaidAmount;
