@@ -38,7 +38,7 @@ contract Repayments is Initializable, RepaymentStorage, IRepayment, ReentrancyGu
     event PoolFactoryUpdated(address poolFactory);
     
     /// @notice Event to denote changes in the configurations of the savings account
-    event SavingsAccountUpdated(address savingnsAccount);
+    event SavingsAccountUpdated(address savingsAccount);
     
     /// @notice Event to denote changes in the configurations of the Grace Penalty Rate
     event GracePenalityRateUpdated(uint256 gracePenaltyRate);
