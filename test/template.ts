@@ -65,9 +65,10 @@ describe.skip('Template For Test cases', async () => {
 
     let Binance7: any;
     let WhaleAccount: any;
+    let protocolFeeCollector: any;
 
     before(async () => {
-        [proxyAdmin, admin, mockCreditLines, borrower, lender] = await ethers.getSigners();
+        [proxyAdmin, admin, mockCreditLines, borrower, lender, protocolFeeCollector] = await ethers.getSigners();
         const deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
         savingsAccount = await deployHelper.core.deploySavingsAccount();
         strategyRegistry = await deployHelper.core.deployStrategyRegistry();
@@ -132,8 +133,8 @@ describe.skip('Template For Test cases', async () => {
 
         priceOracle = await deployHelper.helper.deployPriceOracle();
         await priceOracle.connect(admin).initialize(admin.address);
-        await priceOracle.connect(admin).setfeedAddress(Contracts.LINK, ChainLinkAggregators['LINK/USD']);
-        await priceOracle.connect(admin).setfeedAddress(Contracts.DAI, ChainLinkAggregators['DAI/USD']);
+        await priceOracle.connect(admin).setChainlinkFeedAddress(Contracts.LINK, ChainLinkAggregators['LINK/USD']);
+        await priceOracle.connect(admin).setChainlinkFeedAddress(Contracts.DAI, ChainLinkAggregators['DAI/USD']);
     });
 
     describe('Pool Related', async () => {
@@ -158,25 +159,22 @@ describe.skip('Template For Test cases', async () => {
                 _poolInitFuncSelector,
                 _poolTokenInitFuncSelector,
                 _poolCancelPenalityFraction,
+                _protocolFeeFraction,
             } = testPoolFactoryParams;
             await poolFactory
                 .connect(admin)
                 .initialize(
-                    verification.address,
-                    strategyRegistry.address,
                     admin.address,
                     _collectionPeriod,
                     _matchCollateralRatioInterval,
                     _marginCallDuration,
-                    _collateralVolatilityThreshold,
                     _gracePeriodPenaltyFraction,
                     _poolInitFuncSelector,
                     _poolTokenInitFuncSelector,
                     _liquidatorRewardFraction,
-                    priceOracle.address,
-                    savingsAccount.address,
-                    extenstion.address,
-                    _poolCancelPenalityFraction
+                    _poolCancelPenalityFraction,
+                    _protocolFeeFraction,
+                    protocolFeeCollector.address
                 );
             poolImpl = await deployHelper.pool.deployPool();
             poolTokenImpl = await deployHelper.pool.deployPoolToken();
@@ -191,7 +189,19 @@ describe.skip('Template For Test cases', async () => {
 
                 await poolFactory.connect(admin).updateSupportedCollateralTokens(Contracts.LINK, true);
 
-                await poolFactory.connect(admin).setImplementations(poolImpl.address, repaymentImpl.address, poolTokenImpl.address);
+                await poolFactory.connect(admin).updateVolatilityThreshold(Contracts.DAI, testPoolFactoryParams._collateralVolatilityThreshold);
+                await poolFactory.connect(admin).updateVolatilityThreshold(Contracts.LINK, testPoolFactoryParams._collateralVolatilityThreshold);
+
+                await poolFactory.connect(admin).setImplementations(
+                    poolImpl.address, 
+                    repaymentImpl.address, 
+                    poolTokenImpl.address,
+                    verification.address,
+                    strategyRegistry.address,
+                    priceOracle.address,
+                    savingsAccount.address,
+                    extenstion.address
+                );
 
                 let deployHelper: DeployHelper = new DeployHelper(borrower);
                 let collateralToken: ERC20 = await deployHelper.mock.getMockERC20(Contracts.LINK);

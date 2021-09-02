@@ -50,9 +50,7 @@ contract StrategyRegistry is Initializable, OwnableUpgradeable, IStrategyRegistr
      **/
     function removeStrategy(uint256 _strategyIndex) external override onlyOwner {
         address _strategy = strategies[_strategyIndex];
-        strategies[_strategyIndex] = strategies[
-            strategies.length.sub(1, 'StrategyRegistry::removeStrategy - No strategies exist')
-        ];
+        strategies[_strategyIndex] = strategies[strategies.length.sub(1, 'StrategyRegistry::removeStrategy - No strategies exist')];
         strategies.pop();
         registry[_strategy] = false;
 

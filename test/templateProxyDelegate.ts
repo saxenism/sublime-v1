@@ -78,6 +78,7 @@ describe('Template 2', async () => {
 
     let Binance7: any;
     let WhaleAccount: any;
+    let protocolFeeCollector: any;
 
     let extenstionLogic: Extension;
     let extenstion: Extension;
@@ -94,7 +95,7 @@ describe('Template 2', async () => {
     let testToken2: Token;
 
     before(async () => {
-        [proxyAdmin, admin, mockCreditLines, borrower, lender] = await ethers.getSigners();
+        [proxyAdmin, admin, mockCreditLines, borrower, lender, protocolFeeCollector] = await ethers.getSigners();
         let deployHelper: DeployHelper = new DeployHelper(proxyAdmin);
         console.log('Deploying savings account logic');
         savingsAccountLogic = await deployHelper.core.deploySavingsAccount();
@@ -193,8 +194,8 @@ describe('Template 2', async () => {
         await priceOracle.connect(admin).initialize(admin.address);
 
         if (network.name == 'hardhat') {
-            await priceOracle.connect(admin).setfeedAddress(Contracts.LINK, ChainLinkAggregators['LINK/USD']);
-            await priceOracle.connect(admin).setfeedAddress(Contracts.DAI, ChainLinkAggregators['DAI/USD']);
+            await priceOracle.connect(admin).setChainlinkFeedAddress(Contracts.LINK, ChainLinkAggregators['LINK/USD']);
+            await priceOracle.connect(admin).setChainlinkFeedAddress(Contracts.DAI, ChainLinkAggregators['DAI/USD']);
         }
 
         console.log('Deploying pool factory');
@@ -218,25 +219,22 @@ describe('Template 2', async () => {
             _poolInitFuncSelector,
             _poolTokenInitFuncSelector,
             _poolCancelPenalityFraction,
+            _protocolFeeFraction,
         } = testPoolFactoryParams;
         await poolFactory
             .connect(admin)
             .initialize(
-                verification.address,
-                strategyRegistry.address,
                 admin.address,
                 _collectionPeriod,
                 _matchCollateralRatioInterval,
                 _marginCallDuration,
-                _collateralVolatilityThreshold,
                 _gracePeriodPenaltyFraction,
                 _poolInitFuncSelector,
                 _poolTokenInitFuncSelector,
                 _liquidatorRewardFraction,
-                priceOracle.address,
-                savingsAccount.address,
-                extenstion.address,
-                _poolCancelPenalityFraction
+                _poolCancelPenalityFraction,
+                _protocolFeeFraction,
+                protocolFeeCollector.address
             );
         console.log('Deploying pool logic');
         poolLogic = await deployHelper.pool.deployPool();
@@ -248,9 +246,21 @@ describe('Template 2', async () => {
         if (network.name == 'hardhat') {
             await poolFactory.connect(admin).updateSupportedBorrowTokens(Contracts.DAI, true);
             await poolFactory.connect(admin).updateSupportedCollateralTokens(Contracts.LINK, true);
+
+            await poolFactory.connect(admin).updateVolatilityThreshold(Contracts.DAI, testPoolFactoryParams._collateralVolatilityThreshold);
+            await poolFactory.connect(admin).updateVolatilityThreshold(Contracts.LINK, testPoolFactoryParams._collateralVolatilityThreshold);
         }
 
-        await poolFactory.connect(admin).setImplementations(poolLogic.address, repaymentLogic.address, poolTokenLogic.address);
+        await poolFactory.connect(admin).setImplementations(
+            poolLogic.address, 
+            repaymentLogic.address, 
+            poolTokenLogic.address,
+            verification.address,
+            strategyRegistry.address,
+            priceOracle.address,
+            savingsAccount.address,
+            extenstion.address
+        );
 
         if (network.name === 'hardhat') {
             deployHelper = new DeployHelper(borrower);
@@ -324,13 +334,16 @@ describe('Template 2', async () => {
             testToken2 = await tokenDeployer.mock.deployToken('Test Token 2', 'TST2', BigNumber.from('1000000000000000000000000'));
 
             console.log('Setting Feed Addresses');
-            await priceOracle.connect(admin).setfeedAddress(testToken1.address, '0x22B58f1EbEDfCA50feF632bD73368b2FdA96D541');
-            await priceOracle.connect(admin).setfeedAddress(testToken2.address, '0x9326BFA02ADD2366b30bacB125260Af641031331');
+            await priceOracle.connect(admin).setChainlinkFeedAddress(testToken1.address, '0x22B58f1EbEDfCA50feF632bD73368b2FdA96D541');
+            await priceOracle.connect(admin).setChainlinkFeedAddress(testToken2.address, '0x9326BFA02ADD2366b30bacB125260Af641031331');
 
             console.log('Pool Factory Updating Borrow Tokens');
             await poolFactory.connect(admin).updateSupportedBorrowTokens(testToken1.address, true); //test token 1
             await poolFactory.connect(admin).updateSupportedBorrowTokens(testToken2.address, true); // test token 2
             await poolFactory.connect(admin).updateSupportedBorrowTokens(zeroAddress, true); // for ether
+            await poolFactory.connect(admin).updateVolatilityThreshold(testToken1.address, testPoolFactoryParams._collateralVolatilityThreshold);
+            await poolFactory.connect(admin).updateVolatilityThreshold(testToken2.address, testPoolFactoryParams._collateralVolatilityThreshold);
+            await poolFactory.connect(admin).updateVolatilityThreshold(zeroAddress, testPoolFactoryParams._collateralVolatilityThreshold);
 
             console.log('Pool Factory Updating Collateral Tokens');
             await poolFactory.connect(admin).updateSupportedCollateralTokens(testToken1.address, true); // test token 1

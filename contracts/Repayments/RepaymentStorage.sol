@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.0;
-import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '../interfaces/IPoolFactory.sol';
 
 /**
@@ -8,7 +7,7 @@ import '../interfaces/IPoolFactory.sol';
  * @notice Implements the storage structures that will be used in the Repayments contract
  * @author Sublime
  */
-contract RepaymentStorage is OwnableUpgradeable {
+contract RepaymentStorage {
     address internal _owner;
 
     // instance of the IPoolFactory interface
@@ -54,7 +53,8 @@ contract RepaymentStorage is OwnableUpgradeable {
     /// @param loanExtensionPeriod period for which the extension was granted, ie, if loanExtensionPeriod is 7 * 10**30, 7th instalment can be repaid by 8th instalment deadline
     struct RepaymentVars {
         uint256 totalRepaidAmount;
-        // uint256 repaymentPeriodCovered; // deprecated in favour of getInstalmentsCompleted() in Repayments.sol
+        uint256 repaymentPeriodCovered;
+        uint256 repaidAmount;
         bool isLoanExtensionActive;
         uint256 loanDurationCovered;
         uint256 nextDuePeriod;
