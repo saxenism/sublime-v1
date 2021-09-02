@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.0;
-import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '../interfaces/IPoolFactory.sol';
 
-contract RepaymentStorage is OwnableUpgradeable {
+contract RepaymentStorage {
     address internal _owner;
     IPoolFactory poolFactory;
     address savingsAccount;
@@ -25,6 +24,7 @@ contract RepaymentStorage is OwnableUpgradeable {
     struct RepaymentVars {
         uint256 totalRepaidAmount;
         uint256 repaymentPeriodCovered;
+        uint256 repaidAmount;
         bool isLoanExtensionActive;
         uint256 loanDurationCovered;
         uint256 nextDuePeriod;

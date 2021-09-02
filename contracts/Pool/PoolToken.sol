@@ -94,11 +94,7 @@ contract PoolToken is Initializable, ERC20PresetMinterPauserUpgradeable {
     ) public override returns (bool) {
         IPool(pool).beforeTransfer(_sender, _recipient, _amount);
         _transfer(_sender, _recipient, _amount);
-        _approve(
-            _sender,
-            _msgSender(),
-            allowance(_sender, _msgSender()).sub(_amount, 'ERC20: transfer amount exceeds allowance')
-        );
+        _approve(_sender, _msgSender(), allowance(_sender, _msgSender()).sub(_amount, 'ERC20: transfer amount exceeds allowance'));
         return true;
     }
 }
