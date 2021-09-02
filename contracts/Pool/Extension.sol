@@ -8,6 +8,11 @@ import '../interfaces/IPoolFactory.sol';
 import '../interfaces/IExtension.sol';
 import '../interfaces/IRepayment.sol';
 
+/**
+ * @title Extension contract with methods related to Extension period
+ * @notice Implements the functions related to Extension period of the pool
+ * @author Sublime
+ */
 contract Extension is Initializable, IExtension {
     using SafeMath for uint256;
 
@@ -19,36 +24,71 @@ contract Extension is Initializable, IExtension {
         mapping(address => uint256) lastVoteTime;
     }
 
+    /**
+    * @notice used to keep track of Open Borrow Pool details
+    */
     mapping(address => PoolInfo) public poolInfo;
     IPoolFactory poolFactory;
     uint256 votingPassRatio;
 
+    /** 
+     * @notice checks if the msg.sender is pool's valid owner
+     */
     modifier onlyOwner() {
         require(msg.sender == poolFactory.owner(), 'Not owner');
         _;
     }
 
-    /*
-     * @notice emitted when the Voting Pass Ratio parameter for Open Borrow Pools is updated
-     * @param votingPassRatio the new value of the voting pass ratio for Open Borrow Pools
-     */
+    /**
+    * @notice emitted when the Voting Pass Ratio parameter for Open Borrow Pools is updated
+    * @param votingPassRatio the new value of the voting pass threshold for Open Borrow Pools
+    */
     event VotingPassRatioUpdated(uint256 votingPassRatio);
     event PoolFactoryUpdated(address poolFactory);
 
+    /**
+    * @notice emitted when an extension is requested by a borrower for Open Borrow Pools
+    * @param extensionVoteEndTime the value of the vote end time for the requested extension
+    */
     event ExtensionRequested(uint256 extensionVoteEndTime);
+
+    /**
+    * @notice emitted when the requested extension for Open Borrow Pools is approved
+    * @param loanInterval the value of the current loan interval for Open Borrow Pools
+    */
     event ExtensionPassed(uint256 loanInterval);
+
+    /**
+    * @notice emitted when the lender for Open Borrow Pools has voted on extension request
+    * @param lender address of the lender who voted
+    * @param totalExtensionSupport the value of the total extension support for the Open Borrow Pools
+    * @param lastVoteTime the last time the lender has voted on an extension request
+    */
     event LenderVoted(address lender, uint256 totalExtensionSupport, uint256 lastVoteTime);
 
+    /** 
+     * @notice checks if the address is pool's valid borrower
+     * @param _pool address of the borrower
+     */
     modifier onlyBorrower(address _pool) {
         require(IPool(_pool).borrower() == msg.sender, 'Not Borrower');
         _;
     }
 
+    /** 
+     * @notice initializing the Open Borrow Pool and the voting pass ratio
+     * @param _poolFactory address of the Open Borrow Pool
+     * @param _votingPassRatio the value of the voting pass ratio
+     */
     function initialize(address _poolFactory, uint256 _votingPassRatio) external initializer {
         _updatePoolFactory(_poolFactory);
         _updateVotingPassRatio(_votingPassRatio);
     }
 
+    /** 
+     * @notice initializing the pool extension for the Open Borrow Pool
+     * @param _repaymentInterval value of the repayment interval
+     */
     function initializePoolExtension(uint256 _repaymentInterval) external override {
         IPoolFactory _poolFactory = poolFactory;
         require(poolInfo[msg.sender].repaymentInterval == 0, 'Extension::initializePoolExtension - _repaymentInterval cannot be 0');
@@ -56,6 +96,10 @@ contract Extension is Initializable, IExtension {
         poolInfo[msg.sender].repaymentInterval = _repaymentInterval;
     }
 
+    /** 
+     * @notice used for requesting an extension by a borrower
+     * @param _pool address of the Open Borrow Pool
+     */
     function requestExtension(address _pool) external onlyBorrower(_pool) {
         uint256 _repaymentInterval = poolInfo[_pool].repaymentInterval;
         require(_repaymentInterval != 0);
@@ -73,6 +117,10 @@ contract Extension is Initializable, IExtension {
         emit ExtensionRequested(_extensionVoteEndTime);
     }
 
+    /** 
+     * @notice used for requesting an extension by a borrower
+     * @param _pool address of the Open Borrow Pool
+     */
     function voteOnExtension(address _pool) external {
         uint256 _extensionVoteEndTime = poolInfo[_pool].extensionVoteEndTime;
         require(block.timestamp < _extensionVoteEndTime, 'Pool::voteOnExtension - Voting is over');
@@ -99,6 +147,10 @@ contract Extension is Initializable, IExtension {
         }
     }
 
+    /** 
+     * @notice used for granting an extension for the repayment of loan 
+     * @param _pool address of the Open Borrow Pool
+     */
     function grantExtension(address _pool) internal {
         IPoolFactory _poolFactory = poolFactory;
         IRepayment _repayment = IRepayment(_poolFactory.repaymentImpl());
@@ -112,10 +164,17 @@ contract Extension is Initializable, IExtension {
         emit ExtensionPassed(_currentLoanInterval);
     }
 
+    /** 
+     * @notice used for closing the pool extension
+     */
     function closePoolExtension() external override {
         delete poolInfo[msg.sender];
     }
 
+    /** 
+     * @notice used for updating the voting pass ratio of the Open Borrow Pool
+     * @param _votingPassRatio the value of the new voting pass ratio
+     */
     function updateVotingPassRatio(uint256 _votingPassRatio) public onlyOwner {
         _updateVotingPassRatio(_votingPassRatio);
     }
