@@ -21,8 +21,6 @@ contract Repayments is Initializable, RepaymentStorage, IRepayment, ReentrancyGu
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
-    address PoolFactory;
-
     /// @notice Event emitted during current period interest repayment
     /// @param poolID The address of the pool to which interest was paid
     /// @param repayAmount Amount being re-payed by the borrower
